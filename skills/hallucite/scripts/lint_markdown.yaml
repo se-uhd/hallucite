@@ -1,0 +1,27 @@
+extensions:
+  front-matter:
+    enabled: true
+  markdown-tables:
+    enabled: true
+  markdown-task-list-items:
+    enabled: true
+  markdown-strikethrough:
+    enabled: true
+  markdown-extended-autolinks:
+    enabled: true
+
+plugins:
+  md013:
+    enabled: false
+  md033:
+    enabled: false
+  md041:
+    enabled: false
+  # md034 (bare URL) is off: generated reports embed verbatim citation URLs,
+  # which must stay as-is and not be rewritten into Markdown links.
+  md034:
+    enabled: false
+  # md024: allow repeated section headings (e.g. `### Added`) under different
+  # version sections in CHANGELOG.md.
+  md024:
+    siblings_only: true

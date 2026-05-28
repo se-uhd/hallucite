@@ -30,6 +30,8 @@ import datetime as dt
 import json
 import os
 import re
+import subprocess
+import sys
 import urllib.parse
 from pathlib import Path
 
@@ -130,6 +132,7 @@ def _verify_sheet(paper: dict, items: list) -> str:
             links.append(f"[arXiv](https://arxiv.org/abs/{p['arxiv_id']})")
         lines += [
             f"## [{ref['original_number']}] {v['category']} (severity {SEVERITY.get(v['category'], '-')})",
+            "",
             f"- **Verdict:** ____  (real / hallucinated / citation-error)",
             f"- Title: {title or '(not parsed)'}",
             f"- Authors: {', '.join(p.get('authors') or []) or '(not parsed)'}"
@@ -140,7 +143,25 @@ def _verify_sheet(paper: dict, items: list) -> str:
             f"- Search: " + " · ".join(links),
             "",
         ]
-    return "\n".join(lines)
+    return "\n".join(lines).rstrip("\n") + "\n"
+
+
+def _lint_reports(paths):
+    """Auto-fix each generated report in place with the co-located Markdown linter, so the
+    files this tool writes are valid Markdown by default. Best-effort: returns None (skips)
+    if the vendored lint_markdown.py is not present next to this script."""
+    linter = Path(__file__).resolve().parent / "lint_markdown.py"
+    if not linter.is_file():
+        return None
+    clean = 0
+    for p in paths:
+        r = subprocess.run([sys.executable, str(linter), "--fix", str(p)],
+                           capture_output=True, text=True)
+        if r.returncode == 0:
+            clean += 1
+        elif r.stdout:
+            sys.stderr.write(r.stdout)
+    return clean, len(paths)
 
 
 def cmd_report(out_dir: Path) -> None:
@@ -149,6 +170,7 @@ def cmd_report(out_dir: Path) -> None:
     verdicts = _load_verdicts(out_dir)
 
     flagged: list[tuple[dict, dict, dict]] = []  # (paper, ref, verdict)
+    written: list = []
     today = dt.date.today().isoformat()
 
     for paper in load_papers(out_dir):
@@ -173,7 +195,9 @@ def cmd_report(out_dir: Path) -> None:
                 v = verdicts.get(f"{pid}:{r['original_number']}")
                 cat = v["category"] if v else "(pending)"
                 sev = SEVERITY.get(cat, "-")
-                lines.append(f"### [{r['original_number']}] {(r['parsed'] or {}).get('title') or r['raw_citation'][:70]}")
+                htitle = ((r["parsed"] or {}).get("title") or r["raw_citation"][:70]).rstrip(" .,;:!?")
+                lines.append(f"### [{r['original_number']}] {htitle}")
+                lines.append("")
                 lines.append(f"- Raw: {r['raw_citation']}")
                 lines.append(f"- DB status: {r['db_verification']['status']}")
                 lines.append(f"- Category: **{cat}** (severity: {sev})")
@@ -183,7 +207,9 @@ def cmd_report(out_dir: Path) -> None:
                 if v and cat in FLAG_CATEGORIES:
                     flagged.append((paper, r, v))
 
-        _atomic_write(reports / f"reference-check-{pid}.md", "\n".join(lines))
+        report_path = reports / f"reference-check-{pid}.md"
+        _atomic_write(report_path, "\n".join(lines).rstrip("\n") + "\n")
+        written.append(report_path)
 
     # Corpus rollup for human review.
     roll = ["# Potentially hallucinated references", "",
@@ -220,23 +246,34 @@ def cmd_report(out_dir: Path) -> None:
 
         for pid, items in ranked:
             roll.append(f"## {pid}")
+            roll.append("")
             for paper, ref, v in sorted(items, key=lambda x: ref_num(x[1])):
                 title = (ref["parsed"] or {}).get("title") or ""
                 roll.append(f"- **[{ref['original_number']}] {v['category']}** "
                             f"(severity {SEVERITY.get(v['category'], '-')}): {title}")
                 roll.append(f"  - Raw: {ref['raw_citation']}")
                 roll.append(f"  - Finding: {v.get('finding', '')}")
-    _atomic_write(reports / "potential-hallucinations.md", "\n".join(roll))
+            roll.append("")
+    rollup_path = reports / "potential-hallucinations.md"
+    _atomic_write(rollup_path, "\n".join(roll).rstrip("\n") + "\n")
+    written.append(rollup_path)
 
     # One manual-verification sheet per paper that has flagged references.
     vby: dict = {}
     for paper, ref, v in flagged:
         vby.setdefault(paper["paper_id"], (paper, []))[1].append((ref, v))
     for pid, (paper, its) in vby.items():
-        _atomic_write(reports / f"verify-{pid}.md", _verify_sheet(paper, its))
+        verify_path = reports / f"verify-{pid}.md"
+        _atomic_write(verify_path, _verify_sheet(paper, its))
+        written.append(verify_path)
 
+    lint_summary = _lint_reports(written)
     print(f"Wrote to {reports}/: per-paper reference-check reports, "
           f"potential-hallucinations.md, and {len(vby)} verify-*.md sheets ({len(flagged)} flagged).")
+    if lint_summary is not None:
+        clean, total = lint_summary
+        suffix = "" if clean == total else " (residual findings above)"
+        print(f"Markdown lint: {clean}/{total} report(s) clean{suffix}")
 
 
 def ref_num(ref: dict) -> int:

@@ -10,7 +10,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db. Tool-agnostic; usable by any agent that can run the scripts. Only the plugin/marketplace packaging is Claude Code-specific.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # hallucite
@@ -104,6 +104,9 @@ python "$SCRIPTS"/triage.py report --out <outdir>
   per-paper severity table.
 - `<outdir>/reports/verify-<paper_id>.md`: for each paper with flags, a manual-verification
   checklist (per-reference verdict line plus one-click Scholar/Google/DOI/arXiv links).
+
+`report` auto-lints every file it writes with the bundled Markdown linter
+(`lint_markdown.py`), so the reports are valid GFM without a manual pass.
 
 ## Notes
 

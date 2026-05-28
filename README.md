@@ -26,7 +26,7 @@ Run from this directory. Requires [mise](https://mise.jdx.dev).
 mise install          # provision Python 3.12 + uv (auto-venv)
 mise run install      # uv pip install -r requirements.txt  (hallucinator)
 mise run install-cli  # download the hallucinator CLI binary into .bin/ (checksum-verified)
-mise run build-dblp   # build the offline DBLP DB at ~/hallucite/dblp.db (~4.6 GB, ~20-30 min)
+mise run build-dblp   # build the offline DBLP database at ~/hallucite/dblp.db (~4.6 GB, ~20-30 min)
 ```
 
 The offline DBLP database lives at `~/hallucite/dblp.db`, outside this repo, which keeps the
@@ -90,3 +90,13 @@ Then in any session: "check the references in `<dir>` for hallucinations" (or `/
 skill (`skills/hallucite/SKILL.md`) invokes the bundled `skills/hallucite/scripts/` via
 `${CLAUDE_PLUGIN_ROOT}`.
 
+## Linting the docs
+
+The repo's Markdown is checked with a vendored PyMarkdown (synced from
+[se-uhd/pymarkdown-skill](https://github.com/se-uhd/pymarkdown-skill); self-contained under
+`skills/hallucite/scripts/`, no pip install):
+
+```sh
+mise run lint-md            # check every tracked Markdown file
+MD_FIX=1 mise run lint-md   # auto-fix in place
+```

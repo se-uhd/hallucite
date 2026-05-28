@@ -17,15 +17,18 @@ both by mise and by the bundled skill (`skills/hallucite/SKILL.md`, which calls 
 ## Running things
 
 - Use mise tasks rather than hand-rolled venvs: `mise run install | install-cli | build-dblp |
-  audit`. Python is pinned to 3.12 (hallucinator's wheels).
+  audit | lint-md`. Python is pinned to 3.12 (hallucinator's wheels).
 - The offline DBLP database is at `~/hallucite/dblp.db`, outside this repo (large, not committed).
   The audit warns at run time when it is over 30 days old. Do not move it back under the repo.
 - Stage 1/2 driver: `skills/hallucite/scripts/audit_references.py` (parses each reference via
   `pdf_references.py` plus hallucinator's `parse_reference`, then runs `Validator`). The target
   is 0 unparsed references.
-- Stage 3: `triage.py worklist | record | report`. Verdicts persist in `out/triage_verdicts.json`
-  (keyed `paper_id:number`, resumable). `report` also emits `out/reports/verify-<paper>.md`
-  manual-check sheets for any paper with flags.
+- Stage 3: `triage.py worklist | status | record | report`. Verdicts persist in
+  `out/triage_verdicts.json` (keyed `paper_id:number`, resumable), so triage can run on finished
+  papers while the audit is still going: `worklist --pending` lists only un-recorded references and
+  `status` shows per-paper progress. `report` writes the per-paper checks, the
+  `potential-hallucinations.md` rollup, and `verify-<paper>.md` sheets, and auto-lints every file
+  it writes.
 
 ## Triage conventions (Stage 3)
 
@@ -42,7 +45,12 @@ both by mise and by the bundled skill (`skills/hallucite/SKILL.md`, which calls 
 ## Conventions
 
 - Editing a script under `skills/hallucite/scripts/` updates it for both mise and the plugin
-  (one copy). Bump `.claude-plugin/plugin.json` `version` on a real release.
+  (one copy). On a real release, bump the version in `.claude-plugin/plugin.json` and
+  `skills/hallucite/SKILL.md` (`metadata.version`) and add a `CHANGELOG.md` entry.
 - Plans and READMEs describe only the current approach. Do not narrate dropped or superseded
   ideas, or "out of scope" history. After a scope change, rewrite the doc as if the final
   approach were always the plan.
+- Keep Markdown lint-clean: `mise run lint-md` (`MD_FIX=1` to auto-fix). The vendored PyMarkdown
+  in `skills/hallucite/scripts/` is synced from se-uhd/pymarkdown-skill; do not hand-edit
+  `_vendor/`, `lint_markdown.py`, or `check_baseline.py` (re-sync instead). The hallucite-owned
+  files are `schema_checks.py` and `lint_markdown.yaml`.
