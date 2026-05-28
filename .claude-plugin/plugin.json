@@ -1,0 +1,10 @@
+{
+  "name": "hallucite",
+  "version": "1.0.0",
+  "description": "Detect hallucinated (fabricated) references in academic paper PDF files: extract references, verify against offline DBLP + CrossRef/arXiv/OpenAlex, then triage the residue via web search and report likely-hallucinated citations.",
+  "author": {
+    "name": "se-uhd"
+  },
+  "keywords": ["references", "citations", "hallucination", "peer-review", "dblp", "bibliography"],
+  "license": "MIT"
+}

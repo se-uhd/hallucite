@@ -1,0 +1,52 @@
+# mise config for the hallucite reference-audit pipeline (https://mise.jdx.dev).
+#
+# This repo is both the runnable project (these tasks) and a Claude Code plugin. Run mise
+# tasks from the repo root. Layout:
+#
+#   hallucite/                  # repo root (also the plugin)
+#   ├── mise.toml  requirements.txt
+#   ├── .claude-plugin/         # plugin.json + marketplace.json
+#   ├── skills/hallucite/
+#   │   ├── SKILL.md
+#   │   └── scripts/            # pdf_references, audit_references, triage
+#   └── out/                    # (gitignored) per-paper JSON, summary.json, reports/
+#
+# The offline DBLP DB is at ~/hallucite/dblp.db, outside the repo (it is large and not
+# committed). `audit` checks the database's age at run time and warns when it is out of date.
+
+[tools]
+# hallucinator publishes wheels for CPython 3.12; pinning here avoids a
+# from-source build (Rust + maturin) that 3.13 would trigger.
+python = "3.12"
+uv = "latest"
+
+[env]
+# Auto-create and activate the repo's .venv whenever mise loads this dir.
+_.python.venv = { path = ".venv", create = true }
+
+[tasks.install]
+description = "Install Python dependencies into the venv"
+run = "uv pip install -r requirements.txt"
+
+[tasks.install-cli]
+description = "Download the hallucinator CLI prebuilt binary into .bin/ (checksum-verified, no curl|sh)"
+run = """
+set -euo pipefail
+arch=$(uname -m); case "$arch" in arm64|aarch64) tgt=aarch64-apple-darwin ;; x86_64) tgt=x86_64-apple-darwin ;; *) echo "unsupported arch $arch" >&2; exit 1 ;; esac
+url="https://github.com/gianlucasb/hallucinator/releases/latest/download/hallucinator-cli-$tgt.tar.xz"
+mkdir -p .bin
+curl -fsSL "$url" -o /tmp/hcli.tar.xz
+curl -fsSL "$url.sha256" -o /tmp/hcli.tar.xz.sha256
+[ "$(cut -d' ' -f1 /tmp/hcli.tar.xz.sha256)" = "$(shasum -a 256 /tmp/hcli.tar.xz | cut -d' ' -f1)" ] || { echo "checksum mismatch" >&2; exit 1; }
+tar -xf /tmp/hcli.tar.xz -C /tmp
+cp "/tmp/hallucinator-cli-$tgt/hallucinator-cli" .bin/ && chmod +x .bin/hallucinator-cli
+echo "installed .bin/hallucinator-cli $(./.bin/hallucinator-cli --version)"
+"""
+
+[tasks.build-dblp]
+description = "Build the offline DBLP database at ~/hallucite/dblp.db (one-time; ~4.6 GB, ~20-30 min)"
+run = '.bin/hallucinator-cli update-dblp "$HOME/hallucite/dblp.db"'
+
+[tasks.audit]
+description = "Stages 1+2: extract + verify references. Usage: mise run audit -- <pdf-file-or-dir> [out-dir]"
+run = "python skills/hallucite/scripts/audit_references.py {{arg(name='path')}} --dblp $HOME/hallucite/dblp.db --out {{arg(name='out', default='out')}}"

@@ -1,0 +1,14 @@
+{
+  "name": "se-uhd",
+  "owner": {
+    "name": "se-uhd"
+  },
+  "description": "se-uhd Claude Code plugins.",
+  "plugins": [
+    {
+      "name": "hallucite",
+      "source": "./",
+      "description": "Detect hallucinated references in academic paper PDF files: extract -> verify against offline DBLP + CrossRef/arXiv/OpenAlex -> triage the residue -> report likely-hallucinated citations."
+    }
+  ]
+}
