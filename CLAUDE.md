@@ -32,7 +32,10 @@ both by mise and by the bundled skill (`skills/hallucite/SKILL.md`, which calls 
 
 ## Triage conventions (Stage 3)
 
-- Investigate with parallel web queries; resolve DOIs via `api.crossref.org/works/<doi>`.
+- Investigate with parallel web queries; resolve DOIs via `api.crossref.org/works/<doi>`. If a
+  narrow query (title + author) finds nothing, broaden to the bare title (unquoted) and screen the
+  results before judging; obscure/predatory venues are poorly indexed, so "not found" on a narrow
+  query is not fabrication evidence.
 - Fabrication signatures: dead or mismatched DOIs, non-existent or defunct journals, an
   impossible volume/year, initials-only generic authors, real authors attached to a non-existent
   title, placeholder arXiv IDs such as `2310.XXXX`.

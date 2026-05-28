@@ -10,7 +10,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db. Tool-agnostic; usable by any agent that can run the scripts. Only the plugin/marketplace packaging is Claude Code-specific.
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # hallucite
@@ -73,10 +73,15 @@ and `--pending` surfaces only the references that have not been recorded yet.
 For each entry (references with `db_verification.status` of `not_found` / `author_mismatch` /
 `unparsed`), investigate with parallel web queries and classify it:
 
-- Quoted title plus first-author surname; bare title; `site:arxiv.org "<title>"`; fetch any
-  embedded DOI/URL directly; check Google Scholar.
-- If a DOI is present, resolve `https://api.crossref.org/works/<doi>`. A 404, or resolution to an
-  unrelated paper, is a strong fabrication signal.
+- Search in escalating breadth; only conclude "not found" after the broad pass. Start with the
+  DOI (resolve `https://api.crossref.org/works/<doi>`; a 404, or resolution to an unrelated
+  paper, is a strong fabrication signal), then the exact title in quotes plus the first-author
+  surname (and `site:arxiv.org "<title>"`), then the exact title in quotes alone and on Google
+  Scholar.
+- If those find nothing, drop the quotes and search the title as plain keywords, then read the
+  results for a genuine match. Obscure or predatory venues are poorly indexed, so a narrow query
+  returning nothing is not evidence of fabrication; broaden first, and fetch the venue page or
+  any embedded DOI/URL directly.
 - Fabrication signatures: non-existent or defunct journals, an impossible volume/year,
   initials-only generic authors, real researchers' names attached to a non-existent title,
   placeholder arXiv IDs such as `2310.XXXX`.

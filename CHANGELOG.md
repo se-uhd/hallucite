@@ -4,6 +4,15 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.2.0] - 2026-05-28
+
+### Changed
+
+- Stage 3 triage searches in escalating breadth: when a title-plus-author query finds nothing, it
+  broadens to an unquoted title search and screens the results instead of concluding "not found".
+  Obscure and predatory venues are poorly indexed, so a narrow miss is no longer treated as
+  evidence of fabrication.
+
 ## [1.1.0] - 2026-05-28
 
 ### Added
@@ -27,5 +36,6 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.2.0]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.2.0
 [1.1.0]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.1.0
 [1.0.0]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.0.0
