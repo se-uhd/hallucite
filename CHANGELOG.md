@@ -4,6 +4,21 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.5.1] - 2026-05-29
+
+### Fixed
+
+- `triage.py record --signals` accepts `venue_match=partial`, which the documented signal
+  vocabulary lists but the validator's enum had omitted (a worker following the docs would have hit
+  a spurious rejection).
+
+### Changed
+
+- `PLAN.md` is brought in sync with the title-first triage design: the triage step, the verdict
+  contract (structured fabrication signals plus the `fcntl` lock on `triage_verdicts.json`), the
+  reports (the Desk-reject candidates section), per-paper `worklist --paper` slicing, and the
+  smoke-test inventory.
+
 ## [1.5.0] - 2026-05-29
 
 ### Added
@@ -131,6 +146,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.5.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.5.1
 [1.5.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.5.0
 [1.4.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.4.1
 [1.4.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.4.0
