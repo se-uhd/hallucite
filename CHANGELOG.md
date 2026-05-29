@@ -4,6 +4,31 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.4.1] - 2026-05-29
+
+### Fixed
+
+- Extraction no longer drops references in several edge cases (validated against the prior corpus
+  with no count regressions; one real reference that had been silently dropped was recovered):
+  a numeric bibliography that starts above `[1]` is segmented from its true first entry instead of
+  being dropped (anchored on the first real ascending run, skipping stray page/DOI numbers); the
+  References section is taken from the first heading, so a repeated "References" running page header
+  no longer truncates it to the last page; a trailing Appendix/Acknowledgments heading still ends
+  the section but a reference whose text merely begins with one of those words does not; and the
+  author-year detector finds the year within the first 300 (was 100) characters, so a reference
+  with a long author list is no longer missed.
+- `triage.py report` deletes previously generated files first (no orphan `verify-<pid>.md`),
+  surfaces retracted-but-"verified" references, shows a "Not verified" line for `--no-verify`
+  references, stores a reference fingerprint and warns on a stale verdict after a re-audit, and
+  identifies records by content so a stray `.json` no longer crashes the run.
+- `find_pdfs` matches `.pdf` case-insensitively and errors on an empty directory;
+  `dblp_build_info` tolerates a non-string `last_updated`; `install-cli` refuses non-Darwin hosts;
+  the `requirements.txt` comment was corrected.
+
+### Changed
+
+- CI smoke workflow uses Node 24 actions (`actions/checkout@v5`, `actions/setup-python@v6`).
+
 ## [1.4.0] - 2026-05-29
 
 ### Fixed
@@ -80,6 +105,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.4.1]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.4.1
 [1.4.0]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.4.0
 [1.3.0]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.3.0
 [1.2.0]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.2.0
