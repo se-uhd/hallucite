@@ -51,7 +51,18 @@ both by mise and by the bundled skill (`skills/hallucite/SKILL.md`, which calls 
 
 - Editing a script under `skills/hallucite/scripts/` updates it for both mise and the plugin
   (one copy). On a real release, bump the version in `.claude-plugin/plugin.json` and
-  `skills/hallucite/SKILL.md` (`metadata.version`) and add a `CHANGELOG.md` entry.
+  `skills/hallucite/SKILL.md` (`metadata.version`), add a `CHANGELOG.md` entry, and tag the
+  release commit: `git tag hallucite--v<version>` (lightweight, matching the existing
+  `hallucite--v*` tags and the CHANGELOG link footers). Run the smoke tests
+  (`python skills/hallucite/scripts/tests/run_smoke.py`) and do not consider a release done until
+  it is tagged and they pass.
+- Verification `status` and `db_name` strings come from the external `hallucinator` package; treat
+  them as a contract that can drift. Define "needs triage" by negation (`status != "verified"`),
+  never by an allow-list of failure strings, and keep the invariant that every reference is
+  verified, unverified, or pending (none silently dropped). Validate any hard-coded hallucinator
+  name against what the package actually emits (`run_smoke.py` and the audit's `--offline`
+  tripwire do this); a silent name mismatch is what caused both the `mismatch` and the
+  `DOI Resolver` bugs.
 - Plans and READMEs describe only the current approach. Do not narrate dropped or superseded
   ideas, or "out of scope" history. After a scope change, rewrite the doc as if the final
   approach were always the plan.

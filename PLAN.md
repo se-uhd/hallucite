@@ -59,7 +59,10 @@ days old; rebuild with `mise run build-dblp`.
 ```
 
 A reference goes to triage when `db_verification.status` is anything other than `verified`
-(`not_found`, `mismatch`, or `unparsed`). Triage verdicts are not written back into this file: `triage.py record` stores them
+(`not_found`, `mismatch`, or `unparsed`); every reference is thus verified, unverified, or pending
+(`--no-verify`), and the audit derives the `unverified` count by negation so that a new
+hallucinator status cannot silently fall through uncounted. Triage verdicts are not written back
+into this file: `triage.py record` stores them
 separately in `triage_verdicts.json`, keyed `"<paper_id>:<number>"` (resumable), and
 `triage.py report` joins the two when it assembles the reports.
 
@@ -68,6 +71,15 @@ separately in `triage_verdicts.json`, keyed `"<paper_id>:<number>"` (resumable),
 `triage.py report` writes to `out/reports/`: `reference-check-<paper>.md` (per paper),
 `potential-hallucinations.md` (corpus rollup, led by a per-paper severity table), and
 `verify-<paper>.md` (a manual-check sheet with one-click search links for each flagged paper).
+
+## Tests
+
+`skills/hallucite/scripts/tests/run_smoke.py` is a dependency-light smoke suite (run by
+`.github/workflows/smoke.yml` on push and pull request, and locally before a release): version and
+packaging consistency, logic-contract unit tests on synthetic per-paper records (including a guard
+that a `mismatch` reference reaches triage), Markdown lint, and an offline end-to-end audit against
+a generated fixture DBLP database and a synthetic fixture PDF. The full DBLP database and the
+online backends are not exercised in CI.
 
 ## Packaging
 

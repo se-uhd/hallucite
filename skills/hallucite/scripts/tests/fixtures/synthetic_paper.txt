@@ -1,0 +1,16 @@
+Synthetic Test Paper for hallucite Smoke Tests
+
+Abstract. This document exists only to exercise the hallucite extraction and
+verification pipeline. None of the references below are real publications.
+
+1 Introduction
+
+This is placeholder body text so the document has a section before the
+bibliography. It carries no meaning.
+
+References
+
+[1] Alice Anderson and Bob Brown. A study of synthetic widgets in distributed systems. In Proceedings of the International Conference on Imaginary Computing, pages 1-10, 2020.
+[2] Carol Carter and Dave Davis. Foundations of fictional algorithms. Journal of Make-Believe Research, 12(3):100-120, 2019.
+[3] Erin Evans. An entirely nonexistent treatise on nothing in particular. Imaginary University Press, 2021.
+[4] Frank Foster, Grace Green, and Henry Hughes. Patterns of placeholder data in software testing. ACM Transactions on Test Fixtures, 5(2):50-70, 2022.

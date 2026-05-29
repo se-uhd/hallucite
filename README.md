@@ -92,6 +92,17 @@ Then in any session: "check the references in `<dir>` for hallucinations" (or `/
 skill (`skills/hallucite/SKILL.md`) invokes the bundled `skills/hallucite/scripts/` via
 `${CLAUDE_PLUGIN_ROOT}`.
 
+## Tests
+
+```sh
+python skills/hallucite/scripts/tests/run_smoke.py
+```
+
+A dependency-light smoke suite, also run in CI by `.github/workflows/smoke.yml`: version and
+packaging consistency, logic-contract checks on the per-paper JSON (including a guard that a
+`mismatch` reference reaches triage), Markdown lint, and an offline end-to-end audit against a tiny
+generated fixture DBLP database and a synthetic fixture PDF.
+
 ## Linting the docs
 
 The repo's Markdown is checked with a vendored PyMarkdown (synced from

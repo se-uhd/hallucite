@@ -1,0 +1,30 @@
+name: smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"   # hallucinator ships CPython 3.12 wheels (see CLAUDE.md)
+      - name: Install pdftotext (poppler) and hallucinator
+        run: |
+          sudo apt-get update && sudo apt-get install -y poppler-utils
+          python -m pip install --upgrade pip
+          pip install hallucinator
+      - name: Pipeline smoke (packaging + logic contract + offline end-to-end)
+        run: python skills/hallucite/scripts/tests/run_smoke.py
+      - name: Markdown lint
+        run: |
+          rc=0
+          for f in $(git ls-files '*.md' | grep -vE '/_vendor/|/bundled_licenses/'); do
+            python skills/hallucite/scripts/lint_markdown.py "$f" || rc=1
+          done
+          exit $rc

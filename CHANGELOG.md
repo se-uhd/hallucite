@@ -4,6 +4,31 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.4.0] - 2026-05-29
+
+### Fixed
+
+- `--offline` now actually disables the DOI backend. The disable list named it "DOI Resolver",
+  but hallucinator emits the backend as "DOI", so the name matched nothing and DOI lookups kept
+  hitting the network in offline mode, sometimes returning a non-reproducible `verified` that
+  hides a reference from triage. The list now uses the real backend names, drops two that
+  hallucinator never emits (SSRN, NeurIPS), and the audit warns at run time if a configured name
+  never appears in any result.
+- The audit exits non-zero and prints a summary when a paper fails to process, instead of printing
+  "Done" and returning 0 while the failed paper is silently absent from Stage 3.
+- The audit warns when a paper extracts zero references or no References section is found, which
+  previously looked identical to a clean paper.
+- `triage.py record` warns when the given `paper_id:number` matches no audited reference, instead
+  of storing an orphan verdict that never reaches a report.
+- The mise `audit` task quotes the DBLP path so a path containing spaces no longer word-splits.
+
+### Added
+
+- Smoke-test suite (`skills/hallucite/scripts/tests/run_smoke.py`) and a GitHub Actions workflow
+  (`.github/workflows/smoke.yml`): version/packaging consistency, logic-contract unit tests
+  (including a guard that a `mismatch` reference still reaches triage), Markdown lint, and an
+  offline end-to-end audit against a generated fixture DBLP database and a synthetic fixture PDF.
+
 ## [1.3.0] - 2026-05-29
 
 ### Fixed
@@ -55,6 +80,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.4.0]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.4.0
 [1.3.0]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.3.0
 [1.2.0]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.2.0
 [1.1.0]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.1.0
