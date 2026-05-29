@@ -1,6 +1,8 @@
 .venv/
 .bin/
 out/
+triage_verdicts.json.lock
+.claude/
 __pycache__/
 *.pyc
 .DS_Store
