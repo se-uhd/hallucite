@@ -113,10 +113,12 @@ def _strip_line_numbers(lines: list[str]) -> tuple[list[str], bool]:
 
 
 def _references_section(lines: list[str]) -> list[str]:
-    """Lines after the last 'References'/'Bibliography'-style header. Tolerates a leading
-    section number ('7 References', 'VII. References') and a trailing colon."""
-    for i in range(len(lines) - 1, -1, -1):
-        head = _HEADER_NUM.sub("", lines[i].strip().rstrip(" .:").lower())
+    """Lines after the FIRST 'References'/'Bibliography'-style header. Tolerates a leading section
+    number ('7 References', 'VII. References') and a trailing colon. Scanning forward (not
+    backward) means a 'References' running page header repeated on later pages no longer chops the
+    section down to its last page; those repeated header lines are dropped later as watermarks."""
+    for i, line in enumerate(lines):
+        head = _HEADER_NUM.sub("", line.strip().rstrip(" .:").lower())
         if head in _SECTION_HEADERS:
             return lines[i + 1:]
     return []
@@ -125,16 +127,28 @@ def _references_section(lines: list[str]) -> list[str]:
 # ── Segmentation ─────────────────────────────────────────────────────────────
 
 def _is_new_numeric(s: str, last: int) -> int | None:
-    """The number if `s` starts a new numeric entry whose number continues the
-    running sequence (advances by 1-3, or starts at 1); else None. The
-    sequentiality guard stops stray years/page numbers starting phantom refs."""
+    """The number if `s` starts a new numeric entry whose number continues the running sequence
+    (advances by 1-3 from `last`); else None. The sequentiality guard stops stray years/page
+    numbers from starting phantom refs. The sequence is anchored by `_numeric_anchor` (through the
+    initial `last`), so a bibliography that legitimately starts above 1 is not dropped wholesale."""
     m = _NUM.match(s)
     if not m:
         return None
     num = int(m.group(1))
-    if (num == 1 and last == 0) or 0 < num - last <= 3:
-        return num
-    return None
+    return num if 0 < num - last <= 3 else None
+
+
+def _numeric_anchor(section: list[str]) -> int:
+    """The number the numeric sequence should start at: the smallest entry number N for which N+1
+    and N+2 also appear as entry lines (a real ascending run). This skips a stray page/DOI number
+    and lets a bibliography that legitimately starts above 1 be segmented rather than dropped,
+    while still preferring the conventional start at 1. Falls back to the smallest number, else 1."""
+    present = {int(_NUM.match(s).group(1)) for s in (ln.strip() for ln in section)
+               if s and _NUM.match(s)}
+    if not present:
+        return 1
+    runs = [n for n in present if n + 1 in present and n + 2 in present]
+    return min(runs) if runs else min(present)
 
 
 def _strip_numeric_label(s: str) -> str:
@@ -151,7 +165,7 @@ def _dominant_style(section: list[str]) -> str:
             brk += 1
         elif _NUM.match(s):
             num += 1
-        elif _AUTHORYEAR.match(s) and _YEAR.search(s[:100]):
+        elif _AUTHORYEAR.match(s) and _YEAR.search(s[:300]):
             ay += 1
     if max(num, brk, ay) == 0:
         return "none"
@@ -176,13 +190,15 @@ def _segment(section: list[str], style: str) -> list[tuple[int, str]]:
     refs: list[tuple[int, str]] = []
     cur: str | None = None
     cur_num = 0
-    last = 0   # last numeric number (numeric mode sequentiality)
+    last = (_numeric_anchor(section) - 1) if style == "numeric" else 0  # numeric sequentiality anchor
     seq = 0    # sequential counter (bracket / author-year)
     for line in section:
         s = line.strip()
         if not s or "???:" in s or s in repeated:  # blank / anonymized footer / repeated watermark
             continue
-        if _STOP_SECTION.match(s):
+        # Stop at a trailing Appendix/Acknowledgments *heading* (short, standalone), but not at a
+        # reference whose text merely begins with one of those words.
+        if _STOP_SECTION.match(s) and len(s) <= 40 and not _NUM.match(s) and not _BRACKET.match(s):
             break
 
         new_text: str | None = None
@@ -197,7 +213,7 @@ def _segment(section: list[str], style: str) -> list[tuple[int, str]]:
                 seq = new_num = seq + 1
                 new_text = _BRACKET.sub("", s, count=1).strip()
         elif style == "author-year":
-            if _AUTHORYEAR.match(s) and _YEAR.search(s[:100]):
+            if _AUTHORYEAR.match(s) and _YEAR.search(s[:300]):
                 seq = new_num = seq + 1
                 new_text = s
 
