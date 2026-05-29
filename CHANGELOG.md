@@ -105,9 +105,9 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
-[1.4.1]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.4.1
-[1.4.0]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.4.0
-[1.3.0]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.3.0
-[1.2.0]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.2.0
-[1.1.0]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.1.0
-[1.0.0]: https://github.com/se-uhd/hallucite/releases/tag/hallucite--v1.0.0
+[1.4.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.4.1
+[1.4.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.4.0
+[1.3.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.3.0
+[1.2.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.2.0
+[1.1.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.1.0
+[1.0.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.0.0

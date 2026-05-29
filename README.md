@@ -92,7 +92,7 @@ Then in any session: "check the references in `<dir>` for hallucinations" (or `/
 skill (`skills/hallucite/SKILL.md`) invokes the bundled `skills/hallucite/scripts/` via
 `${CLAUDE_PLUGIN_ROOT}`.
 
-## Tests
+## Tests and linting
 
 ```sh
 python skills/hallucite/scripts/tests/run_smoke.py
@@ -103,15 +103,6 @@ packaging consistency, logic-contract checks on the per-paper JSON (including a 
 `mismatch` reference reaches triage), Markdown lint, and an offline end-to-end audit against a tiny
 generated fixture DBLP database and a synthetic fixture PDF.
 
-## Contributing
-
-Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
-(`type(scope): summary`, for example `fix(extract): ...`); the release version lives in the
-`hallucite--v*` git tag, not in the message. Run `mise run lint-md` and the smoke tests
-(`python skills/hallucite/scripts/tests/run_smoke.py`) before a release.
-
-## Linting the docs
-
 The repo's Markdown is checked with a vendored PyMarkdown (synced from
 [se-uhd/pymarkdown-skill](https://github.com/se-uhd/pymarkdown-skill); self-contained under
 `skills/hallucite/scripts/`, no pip install):
@@ -120,3 +111,10 @@ The repo's Markdown is checked with a vendored PyMarkdown (synced from
 mise run lint-md            # check every tracked Markdown file
 MD_FIX=1 mise run lint-md   # auto-fix in place
 ```
+
+## Contributing
+
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
+(`type(scope): summary`, for example `fix(extract): ...`); keep the release version out of the
+message and record it with a `v*` git tag instead. Run `mise run lint-md` and the smoke tests
+(`python skills/hallucite/scripts/tests/run_smoke.py`) before a release.

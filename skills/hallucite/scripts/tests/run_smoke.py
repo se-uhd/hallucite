@@ -82,16 +82,16 @@ def tier1_packaging() -> None:
            f"version in sync: plugin.json={pv}, SKILL.md={sv}, CHANGELOG latest={cv}")
 
     try:
-        tags = subprocess.run(["git", "-C", str(REPO), "tag", "-l", "hallucite--v*"],
+        tags = subprocess.run(["git", "-C", str(REPO), "tag", "-l", "v*"],
                               capture_output=True, text=True).stdout.split()
     except Exception:
         tags = []
     if not tags:
         C.skip("git tags unavailable (shallow checkout); release-tag check skipped")
-    elif f"hallucite--v{pv}" in tags:
-        C.ok(f"release tag hallucite--v{pv} exists")
+    elif f"v{pv}" in tags:
+        C.ok(f"release tag v{pv} exists")
     else:
-        C.skip(f"tag hallucite--v{pv} not present yet (tag the release commit before publishing)")
+        C.skip(f"tag v{pv} not present yet (tag the release commit before publishing)")
 
     C.eq(market.get("name"), "se-uhd", "marketplace name = se-uhd")
     C.true(any(p.get("source") in ("./", ".") for p in (market.get("plugins") or [])),
