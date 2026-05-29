@@ -61,7 +61,7 @@ SEVERITY = {
 _SIGNAL_ENUMS = {
     "title_match": {"yes", "no", "unsure", "na"},
     "authors_match": {"yes", "no", "partial", "unsure", "na"},
-    "venue_match": {"yes", "no", "unsure", "na"},
+    "venue_match": {"yes", "no", "partial", "unsure", "na"},
     "doi_status": {"resolves", "404", "mismatch", "none", "unsure"},
 }
 _SIGNAL_KEYS = set(_SIGNAL_ENUMS) | {"matched_title"}
