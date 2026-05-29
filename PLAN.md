@@ -12,8 +12,15 @@ Papers are identified by their id, the PDF file name (a file `paper1.pdf` has id
 2. Verify (`audit_references.py`): check each against DBLP (local offline database), CrossRef, arXiv,
    OpenAlex, Semantic Scholar, and other open bibliographic databases. Anything a database
    confirms is cleared. No LLM.
-3. Triage (`triage.py` with an interactive LLM agent): investigate only the database-unverified residue (DOI
-   and publisher pages, Google Scholar, web search), classify each, and write the reports.
+3. Triage (`triage.py` with an interactive LLM agent): investigate only the database-unverified
+   residue (DOI and publisher pages, Google Scholar, web search) and classify each **title-first** --
+   first ask whether a publication bearing the cited title exists at all, then whether its metadata
+   matches. A reference whose cited title matches no real publication is a fabrication
+   (`likely-hallucinated`), distinct from a real, locatable work cited with a slipped field
+   (`partial-match`); finding a different paper by the same authors does not make the cited title
+   real. The agent records a structured set of fabrication signals with each verdict and writes the
+   reports. To fan out across papers, `triage.py worklist --paper <id>` emits one paper's slice by
+   exact id match, so a worker reads only its own references.
 
 ## Built on hallucinator
 
@@ -63,23 +70,33 @@ A reference goes to triage when `db_verification.status` is anything other than 
 (`--no-verify`), and the audit derives the `unverified` count by negation so that a new
 hallucinator status cannot silently fall through uncounted. Triage verdicts are not written back
 into this file: `triage.py record` stores them
-separately in `triage_verdicts.json`, keyed `"<paper_id>:<number>"` (resumable), and
-`triage.py report` joins the two when it assembles the reports.
+separately in `triage_verdicts.json`, keyed `"<paper_id>:<number>"` (resumable). Each verdict
+carries its category, a one-line finding, and structured fabrication signals (`title_match`,
+`matched_title`, `authors_match`, `venue_match`, `doi_status`). `record` takes an `fcntl` lock on
+the file so parallel workers do not lose each other's verdicts, and enforces the title-first rule:
+a `partial-match` must name a matched real title (`title_match=yes` plus `matched_title`, or `na`
+for a non-publication resource) and a `likely-hallucinated` must assert the title was not found
+(`title_match=no`). `triage.py report` joins the two when it assembles the reports.
 
 ## Reports
 
 `triage.py report` writes to `out/reports/`: `reference-check-<paper>.md` (per paper),
-`potential-hallucinations.md` (corpus rollup, led by a per-paper severity table), and
-`verify-<paper>.md` (a manual-check sheet with one-click search links for each flagged paper).
+`potential-hallucinations.md` (corpus rollup, led by a per-paper severity table and a **Desk-reject
+candidates** section -- references whose cited title matches no real publication), and
+`verify-<paper>.md` (a manual-check sheet for each flagged paper, with the matched title, the
+signal summary, and one-click search links). The rollup shows each flag's cited-vs-matched title,
+so a reviewer sees the discriminating fact without re-investigating.
 
 ## Tests
 
 `skills/hallucite/scripts/tests/run_smoke.py` is a dependency-light smoke suite (run by
 `.github/workflows/smoke.yml` on push and pull request, and locally before a release): version and
-packaging consistency, logic-contract unit tests on synthetic per-paper records (including a guard
-that a `mismatch` reference reaches triage), Markdown lint, and an offline end-to-end audit against
-a generated fixture DBLP database and a synthetic fixture PDF. The full DBLP database and the
-online backends are not exercised in CI.
+packaging consistency, logic-contract unit tests on synthetic per-paper records (a `mismatch`
+reference reaches triage; the title-first record gate; the verdicts lock under concurrent writes;
+per-paper worklist slice isolation, including the `paper6`/`paper66` prefix case; and the
+desk-reject heuristic), Markdown lint, and an offline end-to-end audit against a generated fixture
+DBLP database and a synthetic fixture PDF. The full DBLP database and the online backends are not
+exercised in CI.
 
 ## Packaging
 
