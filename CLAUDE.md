@@ -56,6 +56,11 @@ both by mise and by the bundled skill (`skills/hallucite/SKILL.md`, which calls 
   `hallucite--v*` tags and the CHANGELOG link footers). Run the smoke tests
   (`python skills/hallucite/scripts/tests/run_smoke.py`) and do not consider a release done until
   it is tagged and they pass.
+- Commit messages follow Conventional Commits: `type(scope): imperative summary`. Types: `feat`,
+  `fix`, `docs`, `test`, `ci`, `chore`, `refactor`; the scope is the pipeline area (`audit`,
+  `extract`, `triage`) or tooling, and is omitted for cross-cutting changes. Keep the summary short
+  and imperative and put detail in the body. Do not put the release version in the message -- the
+  `hallucite--v*` tag records the release.
 - Verification `status` and `db_name` strings come from the external `hallucinator` package; treat
   them as a contract that can drift. Define "needs triage" by negation (`status != "verified"`),
   never by an allow-list of failure strings, and keep the invariant that every reference is

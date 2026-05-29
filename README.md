@@ -103,6 +103,13 @@ packaging consistency, logic-contract checks on the per-paper JSON (including a 
 `mismatch` reference reaches triage), Markdown lint, and an offline end-to-end audit against a tiny
 generated fixture DBLP database and a synthetic fixture PDF.
 
+## Contributing
+
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
+(`type(scope): summary`, for example `fix(extract): ...`); the release version lives in the
+`hallucite--v*` git tag, not in the message. Run `mise run lint-md` and the smoke tests
+(`python skills/hallucite/scripts/tests/run_smoke.py`) before a release.
+
 ## Linting the docs
 
 The repo's Markdown is checked with a vendored PyMarkdown (synced from
