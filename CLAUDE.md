@@ -18,8 +18,10 @@ both by mise and by the bundled skill (`skills/hallucite/SKILL.md`, which calls 
 
 - Use mise tasks rather than hand-rolled venvs: `mise run install | install-cli | build-dblp |
   audit | lint-md`. Python is pinned to 3.12 (hallucinator's wheels).
-- The offline DBLP database is at `~/hallucite/dblp.db`, outside this repo (large, not committed).
-  The audit warns at run time when it is over 30 days old. Do not move it back under the repo.
+- The offline DBLP database defaults to `~/hallucite/dblp.db`, outside this repo (large, not
+  committed); override the location with `$HALLUCITE_DBLP`. The audit warns at run time when it is
+  over 30 days old. Do not put it under the repo: an installed plugin is cloned to a managed dir
+  the user never sees, so an in-repo (even gitignored) path would not work for marketplace installs.
 - Stage 1/2 driver: `skills/hallucite/scripts/audit_references.py` (parses each reference via
   `pdf_references.py` plus hallucinator's `parse_reference`, then runs `Validator`). The target
   is 0 unparsed references.

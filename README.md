@@ -30,7 +30,7 @@ mise run build-dblp   # build the offline DBLP database at ~/hallucite/dblp.db (
 ```
 
 The offline DBLP database lives at `~/hallucite/dblp.db`, outside this repo, which keeps the
-2.5 GB file out of git.
+2.5 GB file out of git. Set `$HALLUCITE_DBLP` to store it somewhere else.
 
 ## Run the audit (Stages 1+2, no LLM)
 
@@ -41,7 +41,8 @@ mise run audit -- <pdf-file-or-dir> <out-dir>  # optional 2nd arg sets the outpu
 
 Writes `out/<paper_id>.json` (every reference plus per-database verification) and
 `out/summary.json` (status counts plus the DBLP build date). Options: `--dblp PATH`, `--out DIR`,
-`--mailto EMAIL`, `--offline` (DBLP-only), `--no-verify`. A reference needs triage when its
+`--mailto EMAIL`, `--offline` (DBLP-only), `--no-verify`. The DBLP path defaults to
+`$HALLUCITE_DBLP` (else `~/hallucite/dblp.db`). A reference needs triage when its
 `db_verification.status` is `not_found`, `author_mismatch`, or `unparsed`. Re-running into the
 same `--out` is idempotent (`triage_verdicts.json` accumulates by `paper_id:number`).
 

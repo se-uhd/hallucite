@@ -35,8 +35,8 @@ reliably yields 0 unparsed references.
 ## DBLP dump
 
 `hallucinator-cli update-dblp` builds the offline DB from DBLP's RDF N-Triples dump (~4.6 GB)
-into a ~2.5 GB SQLite + FTS5 file (8.4 M publications) at `~/hallucite/dblp.db`, outside the
-repo (not committed). The audit checks the database's age at run time and warns when it is over 30
+into a ~2.5 GB SQLite + FTS5 file (8.4 M publications) at `~/hallucite/dblp.db` (or
+`$HALLUCITE_DBLP` if set), outside the repo (not committed). The audit checks the database's age at run time and warns when it is over 30
 days old; rebuild with `mise run build-dblp`.
 
 ## Per-paper JSON (the contract between stages)

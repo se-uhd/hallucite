@@ -8,9 +8,9 @@ description: >-
   without using an LLM, then triages only the database-unverified residue via web search and writes
   a report of likely-hallucinated references plus per-paper manual-verification sheets.
 license: MIT
-compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db. Tool-agnostic; usable by any agent that can run the scripts. Only the plugin/marketplace packaging is Claude Code-specific.
+compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Only the plugin/marketplace packaging is Claude Code-specific.
 metadata:
-  version: "1.2.0"
+  version: "1.3.0"
 ---
 
 # hallucite
@@ -37,7 +37,8 @@ SCRIPTS="${CLAUDE_PLUGIN_ROOT}/skills/hallucite/scripts"
    `https://github.com/gianlucasb/hallucinator/releases/latest`, checksum-verified, or
    `cargo install hallucinator-cli`):
    `hallucinator-cli update-dblp ~/hallucite/dblp.db` (about 4.6 GB download, 20-30 min, builds
-   a ~2.5 GB SQLite+FTS5 file). Keep it outside protected dirs such as ~/Downloads.
+   a ~2.5 GB SQLite+FTS5 file). Keep it outside protected dirs such as ~/Downloads. To store it
+   elsewhere, set `$HALLUCITE_DBLP` to the target path and pass that path here instead.
 3. Updates: the audit (Stage 1+2 below) checks the database's age at run time and warns when it is
    over 30 days old. Recent papers cite recent work, so rebuild it when that warning appears.
 
@@ -49,13 +50,13 @@ against the directory the user means (ask if ambiguous).
 ## Stage 1+2: extract and verify (no LLM)
 
 ```sh
-python "$SCRIPTS"/audit_references.py <pdf-file-or-dir> --dblp ~/hallucite/dblp.db \
-       --out <outdir> --mailto <your-email>
+python "$SCRIPTS"/audit_references.py <pdf-file-or-dir> --out <outdir> --mailto <your-email>
 ```
 
 Writes `<outdir>/<paper_id>.json` (every reference, parsed fields plus per-database verification)
-and `<outdir>/summary.json`. Flags: `--offline` (DBLP-only, no network), `--no-verify`
-(extraction only). Extraction is `lineno`- and two-column-aware and handles numeric,
+and `<outdir>/summary.json`. The offline DBLP DB defaults to `$HALLUCITE_DBLP` (else
+`~/hallucite/dblp.db`); override it with `--dblp PATH`. Flags: `--offline` (DBLP-only, no
+network), `--no-verify` (extraction only). Extraction is `lineno`- and two-column-aware and handles numeric,
 bracket-label, and author-year bibliographies; the target is 0 unparsed references.
 
 ## Stage 3: triage the residue (LLM)

@@ -11,8 +11,9 @@
 #   │   └── scripts/            # pdf_references, audit_references, triage
 #   └── out/                    # (gitignored) per-paper JSON, summary.json, reports/
 #
-# The offline DBLP DB is at ~/hallucite/dblp.db, outside the repo (it is large and not
-# committed). `audit` checks the database's age at run time and warns when it is out of date.
+# The offline DBLP DB defaults to ~/hallucite/dblp.db, outside the repo (it is large and not
+# committed); override the location with $HALLUCITE_DBLP. `audit` checks the database's age at
+# run time and warns when it is out of date.
 
 [tools]
 # hallucinator publishes wheels for CPython 3.12; pinning here avoids a
@@ -45,11 +46,11 @@ echo "installed .bin/hallucinator-cli $(./.bin/hallucinator-cli --version)"
 
 [tasks.build-dblp]
 description = "Build the offline DBLP database at ~/hallucite/dblp.db (one-time; ~4.6 GB, ~20-30 min)"
-run = '.bin/hallucinator-cli update-dblp "$HOME/hallucite/dblp.db"'
+run = '.bin/hallucinator-cli update-dblp "${HALLUCITE_DBLP:-$HOME/hallucite/dblp.db}"'
 
 [tasks.audit]
 description = "Stages 1+2: extract + verify references. Usage: mise run audit -- <pdf-file-or-dir> [out-dir]"
-run = "python skills/hallucite/scripts/audit_references.py {{arg(name='path')}} --dblp $HOME/hallucite/dblp.db --out {{arg(name='out', default='out')}}"
+run = "python skills/hallucite/scripts/audit_references.py {{arg(name='path')}} --dblp ${HALLUCITE_DBLP:-$HOME/hallucite/dblp.db} --out {{arg(name='out', default='out')}}"
 
 [tasks.lint-md]
 description = "Lint the repo's Markdown with the vendored PyMarkdown (skills/hallucite/scripts/lint_markdown.py). Set MD_FIX=1 to auto-fix in place."

@@ -15,7 +15,8 @@ Usage (or run `mise run audit` from the repo root):
     python audit_references.py <pdf-file-or-dir> [options]
 
 Options:
-    --dblp PATH         Offline DBLP SQLite database (default: ~/hallucite/dblp.db)
+    --dblp PATH         Offline DBLP SQLite database
+                        (default: $HALLUCITE_DBLP, else ~/hallucite/dblp.db)
     --out DIR           Output directory (default: out)
     --mailto EMAIL      CrossRef polite-pool contact (optional; recommended for CrossRef)
     --offline           DBLP-only: disable the online database backends
@@ -45,6 +46,11 @@ except ImportError:
 from pdf_references import extract_references
 
 SCHEMA_VERSION = "1.0"
+
+# Offline DBLP database location. Defaults to ~/hallucite/dblp.db in the user's home (kept out of
+# the repo: it is ~2.5 GB). Override with $HALLUCITE_DBLP to relocate it without editing this
+# script, the mise tasks, or the skill.
+DEFAULT_DBLP = os.environ.get("HALLUCITE_DBLP") or str(Path.home() / "hallucite" / "dblp.db")
 
 
 def _atomic_write(path: Path, text: str) -> None:
@@ -248,8 +254,8 @@ def paper_status_counts(record: dict) -> dict:
 def main() -> int:
     p = argparse.ArgumentParser(description="Extract + verify paper references (no LLM).")
     p.add_argument("target", help="A PDF file or a directory of PDF files (e.g. ..)")
-    p.add_argument("--dblp", default=str(Path.home() / "hallucite" / "dblp.db"),
-                   help="Offline DBLP SQLite DB")
+    p.add_argument("--dblp", default=DEFAULT_DBLP,
+                   help="Offline DBLP SQLite DB ($HALLUCITE_DBLP, else ~/hallucite/dblp.db)")
     p.add_argument("--out", default="out", help="Output directory")
     p.add_argument("--mailto", default="", help="CrossRef polite-pool contact (recommended)")
     p.add_argument("--offline", action="store_true", help="DBLP-only (disable online DBs)")
