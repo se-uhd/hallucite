@@ -7,9 +7,9 @@ Reference extraction is `lineno`-aware (see pdf_references.py); each extracted
 reference is parsed and verified with the `hallucinator` package.
 
 Writes one JSON record per paper to the output directory, plus a corpus-level
-summary.json. References that no database could confirm (status not_found,
-author_mismatch, or unparsed) are what the later interactive LLM triage step
-investigates.
+summary.json. References the databases did not confirm (any status other than
+"verified" -- e.g. not_found, mismatch, unparsed) are what the later interactive
+LLM triage step investigates.
 
 Usage (or run `mise run audit` from the repo root):
     python audit_references.py <pdf-file-or-dir> [options]
@@ -237,17 +237,23 @@ def audit_pdf(pdf: Path, extractor: PdfExtractor, validator: Validator | None) -
 
 
 def paper_status_counts(record: dict) -> dict:
-    counts = {"verified": 0, "not_found": 0, "author_mismatch": 0, "skipped": 0,
-              "unparsed": 0, "retracted": 0, "pending": 0}
+    counts = {"verified": 0, "not_found": 0, "mismatch": 0, "unparsed": 0,
+              "retracted": 0, "pending": 0}
+    checked = 0
     for ref in record["references"]:
         dv = ref["db_verification"]
         if dv is None:
             counts["pending"] += 1
             continue
+        checked += 1
         counts[dv["status"]] = counts.get(dv["status"], 0) + 1
         if dv.get("retraction_info"):
             counts["retracted"] += 1
-    counts["unverified"] = counts["not_found"] + counts["author_mismatch"] + counts["unparsed"]
+    # Everything the validator checked but did not confirm ("verified") needs triage. Derive this
+    # by negation rather than summing a hard-coded list of failure statuses, so an unrecognised
+    # status -- e.g. hallucinator's "mismatch", which an earlier list silently dropped from both
+    # the count and the worklist -- is always surfaced.
+    counts["unverified"] = checked - counts["verified"]
     return counts
 
 

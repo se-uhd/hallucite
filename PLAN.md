@@ -58,8 +58,8 @@ days old; rebuild with `mise run build-dblp`.
 }
 ```
 
-A reference goes to triage when `db_verification.status` is `not_found`, `author_mismatch`, or
-`unparsed`. Triage verdicts are not written back into this file: `triage.py record` stores them
+A reference goes to triage when `db_verification.status` is anything other than `verified`
+(`not_found`, `mismatch`, or `unparsed`). Triage verdicts are not written back into this file: `triage.py record` stores them
 separately in `triage_verdicts.json`, keyed `"<paper_id>:<number>"` (resumable), and
 `triage.py report` joins the two when it assembles the reports.
 

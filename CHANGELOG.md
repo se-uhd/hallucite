@@ -6,6 +6,17 @@ All notable changes to hallucite are documented here. The format follows
 
 ## [1.3.0] - 2026-05-29
 
+### Fixed
+
+- Triage no longer silently drops references whose database verdict is `mismatch` (a title match
+  with mismatching authors). hallucinator reports these with the top-level status `mismatch`, but
+  the worklist, the report, and the audit's `unverified` count filtered on a hard-coded
+  `author_mismatch` that the validator never emits at that level. Matching references -- including
+  likely-hallucinated ones -- were therefore counted as neither verified nor unverified and never
+  reached triage. `needs_triage` and the `unverified` total are now derived by negation (any
+  checked reference whose status is not `verified`), so an unrecognised status can no longer fall
+  through.
+
 ### Added
 
 - The offline DBLP database location is configurable via the `$HALLUCITE_DBLP` environment

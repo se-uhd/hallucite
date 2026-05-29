@@ -43,7 +43,8 @@ Writes `out/<paper_id>.json` (every reference plus per-database verification) an
 `out/summary.json` (status counts plus the DBLP build date). Options: `--dblp PATH`, `--out DIR`,
 `--mailto EMAIL`, `--offline` (DBLP-only), `--no-verify`. The DBLP path defaults to
 `$HALLUCITE_DBLP` (else `~/hallucite/dblp.db`). A reference needs triage when its
-`db_verification.status` is `not_found`, `author_mismatch`, or `unparsed`. Re-running into the
+`db_verification.status` is anything other than `verified` (`not_found`, `mismatch`, or
+`unparsed`). Re-running into the
 same `--out` is idempotent (`triage_verdicts.json` accumulates by `paper_id:number`).
 
 ## Triage the residue (Stage 3, an interactive LLM agent)

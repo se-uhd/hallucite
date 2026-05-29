@@ -71,8 +71,8 @@ These read the per-paper JSON the audit has already written, so Stage 3 can run 
 papers while Stage 1+2 is still processing the rest. Verdicts accumulate per `<paper_id>:<number>`,
 and `--pending` surfaces only the references that have not been recorded yet.
 
-For each entry (references with `db_verification.status` of `not_found` / `author_mismatch` /
-`unparsed`), investigate with parallel web queries and classify it:
+For each entry (references whose `db_verification.status` is anything other than `verified` --
+`not_found`, `mismatch`, or `unparsed`), investigate with parallel web queries and classify it:
 
 - Search in escalating breadth; only conclude "not found" after the broad pass. Start with the
   DOI (resolve `https://api.crossref.org/works/<doi>`; a 404, or resolution to an unrelated

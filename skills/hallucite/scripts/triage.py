@@ -35,7 +35,6 @@ import sys
 import urllib.parse
 from pathlib import Path
 
-UNVERIFIED = {"not_found", "author_mismatch", "unparsed"}
 FLAG_CATEGORIES = ("likely-hallucinated", "partial-match", "unclear")
 SEVERITY = {
     "real-published": "low", "real-grey-literature": "low",
@@ -75,7 +74,12 @@ def is_retracted(ref: dict) -> bool:
 
 
 def needs_triage(ref: dict) -> bool:
-    return (ref.get("db_verification") or {}).get("status") in UNVERIFIED
+    # Needs triage iff the validator checked the reference (db_verification present) but did not
+    # confirm it. Defined by negation of "verified" rather than a hard-coded list of failure
+    # statuses, so a status such as hallucinator's "mismatch" can no longer fall through the list
+    # and be silently dropped from the worklist and the report.
+    dv = ref.get("db_verification")
+    return dv is not None and dv.get("status") != "verified"
 
 
 def cmd_worklist(out_dir: Path, pending: bool = False) -> None:
