@@ -50,30 +50,42 @@ same `--out` is idempotent (`triage_verdicts.json` accumulates by `paper_id:numb
 ## Triage the residue (Stage 3, an interactive LLM agent)
 
 ```sh
-mise exec -- python skills/hallucite/scripts/triage.py worklist --out out   # add --pending to skip done
-mise exec -- python skills/hallucite/scripts/triage.py status --out out      # per-paper done / pending
+mise exec -- python skills/hallucite/scripts/triage.py worklist --out out          # add --pending to skip done
+mise exec -- python skills/hallucite/scripts/triage.py worklist --paper <id> --out out  # one paper's slice
+mise exec -- python skills/hallucite/scripts/triage.py status --out out             # per-paper done / pending
 ```
 
 Stage 3 reads the per-paper JSON the audit has already written, so it can run on finished papers
 while the audit is still processing the rest — no need to wait for the whole corpus. Verdicts
-accumulate, and `worklist --pending` surfaces only references not yet recorded.
+accumulate, and `worklist --pending` surfaces only references not yet recorded. To fan triage out,
+hand each worker its own `worklist --paper <id>` slice (exact id match) instead of the shared
+worklist, so a worker can't grab the wrong paper (e.g. `paper6` vs `paper66`); `record` locks the
+verdicts file, so concurrent workers don't lose each other's verdicts.
 
 Hand the worklist to an interactive LLM agent such as Claude Code ("triage the unverified
-references in `out`"), or use the installed plugin (below). The agent checks each reference on the web,
-classifies it (`real-published`,
-`real-grey-literature`, `real-preprint-or-unpublished`, `partial-match`, `likely-hallucinated`,
-`unclear`), records verdicts, then assembles the reports:
+references in `out`"), or use the installed plugin (below). The agent classifies each reference
+**title-first**: a `partial-match` is a real, locatable publication with the cited title but a
+slipped metadata field (a citation error); a title that matches no real publication is
+`likely-hallucinated`, not a partial-match — even when a different paper by the same authors exists.
+Categories: `real-published`, `real-grey-literature`, `real-preprint-or-unpublished`,
+`partial-match`, `likely-hallucinated`, `unclear`. The agent records verdicts with structured
+fabrication signals, then assembles the reports:
 
 ```sh
-mise exec -- python skills/hallucite/scripts/triage.py record <paper_id> <number> <category> "<finding>" --out out
+mise exec -- python skills/hallucite/scripts/triage.py record <paper_id> <number> <category> "<finding>" \
+  --signals '{"title_match":"no","authors_match":"yes","venue_match":"no","doi_status":"none"}' --out out
 mise exec -- python skills/hallucite/scripts/triage.py report --out out
 ```
 
-`report` writes to `out/reports/`: `reference-check-<paper>.md` (per paper),
-`potential-hallucinations.md` (corpus rollup for review, severity table first), and
-`verify-<paper>.md` (a manual-check sheet for each flagged paper, with a per-reference verdict
-line and one-click Scholar/Google/DOI/arXiv links). Triage is the slow step that calls an LLM; do
-one paper at a time unless you ask for the whole corpus.
+`record` enforces the title-first rule via `--signals`: `partial-match` needs `title_match=yes`
+(plus a `matched_title`) or `na`; `likely-hallucinated` needs `title_match=no`. `report` writes to
+`out/reports/`: `reference-check-<paper>.md` (per paper), `potential-hallucinations.md` (corpus
+rollup for review — a severity table, then a **Desk-reject candidates** section listing references
+whose cited title matches no real publication, compounded by a fabricated author constellation,
+venue, or DOI), and `verify-<paper>.md` (a manual-check sheet for each flagged paper, with a
+per-reference verdict line, the matched title, the signals, and one-click Scholar/Google/DOI/arXiv
+links). Triage is the slow step that calls an LLM; do one paper at a time unless you ask for the
+whole corpus.
 
 ## Updating the offline DBLP database
 

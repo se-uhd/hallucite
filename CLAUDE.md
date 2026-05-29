@@ -28,9 +28,15 @@ both by mise and by the bundled skill (`skills/hallucite/SKILL.md`, which calls 
 - Stage 3: `triage.py worklist | status | record | report`. Verdicts persist in
   `out/triage_verdicts.json` (keyed `paper_id:number`, resumable), so triage can run on finished
   papers while the audit is still going: `worklist --pending` lists only un-recorded references and
-  `status` shows per-paper progress. `report` writes the per-paper checks, the
-  `potential-hallucinations.md` rollup, and `verify-<paper>.md` sheets, and auto-lints every file
-  it writes.
+  `status` shows per-paper progress. To fan out, give each worker its own `worklist --paper <id>`
+  slice (exact id match, errors on an unknown id) so it never self-filters the shared worklist and
+  grabs the wrong paper (`paper6` vs `paper66`); `record` takes an `fcntl` lock on the verdicts file
+  so concurrent workers don't lose updates. `record --signals '<json>'` carries the structured
+  fabrication signals and enforces the title-first rule (`partial-match` needs `title_match=yes`+
+  `matched_title` or `na`; `likely-hallucinated` needs `title_match=no`). `report` writes the
+  per-paper checks, the `potential-hallucinations.md` rollup (severity table + a **Desk-reject
+  candidates** section keyed on `is_fabrication`), and `verify-<paper>.md` sheets, and auto-lints
+  every file it writes.
 
 ## Triage conventions (Stage 3)
 
@@ -38,14 +44,31 @@ both by mise and by the bundled skill (`skills/hallucite/SKILL.md`, which calls 
   narrow query (title + author) finds nothing, broaden to the bare title (unquoted) and screen the
   results before judging; obscure/predatory venues are poorly indexed, so "not found" on a narrow
   query is not fabrication evidence.
-- Fabrication signatures: dead or mismatched DOIs, non-existent or defunct journals, an
-  impossible volume/year, initials-only generic authors, real authors attached to a non-existent
-  title, placeholder arXiv IDs such as `2310.XXXX`.
+- Classify title-first, and keep two questions separate: (1) does a publication bearing the cited
+  *title* exist (matching on title, not on a same-authors/same-venue paper with a different title)?
+  (2) only if yes, do the metadata fields match? Match the title on meaning: formatting, subtitle,
+  hyphen/spacing/spelling/OCR differences are the same title; a wrong content word counts as found
+  only when a resolving DOI or an exact author+venue+year match pins it to one real publication.
+  `partial-match` requires question 1 to be *yes* -- a real, locatable work with the cited title but
+  a slipped field (wrong year/DOI digit/venue/co-author). If no work bears the cited title, the
+  cited work does not exist: `likely-hallucinated`
+  (thorough search + fabrication signals) or `unclear`. Never rescue a non-existent title to
+  `partial-match` just because the authors or venue match some *other* real paper -- that conflation
+  is what misfiled a fabricated reference as a citation error and forced a long correction.
+- Honest human mistakes do not invent titles; they slip a metadata field on a real, findable work.
+  Independent fabrication signals: **(T) no publication has the cited title** (decisive); **(A)** an
+  author set/order that never co-published, or initials-only generic authors; **(V)** an impossible
+  or non-existent venue/year/volume (e.g. a proceedings entry + page range that do not exist, a
+  defunct journal); **(D)** a dead/mismatched DOI or placeholder arXiv id (`2310.XXXX`). A
+  non-existent title (T) is itself a fabrication and grounds to desk-reject -- even with real
+  authors and a real venue (the hardest case); A/V/D strengthen it but are not required. This is
+  what `is_fabrication` keys on.
 - Categories: `real-published`, `real-grey-literature`, `real-preprint-or-unpublished` (low);
   `partial-match` (citation error, medium); `likely-hallucinated` (high); `unclear`.
 - Do not push borderline cases into `real-*` to make a report look clean. `unclear` is a valid,
   useful verdict, and a "hallucinated" call against named authors is serious: flag it for review,
-  do not accuse.
+  do not accuse. Equally, do not downgrade a fabricated title to a citation error to avoid the
+  accusation -- record what the evidence shows.
 
 ## Conventions
 
@@ -71,6 +94,14 @@ both by mise and by the bundled skill (`skills/hallucite/SKILL.md`, which calls 
 - Plans and READMEs describe only the current approach. Do not narrate dropped or superseded
   ideas, or "out of scope" history. After a scope change, rewrite the doc as if the final
   approach were always the plan.
+- Check prose you write -- docs, README, PLAN, CHANGELOG, commit and PR messages, the triage
+  reports -- against the AI-slop tropes in
+  <https://gist.github.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1>. The frequent offenders here:
+  "it's not X, it's Y" negative parallelism, filler transitions ("it's worth noting",
+  "importantly"), grandiose stakes, vague attributions ("experts say") instead of a named source,
+  invented concept labels, and inflated verbs (`use`, not `utilize`/`leverage`). Em dashes (`--`)
+  and bold-lead bullets already appear in these files; do not pile on more than the surrounding
+  text uses. Plain, specific, and varied beats ornate.
 - Keep Markdown lint-clean: `mise run lint-md` (`MD_FIX=1` to auto-fix). The vendored PyMarkdown
   in `skills/hallucite/scripts/` is synced from se-uhd/pymarkdown-skill; do not hand-edit
   `_vendor/`, `lint_markdown.py`, or `check_baseline.py` (re-sync instead). The hallucite-owned

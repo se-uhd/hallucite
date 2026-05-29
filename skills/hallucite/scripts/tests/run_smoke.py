@@ -149,6 +149,133 @@ def tier3_logic() -> None:
          "INVARIANT: verified + unverified == checked references (none silently dropped)")
 
 
+def tier3b_triage_concurrency() -> None:
+    print("Tier 3b: triage worklist slicing + verdicts locking (no network/DB)")
+    import triage
+
+    def paper(pid, nums):
+        return {"paper_id": pid, "references": [
+            {"original_number": n, "raw_citation": f"{pid} cite {n}",
+             "db_verification": {"status": "not_found"}} for n in nums]}
+
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td)
+        # Two paper_ids where one is a prefix of the other -- the paper6 / paper66 trap.
+        (out / "p6.json").write_text(json.dumps(paper("esem26-seip-paper6", [3, 4, 5])))
+        (out / "p66.json").write_text(json.dumps(paper("esem26-seip-paper66", [1, 2, 7, 10])))
+
+        # --paper emits exactly one paper's slice by EXACT id match: the prefix neither leaks in
+        # nor steals the other's references.
+        triage.cmd_worklist(out, paper_id="esem26-seip-paper6")
+        slice6 = json.loads((out / "triage_worklist-esem26-seip-paper6.json").read_text())
+        C.eq({e["paper_id"] for e in slice6}, {"esem26-seip-paper6"},
+             "REGRESSION GUARD: --paper paper6 slice holds only paper6 (not paper66)")
+        C.eq(sorted(e["number"] for e in slice6), [3, 4, 5], "--paper paper6 slice has paper6's refs")
+        triage.cmd_worklist(out, paper_id="esem26-seip-paper66")
+        slice66 = json.loads((out / "triage_worklist-esem26-seip-paper66.json").read_text())
+        C.eq(sorted(e["number"] for e in slice66), [1, 2, 7, 10],
+             "--paper paper66 slice has paper66's refs")
+
+        # An unknown id fails loudly instead of silently writing an empty/wrong slice.
+        try:
+            triage.cmd_worklist(out, paper_id="esem26-seip-paper999")
+            C.fail("--paper with an unknown id should raise SystemExit")
+        except SystemExit:
+            C.ok("--paper with an unknown id raises SystemExit")
+
+    # The verdicts lock prevents lost updates: many concurrent `record` processes each writing a
+    # distinct key must all survive (the pre-lock load/modify/write would drop most of them).
+    triage_py = SCRIPTS / "triage.py"
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td)
+        (out / "p.json").write_text(json.dumps(paper("p", list(range(1, 21)))))
+        procs = [subprocess.Popen(
+            [sys.executable, str(triage_py), "record", "p", str(i),
+             "real-published", f"finding {i}", "--out", str(out)],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for i in range(1, 21)]
+        for p in procs:
+            p.wait()
+        saved = json.loads((out / "triage_verdicts.json").read_text())
+        C.eq(len(saved), 20,
+             "REGRESSION GUARD: 20 concurrent record writes all persist (verdicts lock, no lost update)")
+
+
+def tier3c_title_first_gate() -> None:
+    print("Tier 3c: title-first record gate + fabrication signals (no network/DB)")
+    import triage
+    triage_py = SCRIPTS / "triage.py"
+
+    def rec(out, num, category, signals=None):
+        cmd = [sys.executable, str(triage_py), "record", "p", str(num), category, "finding",
+               "--out", str(out)]
+        if signals is not None:
+            cmd += ["--signals", json.dumps(signals)]
+        return subprocess.run(cmd, capture_output=True, text=True).returncode
+
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td)
+        refs = [{"original_number": n, "raw_citation": f"cite {n}",
+                 "db_verification": {"status": "not_found"},
+                 "parsed": {"title": f"Title {n}"}} for n in range(1, 8)]
+        (out / "p.json").write_text(json.dumps(
+            {"paper_id": "p", "pdf_path": "p.pdf", "num_references": 7, "references": refs}))
+
+        # The gate: a partial-match must name a matched real title; likely-hallucinated must assert
+        # the title was not found. These are the misclassifications that caused the long correction.
+        C.true(rec(out, 1, "partial-match") != 0,
+               "REGRESSION GUARD: partial-match without --signals is rejected")
+        C.true(rec(out, 1, "partial-match", {"title_match": "no"}) != 0,
+               "REGRESSION GUARD: partial-match with title_match=no is rejected")
+        C.true(rec(out, 1, "partial-match", {"title_match": "yes"}) != 0,
+               "partial-match with title_match=yes but no matched_title is rejected")
+        C.eq(rec(out, 1, "partial-match", {"title_match": "yes", "matched_title": "Real"}), 0,
+             "partial-match with title_match=yes + matched_title is accepted")
+        C.true(rec(out, 2, "likely-hallucinated", {"title_match": "yes", "matched_title": "x"}) != 0,
+               "likely-hallucinated with title_match=yes is rejected")
+        C.eq(rec(out, 2, "likely-hallucinated", {"title_match": "no"}), 0,
+             "likely-hallucinated with title_match=no is accepted")
+        C.true(rec(out, 3, "unclear", {"title_match": "maybe"}) != 0,
+               "an out-of-vocabulary signal value is rejected")
+        C.eq(rec(out, 4, "real-published"), 0, "real-* without signals is accepted (optional)")
+        # Grey literature (a web page, not a publication) uses title_match=na and needs no
+        # matched_title -- the gate must not block it (the paper82 "Copy for AI" case).
+        C.eq(rec(out, 5, "partial-match", {"title_match": "na", "venue_match": "yes"}), 0,
+             "partial-match with title_match=na (non-publication resource) is accepted")
+
+    # is_fabrication: a non-existent title (T) is itself the desk-reject trigger -- even with real
+    # authors and a real venue otherwise intact (the paper33 case: invented title, real six-author
+    # group, real ICSE 2020 association). Requiring a compounding signal would miss exactly this.
+    C.true(triage.is_fabrication({"signals": {"title_match": "no"}}),
+           "REGRESSION GUARD: title_match=no alone is a desk-reject candidate (real authors/venue, invented title)")
+    C.true(triage.is_fabrication({"signals": {"title_match": "no", "authors_match": "yes", "venue_match": "no"}}),
+           "is_fabrication: title_match=no with compounding signals")
+    C.true(not triage.is_fabrication({"signals": {"title_match": "yes", "venue_match": "no"}}),
+           "is_fabrication: a real title with a wrong venue is a citation error, not fabrication")
+    # A dead/misresolving DOI on a real title is an honest citation error (the off-by-one-digit
+    # case), NOT fabrication -- the title, not the DOI, is the decisive signal.
+    C.true(not triage.is_fabrication({"signals": {"title_match": "yes", "doi_status": "404"}}),
+           "is_fabrication: a real title with a dead DOI is a citation error, not fabrication")
+    C.true(not triage.is_fabrication({"signals": {"title_match": "na", "venue_match": "no"}}),
+           "is_fabrication: a non-publication resource (na) is never a fabricated title")
+
+    # report surfaces the discriminating facts and the desk-reject section.
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td)
+        refs = [{"original_number": 1, "raw_citation": "Real Authors. Invented Title. ICSE, 2020.",
+                 "db_verification": {"status": "not_found"}, "parsed": {"title": "Invented Title"}}]
+        (out / "p.json").write_text(json.dumps(
+            {"paper_id": "p", "pdf_path": "p.pdf", "num_references": 1, "references": refs}))
+        rec(out, 1, "likely-hallucinated",
+            {"title_match": "no", "authors_match": "yes", "venue_match": "no", "doi_status": "none"})
+        triage.cmd_report(out)
+        rollup = (out / "reports" / "potential-hallucinations.md").read_text()
+        C.true("Desk-reject candidates" in rollup,
+               "report rollup has a Desk-reject candidates section for a fabricated-title ref")
+        C.true("no publication bears the cited title" in rollup,
+               "report shows the cited title matched no publication")
+        C.true("title=no" in rollup, "report prints the structured signal summary")
+
+
 def _build_fixture_db(path: Path) -> None:
     """A few-KB DBLP DB matching hallucinator's offline schema (4 tables + an FTS5 index).
     Seeded so the synthetic fixture PDF yields verified (1, 4) and not_found (2, 3)."""
@@ -228,6 +355,8 @@ def tier4_end_to_end() -> None:
 def main() -> int:
     tier1_packaging()
     tier3_logic()
+    tier3b_triage_concurrency()
+    tier3c_title_first_gate()
     tier4_end_to_end()
     print()
     if C.failed:

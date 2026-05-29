@@ -4,6 +4,32 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.5.0] - 2026-05-29
+
+### Added
+
+- Title-first triage with structured fabrication signals. `triage.py record` takes a `--signals`
+  JSON object (`title_match`, `matched_title`, `authors_match`, `venue_match`, `doi_status`) and
+  enforces the rule that separates a citation error from a fabrication: a `partial-match` must name
+  the real publication it matched (`title_match=yes` plus `matched_title`, or `na` for a
+  non-publication resource), and a `likely-hallucinated` must assert the cited title was not found
+  (`title_match=no`). A title that matches no real publication can no longer be filed as a citation
+  error because a different paper by the same authors happens to exist.
+- `triage.py report` shows each flagged reference's matched title and signal summary, warns on a
+  `partial-match` whose signals say the title was not found, and adds a **Desk-reject candidates**
+  section listing references whose cited title matches no real publication, compounded by a
+  fabricated author constellation, venue, or DOI.
+- `triage.py worklist --paper <id>` writes one paper's slice (exact id match, errors on an unknown
+  id), so a parallel Stage 3 worker reads only its own references instead of self-filtering the
+  shared worklist -- closing a fan-out hazard where a prefix id (`paper6` vs `paper66`) could pull
+  the wrong paper.
+
+### Fixed
+
+- `triage.py record` serializes its read-modify-write of `triage_verdicts.json` under an `fcntl`
+  lock, so concurrent workers no longer drop each other's verdicts (a lost update the atomic write
+  alone did not prevent).
+
 ## [1.4.1] - 2026-05-29
 
 ### Fixed
@@ -105,6 +131,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.5.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.5.0
 [1.4.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.4.1
 [1.4.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.4.0
 [1.3.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.3.0
