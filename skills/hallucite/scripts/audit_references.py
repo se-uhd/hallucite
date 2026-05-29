@@ -60,12 +60,14 @@ def _atomic_write(path: Path, text: str) -> None:
     tmp.write_text(text, encoding="utf-8")
     os.replace(tmp, path)
 
-# Online backends to switch off in --offline mode (keeps offline DBLP). The exact
-# names hallucinator uses appear as `db` in each db_results entry; adjust here if a
-# backend still runs offline. Use --disable-dbs to override explicitly.
+# Online backends to switch off in --offline mode (keeps offline DBLP). These MUST be the exact
+# `db` names hallucinator emits in each db_results entry -- a name that matches no backend is
+# silently ignored, so a typo leaves that backend live in --offline mode (this is what let the
+# old "DOI Resolver" entry never disable the real "DOI" backend). The names below are validated
+# at run time against the db names actually seen (see main()); use --disable-dbs to add more.
 DEFAULT_ONLINE_DBS = [
-    "CrossRef", "arXiv", "Semantic Scholar", "OpenAlex", "ACL Anthology",
-    "Europe PMC", "PubMed", "SSRN", "NeurIPS", "DOI Resolver", "Open Library",
+    "CrossRef", "arXiv", "Semantic Scholar", "ACL Anthology",
+    "Europe PMC", "PubMed", "DOI", "Open Library",
 ]
 
 
@@ -280,6 +282,7 @@ def main() -> int:
     validator = None if args.no_verify else Validator(build_config(args))
 
     summary_papers = []
+    seen_dbs: set[str] = set()
     for i, pdf in enumerate(pdfs, start=1):
         print(f"[{i}/{len(pdfs)}] {pdf.name} ...", flush=True)
         try:
@@ -295,6 +298,15 @@ def main() -> int:
         counts = paper_status_counts(record)
         summary_papers.append({"paper_id": record["paper_id"],
                                "num_references": record["num_references"], **counts})
+        for ref in record["references"]:
+            for r in (ref.get("db_verification") or {}).get("db_results", []) or []:
+                seen_dbs.add(r["db"])
+        ext = record["extraction"]
+        if record["num_references"] == 0 or not ext["section_found"]:
+            print(f"    warning: extracted {record['num_references']} reference(s)"
+                  f"{'; no References section was found' if not ext['section_found'] else ''}"
+                  f" -- this paper contributes nothing to triage; check the PDF/extraction.",
+                  file=sys.stderr)
         if args.no_verify:
             print(f"    {record['num_references']} refs extracted "
                   f"({record['extraction']['unparsed']} unparsed)", flush=True)
@@ -326,6 +338,21 @@ def main() -> int:
     if not args.no_verify:
         print(f"Unverified references to triage: {totals.get('unverified', 0)} "
               f"across {len(pdfs)} papers.")
+        # Drift tripwire: a configured online-backend name that never appeared as a real `db`
+        # is almost certainly misspelled or renamed upstream -- the failure mode that let the
+        # old "DOI Resolver" entry silently never disable the live "DOI" backend in --offline.
+        if not args.offline and seen_dbs:
+            stale = [db for db in DEFAULT_ONLINE_DBS if db not in seen_dbs]
+            if stale:
+                print(f"warning: configured online-backend name(s) {stale} never appeared in any "
+                      f"db_results; hallucinator may have renamed/removed them, so --offline would "
+                      f"not actually disable them. Update DEFAULT_ONLINE_DBS.", file=sys.stderr)
+    errored = [p for p in summary_papers if "error" in p]
+    if errored:
+        ids = ", ".join(p["paper_id"] for p in errored)
+        print(f"\nERROR: {len(errored)} of {len(pdfs)} paper(s) failed and produced NO output, so "
+              f"they are silently absent from Stage 3 triage: {ids}", file=sys.stderr)
+        return 1
     return 0
 
 

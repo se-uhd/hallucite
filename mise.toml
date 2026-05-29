@@ -50,7 +50,7 @@ run = '.bin/hallucinator-cli update-dblp "${HALLUCITE_DBLP:-$HOME/hallucite/dblp
 
 [tasks.audit]
 description = "Stages 1+2: extract + verify references. Usage: mise run audit -- <pdf-file-or-dir> [out-dir]"
-run = "python skills/hallucite/scripts/audit_references.py {{arg(name='path')}} --dblp ${HALLUCITE_DBLP:-$HOME/hallucite/dblp.db} --out {{arg(name='out', default='out')}}"
+run = "python skills/hallucite/scripts/audit_references.py {{arg(name='path')}} --dblp \"${HALLUCITE_DBLP:-$HOME/hallucite/dblp.db}\" --out {{arg(name='out', default='out')}}"
 
 [tasks.lint-md]
 description = "Lint the repo's Markdown with the vendored PyMarkdown (skills/hallucite/scripts/lint_markdown.py). Set MD_FIX=1 to auto-fix in place."

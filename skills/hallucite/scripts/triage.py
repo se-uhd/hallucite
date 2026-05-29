@@ -287,6 +287,14 @@ def ref_num(ref: dict) -> int:
 def cmd_record(out_dir: Path, paper_id: str, number: str, category: str, finding: str) -> None:
     if category not in SEVERITY:
         raise SystemExit(f"unknown category {category!r}; expected one of {sorted(SEVERITY)}")
+    # Surface typo'd keys: a verdict whose paper_id:number matches no audited reference would
+    # otherwise sit in triage_verdicts.json forever and never appear in any report.
+    known = {f"{p['paper_id']}:{r['original_number']}"
+             for p in load_papers(out_dir) for r in p["references"]}
+    if known and f"{paper_id}:{number}" not in known:
+        print(f"warning: {paper_id}:{number} matches no reference in {out_dir}/ -- recording it "
+              f"anyway, but it will not appear in any report; re-check the paper_id and number.",
+              file=sys.stderr)
     path = out_dir / "triage_verdicts.json"
     data = _load_verdicts(out_dir)
     data[f"{paper_id}:{number}"] = {"category": category, "finding": finding}
