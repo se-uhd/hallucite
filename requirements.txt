@@ -6,8 +6,9 @@
 # CPython 3.12 — mise.toml pins python = "3.12" so pip resolves a wheel
 # instead of building from source (which would need Rust + maturin).
 #
-# The driver scripts (audit_references.py, dblp_bibtex.py) otherwise use
-# only the standard library (json, sqlite3, urllib, pathlib).
+# The driver scripts (audit_references.py, triage.py, pdf_references.py) otherwise use
+# only the Python standard library, except that pdf_references.py shells out to
+# `pdftotext` (poppler) for PDF text extraction.
 #
 # Pin the exact version after the first install:  uv pip freeze | grep -i hallucinator
 hallucinator

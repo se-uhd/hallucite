@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import os
 import re
@@ -43,11 +44,14 @@ SEVERITY = {
 }
 
 
-_NON_PAPER_JSON = {"summary.json", "triage_worklist.json", "triage_verdicts.json"}
-
-
 def _natural_key(name: str) -> list:
     return [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", name)]
+
+
+def _ref_fp(raw: str) -> str:
+    """Short fingerprint of a reference's raw text, stored alongside a verdict so the report can
+    warn when a re-audit changed the reference the verdict was recorded against (numbering shifts)."""
+    return hashlib.sha1((raw or "").encode("utf-8")).hexdigest()[:12]
 
 
 def _atomic_write(path: Path, text: str) -> None:
@@ -63,10 +67,21 @@ def _load_verdicts(out_dir: Path) -> dict:
 
 
 def load_papers(out_dir: Path) -> list[dict]:
-    """Per-paper JSON records in out_dir (any filename), naturally sorted. The
-    pipeline's own outputs (summary / worklist / verdicts) are excluded."""
-    files = [f for f in out_dir.glob("*.json") if f.name not in _NON_PAPER_JSON]
-    return [json.loads(f.read_text()) for f in sorted(files, key=lambda f: _natural_key(f.name))]
+    """Per-paper JSON records in out_dir (any filename), naturally sorted. A file is a paper record
+    iff it parses to a dict with a "references" list and a "paper_id"; this excludes the pipeline's
+    own outputs (summary / worklist / verdicts) by content -- so a paper whose name happens to
+    collide with one of those is still included -- and skips any stray/unreadable .json rather than
+    crashing the whole run."""
+    out: list[dict] = []
+    for f in sorted(out_dir.glob("*.json"), key=lambda f: _natural_key(f.name)):
+        try:
+            rec = json.loads(f.read_text())
+        except (json.JSONDecodeError, OSError):
+            print(f"warning: skipping unreadable JSON {f.name}", file=sys.stderr)
+            continue
+        if isinstance(rec, dict) and isinstance(rec.get("references"), list) and "paper_id" in rec:
+            out.append(rec)
+    return out
 
 
 def is_retracted(ref: dict) -> bool:
@@ -173,7 +188,14 @@ def cmd_report(out_dir: Path) -> None:
     reports.mkdir(parents=True, exist_ok=True)
     verdicts = _load_verdicts(out_dir)
 
+    # Remove previously generated reports first, so a re-categorized or removed flag cannot leave
+    # an orphan behind (e.g. a stale verify-<pid>.md still claiming a human check is needed).
+    for old in list(reports.glob("reference-check-*.md")) + list(reports.glob("verify-*.md")):
+        old.unlink()
+    (reports / "potential-hallucinations.md").unlink(missing_ok=True)
+
     flagged: list[tuple[dict, dict, dict]] = []  # (paper, ref, verdict)
+    all_retracted: list[tuple[dict, dict]] = []  # (paper, ref) matched to a retracted record
     written: list = []
     today = dt.date.today().isoformat()
 
@@ -183,12 +205,15 @@ def cmd_report(out_dir: Path) -> None:
                     if (r.get("db_verification") or {}).get("status") == "verified"]
         triage = [r for r in paper["references"] if needs_triage(r)]
         retracted = [r for r in paper["references"] if is_retracted(r)]
+        pending = [r for r in paper["references"] if r.get("db_verification") is None]
 
         lines = [f"# Reference check: {pid}", "",
                  f"- PDF: `{paper['pdf_path']}`",
                  f"- References: {paper['num_references']}",
                  f"- Verified by database: {len(verified)}",
                  f"- Needs triage (not in any database): {len(triage)}"]
+        if pending:
+            lines.append(f"- Not verified (--no-verify): {len(pending)}")
         if retracted:
             lines.append(f"- **RETRACTED: {len(retracted)}**")
         lines.append("")
@@ -197,6 +222,10 @@ def cmd_report(out_dir: Path) -> None:
             lines += ["## Triage", ""]
             for r in triage:
                 v = verdicts.get(f"{pid}:{r['original_number']}")
+                if v and v.get("ref_hash") and v["ref_hash"] != _ref_fp(r["raw_citation"]):
+                    print(f"warning: verdict {pid}:{r['original_number']} was recorded against "
+                          f"different reference text (re-audit changed it?); re-triage it.",
+                          file=sys.stderr)
                 cat = v["category"] if v else "(pending)"
                 sev = SEVERITY.get(cat, "-")
                 htitle = ((r["parsed"] or {}).get("title") or r["raw_citation"][:70]).rstrip(" .,;:!?")
@@ -211,6 +240,22 @@ def cmd_report(out_dir: Path) -> None:
                 if v and cat in FLAG_CATEGORIES:
                     flagged.append((paper, r, v))
 
+        if retracted:
+            lines += ["## Retracted references (cited despite retraction)", ""]
+            for r in retracted:
+                p = r.get("parsed") or {}
+                rinfo = (r.get("db_verification") or {}).get("retraction_info") or {}
+                htitle = (p.get("title") or r["raw_citation"][:70]).rstrip(" .,;:!?")
+                lines += [f"### [{r['original_number']}] {htitle}", "",
+                          f"- Raw: {r['raw_citation']}",
+                          f"- DB status: {(r.get('db_verification') or {}).get('status')}"]
+                if rinfo.get("retraction_doi"):
+                    lines.append(f"- Retraction DOI: {rinfo['retraction_doi']}")
+                if rinfo.get("retraction_source"):
+                    lines.append(f"- Source: {rinfo['retraction_source']}")
+                lines.append("")
+                all_retracted.append((paper, r))
+
         report_path = reports / f"reference-check-{pid}.md"
         _atomic_write(report_path, "\n".join(lines).rstrip("\n") + "\n")
         written.append(report_path)
@@ -218,6 +263,14 @@ def cmd_report(out_dir: Path) -> None:
     # Corpus rollup for human review.
     roll = ["# Potentially hallucinated references", "",
             f"Generated: {today}", ""]
+    if all_retracted:
+        roll += [f"## Retracted references still cited ({len(all_retracted)})", "",
+                 "Matched to a record flagged as retracted; confirm each and treat it as serious.", ""]
+        for paper, r in sorted(all_retracted,
+                               key=lambda x: (_natural_key(x[0]["paper_id"]), ref_num(x[1]))):
+            title = (r.get("parsed") or {}).get("title") or r["raw_citation"][:80]
+            roll.append(f"- **{paper['paper_id']} [{r['original_number']}]**: {title}")
+        roll.append("")
     if not flagged:
         roll.append("No references were flagged as likely-hallucinated, partial-match, or unclear.")
     else:
@@ -289,15 +342,18 @@ def cmd_record(out_dir: Path, paper_id: str, number: str, category: str, finding
         raise SystemExit(f"unknown category {category!r}; expected one of {sorted(SEVERITY)}")
     # Surface typo'd keys: a verdict whose paper_id:number matches no audited reference would
     # otherwise sit in triage_verdicts.json forever and never appear in any report.
-    known = {f"{p['paper_id']}:{r['original_number']}"
-             for p in load_papers(out_dir) for r in p["references"]}
-    if known and f"{paper_id}:{number}" not in known:
-        print(f"warning: {paper_id}:{number} matches no reference in {out_dir}/ -- recording it "
-              f"anyway, but it will not appear in any report; re-check the paper_id and number.",
-              file=sys.stderr)
+    refs = {f"{p['paper_id']}:{r['original_number']}": r.get("raw_citation", "")
+            for p in load_papers(out_dir) for r in p["references"]}
+    key = f"{paper_id}:{number}"
+    if refs and key not in refs:
+        print(f"warning: {key} matches no reference in {out_dir}/ -- recording it anyway, but it "
+              f"will not appear in any report; re-check the paper_id and number.", file=sys.stderr)
     path = out_dir / "triage_verdicts.json"
     data = _load_verdicts(out_dir)
-    data[f"{paper_id}:{number}"] = {"category": category, "finding": finding}
+    entry = {"category": category, "finding": finding}
+    if key in refs:
+        entry["ref_hash"] = _ref_fp(refs[key])
+    data[key] = entry
     _atomic_write(path, json.dumps(data, indent=2, ensure_ascii=False))
     print(f"recorded {paper_id}:{number} = {category} ({len(data)} verdicts total)")
 

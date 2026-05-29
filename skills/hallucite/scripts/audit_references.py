@@ -77,7 +77,12 @@ def now_iso() -> str:
 
 def find_pdfs(target: Path) -> list[Path]:
     if target.is_dir():
-        return sorted(target.glob("*.pdf"))
+        # Case-insensitive (.pdf and .PDF); error on an empty directory rather than silently
+        # running on zero papers.
+        pdfs = sorted(p for p in target.iterdir() if p.is_file() and p.suffix.lower() == ".pdf")
+        if not pdfs:
+            sys.exit(f"error: no PDF files in {target} (looked for *.pdf, case-insensitive)")
+        return pdfs
     if target.is_file() and target.suffix.lower() == ".pdf":
         return [target]
     sys.exit(f"error: no PDF(s) found at {target}")
@@ -144,7 +149,7 @@ def dblp_build_info(dblp_path: Path) -> dict:
     # hallucinator stores the dump's HTTP Last-Modified date and a build epoch.
     if meta.get("last_modified"):
         info["dump_last_modified"] = meta["last_modified"]
-    if meta.get("last_updated", "").isdigit():
+    if str(meta.get("last_updated", "")).isdigit():
         info["built_at"] = dt.datetime.fromtimestamp(
             int(meta["last_updated"]), dt.timezone.utc).replace(microsecond=0).isoformat()
     if meta.get("publication_count"):

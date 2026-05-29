@@ -33,6 +33,7 @@ run = "uv pip install -r requirements.txt"
 description = "Download the hallucinator CLI prebuilt binary into .bin/ (checksum-verified, no curl|sh)"
 run = """
 set -euo pipefail
+os=$(uname -s); [ "$os" = "Darwin" ] || { echo "install-cli fetches macOS (Darwin) binaries only; on $os install with 'cargo install hallucinator-cli' or download from the releases page" >&2; exit 1; }
 arch=$(uname -m); case "$arch" in arm64|aarch64) tgt=aarch64-apple-darwin ;; x86_64) tgt=x86_64-apple-darwin ;; *) echo "unsupported arch $arch" >&2; exit 1 ;; esac
 url="https://github.com/gianlucasb/hallucinator/releases/latest/download/hallucinator-cli-$tgt.tar.xz"
 mkdir -p .bin
