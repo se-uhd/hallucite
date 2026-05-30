@@ -7,7 +7,10 @@ contract and the plugin packaging. Run in CI (.github/workflows/smoke.yml) and l
 Tiers (any failing check exits non-zero):
   1  packaging/consistency -- version in sync across plugin.json / SKILL.md / CHANGELOG,
                               JSON validity, SKILL.md frontmatter, every script compiles,
-                              referenced script paths exist.
+                              referenced script paths exist, SKILL.md drives the pipeline via
+                              run.sh and states the stop conditions.
+  1b run.sh bootstrap        -- the wrapper syntax-checks, rejects an unknown command, and fails
+                              loud (sentinel + non-zero) when its Python lacks hallucinator.
   3  logic contract        -- needs_triage / paper_status_counts on synthetic records,
                               including the "mismatch" status a past bug silently dropped,
                               and category/severity consistency. No network or DB.
@@ -22,6 +25,7 @@ with `cupsfilter`; it contains only invented authors/titles (no real or shared p
 from __future__ import annotations
 
 import json
+import os
 import re
 import sqlite3
 import subprocess
@@ -107,6 +111,72 @@ def tier1_packaging() -> None:
 
     for name in ("audit_references.py", "triage.py", "pdf_references.py"):
         C.true((SCRIPTS / name).exists(), f"pipeline script present: {name}")
+
+    run_sh = SCRIPTS / "run.sh"
+    C.true(run_sh.exists(), "runner present: run.sh")
+    C.true(run_sh.exists() and os.access(run_sh, os.X_OK), "run.sh is executable")
+    # SKILL.md must drive the pipeline through run.sh, not a bare `python <script>` that the
+    # plugin's shell may not have -- the failure that let a broken run masquerade as a clean one.
+    C.true('run.sh' in skill, "SKILL.md invokes the run.sh wrapper")
+    C.true('python "$SCRIPTS"' not in skill,
+           "SKILL.md has no bare `python \"$SCRIPTS\"` calls (use run.sh)")
+    C.true("Stop conditions" in skill and "No script output" in skill,
+           "SKILL.md states the no-output-no-verdict stop conditions")
+
+
+def tier1b_runner() -> None:
+    """The run.sh bootstrap contract, without needing a network or a built venv: it must
+    syntax-check, reject an unknown command, fail loud (sentinel + non-zero) on a Python that
+    cannot import hallucinator, and -- when hallucinator is present -- print HALLUCITE_OK and
+    forward a subcommand. The auto-provision path (build a venv + pip install) needs the network
+    and is exercised manually, not here; tier4 runs a real audit *through* run.sh."""
+    print("Tier 1b: run.sh bootstrap contract")
+    run_sh = SCRIPTS / "run.sh"
+    if which("bash") is None:
+        C.skip("bash not available; run.sh contract skipped")
+        return
+    SENTINEL = "HALLUCITE_BOOTSTRAP_FAILED:"
+
+    def run(args, **over):
+        env = {**os.environ, **over.pop("env_add", {})}
+        return subprocess.run(["bash", str(run_sh), *args], capture_output=True, text=True,
+                              env=env, **over)
+
+    r = subprocess.run(["bash", "-n", str(run_sh)], capture_output=True, text=True)
+    C.true(r.returncode == 0, "run.sh passes `bash -n` syntax check"
+           + ("" if r.returncode == 0 else f" :: {r.stderr.strip()}"))
+
+    r = run(["frobnicate"])
+    C.true(r.returncode != 0 and SENTINEL in r.stderr,
+           "run.sh rejects an unknown command with the failure sentinel")
+
+    r = run([])
+    C.true(r.returncode != 0, "run.sh with no subcommand exits non-zero (usage)")
+
+    # FAIL-LOUD, exercised deterministically regardless of the host's Pythons: a HALLUCITE_PYTHON
+    # that is not even executable can never import hallucinator, so resolve_python must `die` with
+    # the sentinel rather than fall through to a silent run. This is the guarantee that stops a
+    # broken environment from masquerading as a clean audit.
+    r = run(["doctor"], env_add={"HALLUCITE_PYTHON": str(TESTS / "no-such-python")})
+    C.true(r.returncode != 0 and SENTINEL in r.stderr,
+           "REGRESSION GUARD: run.sh fails loud (sentinel) when HALLUCITE_PYTHON is unusable")
+
+    # HAPPY PATH + subcommand dispatch, when a hallucinator-capable Python exists. Point
+    # HALLUCITE_PYTHON at it so no venv is provisioned, then check both `doctor` and that an unknown
+    # *script* flag is forwarded (proving args reach the underlying script, not swallowed by run.sh).
+    if subprocess.run([sys.executable, "-c", "import hallucinator"],
+                      capture_output=True).returncode == 0:
+        r = run(["doctor"], env_add={"HALLUCITE_PYTHON": sys.executable})
+        C.true(r.returncode == 0 and "HALLUCITE_OK:" in r.stdout,
+               "run.sh doctor prints HALLUCITE_OK for a hallucinator-capable Python")
+        r = run(["audit", "--this-flag-does-not-exist"],
+                env_add={"HALLUCITE_PYTHON": sys.executable})
+        C.true(r.returncode != 0 and SENTINEL not in r.stderr
+               and "audit_references.py" in (r.stderr + r.stdout),
+               "run.sh forwards a subcommand+args to the underlying script (argparse error, "
+               "not a bootstrap failure)")
+    else:
+        C.skip("hallucinator not importable from sys.executable; run.sh happy-path checks skipped")
 
 
 def tier3_logic() -> None:
@@ -333,10 +403,18 @@ def tier4_end_to_end() -> None:
         tmp = Path(tmp)
         _build_fixture_db(tmp / "dblp.db")
         out = tmp / "out"
-        r = subprocess.run(
-            [sys.executable, str(SCRIPTS / "audit_references.py"), str(pdf),
-             "--offline", "--dblp", str(tmp / "dblp.db"), "--out", str(out)],
-            capture_output=True, text=True)
+        # Drive the audit through run.sh (HALLUCITE_PYTHON pins this interpreter, so no venv is
+        # provisioned), so the wrapper's dispatch and argument forwarding are on the end-to-end
+        # tested path rather than bypassed. Falls back to a direct call only if bash is absent.
+        if which("bash") is not None:
+            cmd = ["bash", str(SCRIPTS / "run.sh"), "audit", str(pdf),
+                   "--offline", "--dblp", str(tmp / "dblp.db"), "--out", str(out)]
+            env = {**os.environ, "HALLUCITE_PYTHON": sys.executable}
+        else:
+            cmd = [sys.executable, str(SCRIPTS / "audit_references.py"), str(pdf),
+                   "--offline", "--dblp", str(tmp / "dblp.db"), "--out", str(out)]
+            env = None
+        r = subprocess.run(cmd, capture_output=True, text=True, env=env)
         rec_path = out / f"{pdf.stem}.json"
         if not rec_path.exists():
             C.fail(f"audit produced no record (exit {r.returncode}): {r.stderr[-300:]}")
@@ -354,6 +432,7 @@ def tier4_end_to_end() -> None:
 
 def main() -> int:
     tier1_packaging()
+    tier1b_runner()
     tier3_logic()
     tier3b_triage_concurrency()
     tier3c_title_first_gate()

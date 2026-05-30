@@ -11,13 +11,21 @@ One repo, two roles: it is the runnable project (mise tasks) and an installable 
 plugin. The repo root is the plugin (`.claude-plugin/plugin.json`), and
 `.claude-plugin/marketplace.json` (name `se-uhd`, plugin `source: "./"`) makes it its own
 single-plugin marketplace. The pipeline scripts live once in `skills/hallucite/scripts/`, used
-both by mise and by the bundled skill (`skills/hallucite/SKILL.md`, which calls them via
-`${CLAUDE_PLUGIN_ROOT}`). No separate plugin repo, no submodule.
+both by mise and by the bundled skill (`skills/hallucite/SKILL.md`, which drives them through
+`${CLAUDE_PLUGIN_ROOT}/skills/hallucite/scripts/run.sh`). No separate plugin repo, no submodule.
 
 ## Running things
 
-- Use mise tasks rather than hand-rolled venvs: `mise run install | install-cli | build-dblp |
-  audit | lint-md`. Python is pinned to 3.12 (hallucinator's wheels).
+- The bundled skill drives the pipeline through `skills/hallucite/scripts/run.sh`, the single
+  entry point (`doctor | audit | triage | lint | python`). It resolves -- or on first use
+  provisions at `${XDG_CACHE_HOME:-~/.cache}/hallucite/venv` -- a Python 3.12 that can
+  `import hallucinator`, never relying on a bare `python`/`uv`/`mise` being on the plugin shell's
+  PATH (the failure that made the plugin silently un-runnable). It fails loud with a
+  `HALLUCITE_BOOTSTRAP_FAILED:` sentinel and a non-zero exit; `$HALLUCITE_PYTHON` reuses an existing
+  hallucinator environment and skips provisioning. `run.sh doctor` is the preflight.
+- In a repo clone you can equivalently use mise tasks: `mise run install | install-cli |
+  build-dblp | audit | lint-md`. Python is pinned to 3.12 (hallucinator's wheels). Both paths run
+  the same scripts in `skills/hallucite/scripts/`.
 - The offline DBLP database defaults to `~/hallucite/dblp.db`, outside this repo (large, not
   committed); override the location with `$HALLUCITE_DBLP`. The audit warns at run time when it is
   over 30 days old. Do not put it under the repo: an installed plugin is cloned to a managed dir
@@ -40,6 +48,12 @@ both by mise and by the bundled skill (`skills/hallucite/SKILL.md`, which calls 
 
 ## Triage conventions (Stage 3)
 
+- Never fabricate a verdict. A verdict may rest only on a Stage 1+2 `db_verification` record the
+  audit wrote or Stage 3 web evidence you actually gathered -- never on reading the `.bib`/`.bbl`/PDF
+  by eye. If `run.sh` exits non-zero or prints `HALLUCITE_BOOTSTRAP_FAILED:`, or output starts
+  coming back empty, stop and report it verbatim; "the tool would not run" is the correct outcome,
+  not a hand-written report. This rule lives in full in `SKILL.md` ("Stop conditions") and is
+  guarded by smoke tier 1b.
 - Investigate with parallel web queries; resolve DOIs via `api.crossref.org/works/<doi>`. If a
   narrow query (title + author) finds nothing, broaden to the bare title (unquoted) and screen the
   results before judging; obscure/predatory venues are poorly indexed, so "not found" on a narrow

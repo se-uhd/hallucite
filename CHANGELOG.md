@@ -4,6 +4,32 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.6.0] - 2026-05-30
+
+### Added
+
+- `run.sh`, a single bootstrap entry point for the pipeline (`doctor` / `audit` / `triage` /
+  `lint` / `python`). It resolves -- or, on first use, provisions at
+  `${XDG_CACHE_HOME:-~/.cache}/hallucite/venv` -- a Python 3.12 that can `import hallucinator`,
+  preferring `uv` and falling back to a stdlib `venv` over a discovered 3.12 (PATH, common install
+  dirs, or `mise where`). It never relies on a bare `python`/`uv`/`mise` being on the plugin
+  shell's PATH, which is what made the pipeline silently un-runnable when installed as a plugin.
+  Set `$HALLUCITE_PYTHON` to reuse an existing hallucinator environment and skip provisioning.
+- `run.sh doctor` preflight: prints `HALLUCITE_OK: <python> (hallucinator <version>)` on success,
+  or a `HALLUCITE_BOOTSTRAP_FAILED:` sentinel line and a non-zero exit on any setup failure.
+- Smoke tier 1b exercises the `run.sh` contract (syntax check, unknown-command rejection, fail-loud
+  on a Python without hallucinator), and tier 1 now asserts SKILL.md drives the pipeline through
+  `run.sh` and carries the stop conditions.
+
+### Changed
+
+- SKILL.md adds a **Stop conditions -- never fabricate a verdict** section and routes every stage
+  through `run.sh`: no script output means no verdict, and any non-zero exit or
+  `HALLUCITE_BOOTSTRAP_FAILED:` line is a blocking error to surface, never to work around by reading
+  the bibliography by hand.
+- README, CLAUDE.md, and PLAN.md document `run.sh` as the entry point (and the mise-free plugin
+  path), the stop conditions, and smoke tier 1b, so the downstream docs match the pipeline.
+
 ## [1.5.1] - 2026-05-29
 
 ### Fixed
@@ -146,6 +172,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.6.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.6.0
 [1.5.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.5.1
 [1.5.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.5.0
 [1.4.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.4.1

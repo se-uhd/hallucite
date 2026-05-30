@@ -10,7 +10,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Only the plugin/marketplace packaging is Claude Code-specific.
 metadata:
-  version: "1.5.1"
+  version: "1.6.0"
 ---
 
 # hallucite
@@ -19,15 +19,53 @@ Detect fabricated references in academic paper PDF files. Three stages: extract 
 local and deterministic (no LLM); triage is the only step that uses an LLM (cloud or local), run
 on the references that no database could confirm.
 
-The pipeline scripts live in this skill's `scripts/` directory (`pdf_references.py`,
-`audit_references.py`, `triage.py`). Run them with a Python that has `hallucinator` installed.
-When the skill is installed as a plugin, reference them under `${CLAUDE_PLUGIN_ROOT}`:
+## Stop conditions -- never fabricate a verdict
+
+This skill exists to catch fabricated references; it must never produce one. A hallucination
+verdict is a serious accusation against named authors, so every claim you make must trace to real
+tool output, not to your own reading of a `.bib`/`.bbl`/PDF.
+
+- **No script output ⇒ no verdict.** A reference may be called real, partial-match,
+  likely-hallucinated, or unclear **only** on the basis of (a) a Stage 1+2 `db_verification` record
+  the audit actually wrote, or (b) Stage 3 web-search evidence you actually gathered. Eyeballing a
+  bibliography is not a verification method and never yields a verdict.
+- **Treat any non-zero exit or a `HALLUCITE_BOOTSTRAP_FAILED:` line as a blocking error.** Stop,
+  report the failure verbatim to the user, and do not work around it by inspecting the references
+  yourself. "The tool would not run" is the correct, honest outcome -- not a hand-written report.
+- **Run the preflight (`doctor`) first.** If it does not print `HALLUCITE_OK`, the environment is
+  not ready; surface its message and stop.
+- If commands start erroring or returning empty output, **halt and say so.** Do not begin
+  assembling findings from memory or from the source files while the pipeline is broken.
+
+## Running the pipeline
+
+Always invoke the pipeline through the `run.sh` wrapper. It resolves (or, on first use, provisions)
+a Python 3.12 that can `import hallucinator`, so you never call a bare `python`/`mise`/`uv` that may
+be missing from the plugin's shell. It is the single supported entry point.
 
 ```sh
-SCRIPTS="${CLAUDE_PLUGIN_ROOT}/skills/hallucite/scripts"
+RUN="${CLAUDE_PLUGIN_ROOT}/skills/hallucite/scripts/run.sh"   # plugin install
+# RUN="skills/hallucite/scripts/run.sh"                        # repo clone
 ```
 
-(In a clone of the repo you can instead run `mise run audit`.)
+Subcommands: `run.sh doctor` (preflight), `audit ...`, `triage ...`, `lint ...`, `python ...`.
+On success it is transparent (runs the script, forwards its exit code); on a setup failure it
+prints `HALLUCITE_BOOTSTRAP_FAILED: <reason>` to stderr and exits non-zero -- that sentinel means
+**no audit ran**, so there is nothing to interpret.
+
+First run builds a cached venv at `${XDG_CACHE_HOME:-~/.cache}/hallucite/venv` (needs `uv` or a
+Python 3.12, plus network for `pip install hallucinator`); later runs reuse it and are instant.
+To reuse an environment that already has hallucinator, set `$HALLUCITE_PYTHON` to its interpreter
+and no venv is built. (In a repo clone you can equivalently use the `mise run ...` tasks.)
+
+### Preflight (every session, before any audit)
+
+```sh
+"$RUN" doctor    # must print `HALLUCITE_OK: <python> (hallucinator <version>)`
+```
+
+If it prints `HALLUCITE_BOOTSTRAP_FAILED:` instead, relay that line to the user and stop -- see the
+stop conditions above.
 
 ## Setup (once)
 
@@ -50,7 +88,7 @@ against the directory the user means (ask if ambiguous).
 ## Stage 1+2: extract and verify (no LLM)
 
 ```sh
-python "$SCRIPTS"/audit_references.py <pdf-file-or-dir> --out <outdir> --mailto <your-email>
+"$RUN" audit <pdf-file-or-dir> --out <outdir> --mailto <your-email>
 ```
 
 Writes `<outdir>/<paper_id>.json` (every reference, parsed fields plus per-database verification)
@@ -59,13 +97,17 @@ and `<outdir>/summary.json`. The offline DBLP DB defaults to `$HALLUCITE_DBLP` (
 network), `--no-verify` (extraction only). Extraction is `lineno`- and two-column-aware and handles numeric,
 bracket-label, and author-year bibliographies; the target is 0 unparsed references.
 
+If this exits non-zero -- whether a `HALLUCITE_BOOTSTRAP_FAILED:` line (no Python/hallucinator) or
+a per-paper error from the audit -- stop and report it; do not infer verdicts by hand (see the stop
+conditions above).
+
 ## Stage 3: triage the residue (LLM)
 
 ```sh
-python "$SCRIPTS"/triage.py worklist --out <outdir>             # -> <outdir>/triage_worklist.json
-python "$SCRIPTS"/triage.py worklist --pending --out <outdir>   # only refs not yet recorded
-python "$SCRIPTS"/triage.py worklist --paper <paper_id> --out <outdir>  # one paper's slice
-python "$SCRIPTS"/triage.py status --out <outdir>               # per-paper done / pending counts
+"$RUN" triage worklist --out <outdir>             # -> <outdir>/triage_worklist.json
+"$RUN" triage worklist --pending --out <outdir>   # only refs not yet recorded
+"$RUN" triage worklist --paper <paper_id> --out <outdir>  # one paper's slice
+"$RUN" triage status --out <outdir>               # per-paper done / pending counts
 ```
 
 These read the per-paper JSON the audit has already written, so Stage 3 can run on finished
@@ -146,7 +188,7 @@ Record each verdict (it persists immediately and is resumable) with the structur
 back the category:
 
 ```sh
-python "$SCRIPTS"/triage.py record <paper_id> <number> <category> "<finding>" \
+"$RUN" triage record <paper_id> <number> <category> "<finding>" \
   --signals '{"title_match":"no","authors_match":"yes","venue_match":"no","doi_status":"none"}' \
   --out <outdir>
 ```
@@ -163,7 +205,7 @@ with a non-existent-title reference under a **Desk-reject candidates** heading.
 Then assemble the reports:
 
 ```sh
-python "$SCRIPTS"/triage.py report --out <outdir>
+"$RUN" triage report --out <outdir>
 ```
 
 - `<outdir>/reports/reference-check-<paper_id>.md`: per paper.

@@ -101,8 +101,15 @@ claude plugin install hallucite@se-uhd
 ```
 
 Then in any session: "check the references in `<dir>` for hallucinations" (or `/hallucite`). The
-skill (`skills/hallucite/SKILL.md`) invokes the bundled `skills/hallucite/scripts/` via
-`${CLAUDE_PLUGIN_ROOT}`.
+skill (`skills/hallucite/SKILL.md`) drives the bundled scripts through
+`${CLAUDE_PLUGIN_ROOT}/skills/hallucite/scripts/run.sh`, a single entry point
+(`doctor | audit | triage | lint | python`). The installed plugin does not need mise: on first use
+`run.sh` provisions a Python 3.12 that can `import hallucinator` at
+`${XDG_CACHE_HOME:-~/.cache}/hallucite/venv` (preferring `uv`, else a stdlib `venv` over a
+discovered 3.12), reuses it on later runs, and fails loud with a `HALLUCITE_BOOTSTRAP_FAILED:`
+line rather than running half-configured. Set `$HALLUCITE_PYTHON` to reuse an existing
+hallucinator environment and skip provisioning. You still build the offline DBLP database once
+(see Setup). `run.sh doctor` reports whether the environment is ready.
 
 ## Tests and linting
 

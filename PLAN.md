@@ -91,18 +91,29 @@ so a reviewer sees the discriminating fact without re-investigating.
 
 `skills/hallucite/scripts/tests/run_smoke.py` is a dependency-light smoke suite (run by
 `.github/workflows/smoke.yml` on push and pull request, and locally before a release): version and
-packaging consistency, logic-contract unit tests on synthetic per-paper records (a `mismatch`
-reference reaches triage; the title-first record gate; the verdicts lock under concurrent writes;
-per-paper worklist slice isolation, including the `paper6`/`paper66` prefix case; and the
-desk-reject heuristic), Markdown lint, and an offline end-to-end audit against a generated fixture
-DBLP database and a synthetic fixture PDF. The full DBLP database and the online backends are not
-exercised in CI.
+packaging consistency (including that `SKILL.md` drives the pipeline via `run.sh` and carries the
+stop conditions); the `run.sh` bootstrap contract (syntax, unknown-command rejection, fail-loud
+with the sentinel when its Python cannot import hallucinator, and subcommand+argument forwarding);
+logic-contract unit tests on synthetic per-paper records (a `mismatch` reference reaches triage;
+the title-first record gate; the verdicts lock under concurrent writes; per-paper worklist slice
+isolation, including the `paper6`/`paper66` prefix case; and the desk-reject heuristic); Markdown
+lint; and an offline end-to-end audit (driven through `run.sh`) against a generated fixture DBLP
+database and a synthetic fixture PDF. The full DBLP database, the online backends, and `run.sh`'s
+network auto-provision path are not exercised in CI.
 
 ## Packaging
 
 One repo (`se-uhd/hallucite`) is the runnable project and an installable Claude Code plugin: its
 root is the plugin (`.claude-plugin/plugin.json`) and its own single-plugin marketplace
 (`.claude-plugin/marketplace.json`, name `se-uhd`, plugin `source "./"`). The scripts live once
-in `skills/hallucite/scripts/`, used both by mise and by the bundled skill (`skills/hallucite/SKILL.md`
-references them via `${CLAUDE_PLUGIN_ROOT}`). Generated artifacts under `out/` are gitignored.
-See `README.md` for commands.
+in `skills/hallucite/scripts/`, used both by mise and by the bundled skill. Generated artifacts
+under `out/` are gitignored. See `README.md` for commands.
+
+The skill drives the scripts through `skills/hallucite/scripts/run.sh`, a single entry point
+(`doctor | audit | triage | lint | python`) referenced via `${CLAUDE_PLUGIN_ROOT}`. It resolves
+or, on first use, provisions a Python 3.12 that can `import hallucinator` (preferring `uv`, else a
+stdlib `venv` over a 3.12 found on PATH, in common install dirs, or via `mise where`), so the
+plugin does not depend on a bare `python`/`uv`/`mise` being on the shell's PATH. On any setup
+failure it prints a `HALLUCITE_BOOTSTRAP_FAILED:` sentinel and exits non-zero; `$HALLUCITE_PYTHON`
+reuses an existing environment and skips provisioning. This is also the guardrail behind the
+"never fabricate a verdict" rule: no script output means no verdict.
