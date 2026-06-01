@@ -258,18 +258,18 @@ def tier1b_runner() -> None:
     # that is not even executable can never import hallucinator, so resolve_python must `die` with
     # the sentinel rather than fall through to a silent run. This is the guarantee that stops a
     # broken environment from masquerading as a clean audit.
-    r = run(["doctor"], env_add={"HALLUCITE_PYTHON": str(TESTS / "no-such-python")})
+    r = run(["check-env"], env_add={"HALLUCITE_PYTHON": str(TESTS / "no-such-python")})
     C.true(r.returncode != 0 and SENTINEL in r.stderr,
            "REGRESSION GUARD: run.sh fails loud (sentinel) when HALLUCITE_PYTHON is unusable")
 
     # HAPPY PATH + subcommand dispatch, when a hallucinator-capable Python exists. Point
-    # HALLUCITE_PYTHON at it so no venv is provisioned, then check both `doctor` and that an unknown
+    # HALLUCITE_PYTHON at it so no venv is provisioned, then check both `check-env` and that an unknown
     # *script* flag is forwarded (proving args reach the underlying script, not swallowed by run.sh).
     if subprocess.run([sys.executable, "-c", "import hallucinator"],
                       capture_output=True).returncode == 0:
-        r = run(["doctor"], env_add={"HALLUCITE_PYTHON": sys.executable})
+        r = run(["check-env"], env_add={"HALLUCITE_PYTHON": sys.executable})
         C.true(r.returncode == 0 and "HALLUCITE_OK:" in r.stdout,
-               "run.sh doctor prints HALLUCITE_OK for a hallucinator-capable Python")
+               "run.sh check-env prints HALLUCITE_OK for a hallucinator-capable Python")
         r = run(["audit", "--this-flag-does-not-exist"],
                 env_add={"HALLUCITE_PYTHON": sys.executable})
         C.true(r.returncode != 0 and SENTINEL not in r.stderr

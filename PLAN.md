@@ -114,7 +114,7 @@ The scripts live once in `skills/hallucite/scripts/`, used by mise and by the bu
 Generated artifacts under `out/` are gitignored. See `README.md` for commands.
 
 The skill drives the scripts through `skills/hallucite/scripts/run.sh`, a single entry point
-(`doctor | audit | triage | lint | python`). It resolves the wrapper from a Claude Code plugin
+(`check-env | audit | triage | lint | python`). It resolves the wrapper from a Claude Code plugin
 install, the Codex repo-local skill shim, a direct repo clone, or the Codex plugin cache (preferring
 `se-uhd/hallucite` and then any cached `hallucite`, with the lexicographically highest cached
 version). The wrapper resolves or, on first use, provisions a Python 3.12 that can

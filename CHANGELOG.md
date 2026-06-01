@@ -4,6 +4,13 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.7.1] - 2026-06-01
+
+### Changed
+
+- Renamed the environment readiness command from `run.sh doctor` to the clearer
+  `run.sh check-env`.
+
 ## [1.7.0] - 2026-06-01
 
 ### Added
@@ -191,6 +198,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.7.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.7.1
 [1.7.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.7.0
 [1.6.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.6.0
 [1.5.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.5.1

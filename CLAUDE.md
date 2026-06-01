@@ -18,14 +18,14 @@ No separate plugin repo, no submodule.
 ## Running things
 
 - The bundled skill drives the pipeline through `skills/hallucite/scripts/run.sh`, the single
-  entry point (`doctor | audit | triage | lint | python`). It resolves the wrapper from a Claude
+  entry point (`check-env | audit | triage | lint | python`). It resolves the wrapper from a Claude
   Code plugin install, a Codex repo-local skill shim, a direct repo clone, or the Codex plugin
   cache. The wrapper resolves -- or on first use provisions at
   `${XDG_CACHE_HOME:-~/.cache}/hallucite/venv` -- a Python 3.12 that can `import hallucinator`,
   never relying on a bare `python`/`uv`/`mise` being on the plugin shell's PATH (the failure that
   made the plugin silently un-runnable). It fails loud with a `HALLUCITE_BOOTSTRAP_FAILED:`
   sentinel and a non-zero exit; `$HALLUCITE_PYTHON` reuses an existing hallucinator environment and
-  skips provisioning. `run.sh doctor` is the preflight.
+  skips provisioning. `run.sh check-env` is the preflight.
 - In a repo clone you can equivalently use mise tasks: `mise run install | install-cli |
   build-dblp | audit | lint-md`. Python is pinned to 3.12 (hallucinator's wheels). Both paths run
   the same scripts in `skills/hallucite/scripts/`.

@@ -100,11 +100,18 @@ claude plugin marketplace add se-uhd/hallucite      # GitHub once pushed, or a l
 claude plugin install hallucite@se-uhd
 ```
 
-For Codex CLI, install from a pushed release tag for normal use:
+For Codex CLI, add the marketplace and install the plugin:
 
 ```sh
-codex plugin marketplace add se-uhd/hallucite --ref v1.7.0
+codex plugin marketplace add se-uhd/hallucite
 codex plugin list --marketplace se-uhd
+codex plugin add hallucite@se-uhd
+```
+
+To update later:
+
+```sh
+codex plugin marketplace upgrade se-uhd
 codex plugin add hallucite@se-uhd
 ```
 
@@ -123,13 +130,13 @@ Then in any session: "check the references in `<dir>` for hallucinations" (or `/
 Claude Code). The skill (`skills/hallucite/SKILL.md`) resolves the bundled
 `skills/hallucite/scripts/run.sh` from a Claude plugin install, a Codex repo-local skill shim, a
 direct repo clone, or the Codex plugin cache. That wrapper is the single entry point
-(`doctor | audit | triage | lint | python`). Installed plugins do not need mise: on first use
+(`check-env | audit | triage | lint | python`). Installed plugins do not need mise: on first use
 `run.sh` provisions a Python 3.12 that can `import hallucinator` at
 `${XDG_CACHE_HOME:-~/.cache}/hallucite/venv` (preferring `uv`, else a stdlib `venv` over a
 discovered 3.12), reuses it on later runs, and fails loud with a `HALLUCITE_BOOTSTRAP_FAILED:`
 line rather than running half-configured. Set `$HALLUCITE_PYTHON` to reuse an existing
 hallucinator environment and skip provisioning. You still build the offline DBLP database once
-(see Setup). `run.sh doctor` reports whether the environment is ready.
+(see Setup). `run.sh check-env` reports whether the environment is ready.
 
 ## Tests and linting
 

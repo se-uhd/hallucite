@@ -15,7 +15,7 @@
 #     and exits non-zero. That sentinel means NO audit ran -- there is no output to interpret.
 #
 # Usage:
-#   run.sh doctor                 # provision if needed, then print HALLUCITE_OK / fail loud
+#   run.sh check-env              # provision if needed, then print HALLUCITE_OK / fail loud
 #   run.sh audit  <pdf|dir> [...] # -> audit_references.py
 #   run.sh triage <subcmd> [...]  # -> triage.py
 #   run.sh lint   [...]           # -> lint_markdown.py
@@ -111,18 +111,19 @@ to a python that already has hallucinator."
 
 cmd="${1:-}"
 case "$cmd" in
-  doctor|audit|triage|lint|python) shift ;;
+  check-env|audit|triage|lint|python) shift ;;
   ""|-h|--help)
-    printf 'usage: run.sh {doctor|audit|triage|lint|python} [args...]\n' >&2; exit 2 ;;
+    printf 'usage: run.sh {check-env|audit|triage|lint|python} [args...]\n' >&2; exit 2 ;;
   *)
-    printf '%s unknown command %q (expected doctor|audit|triage|lint|python)\n' "$FAIL" "$cmd" >&2
+    printf '%s unknown command %q (expected check-env|audit|triage|lint|python)\n' \
+      "$FAIL" "$cmd" >&2
     exit 2 ;;
 esac
 
 PYTHON="$(resolve_python)"
 
 case "$cmd" in
-  doctor)
+  check-env)
     ver="$("$PYTHON" -c 'import importlib.metadata as m; print(m.version("hallucinator"))' \
            2>/dev/null || echo '?')"
     printf 'HALLUCITE_OK: %s (hallucinator %s)\n' "$PYTHON" "$ver" ;;

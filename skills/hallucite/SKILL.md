@@ -10,7 +10,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
-  version: "1.7.0"
+  version: "1.7.1"
 ---
 
 # hallucite
@@ -32,7 +32,7 @@ tool output, not to your own reading of a `.bib`/`.bbl`/PDF.
 - **Treat any non-zero exit or a `HALLUCITE_BOOTSTRAP_FAILED:` line as a blocking error.** Stop,
   report the failure verbatim to the user, and do not work around it by inspecting the references
   yourself. "The tool would not run" is the correct, honest outcome -- not a hand-written report.
-- **Run the preflight (`doctor`) first.** If it does not print `HALLUCITE_OK`, the environment is
+- **Run the preflight (`check-env`) first.** If it does not print `HALLUCITE_OK`, the environment is
   not ready; surface its message and stop.
 - If commands start erroring or returning empty output, **halt and say so.** Do not begin
   assembling findings from memory or from the source files while the pipeline is broken.
@@ -76,7 +76,8 @@ resolve_hallucite_run() {
 RUN="$(resolve_hallucite_run)" || exit $?
 ```
 
-Subcommands: `run.sh doctor` (preflight), `audit ...`, `triage ...`, `lint ...`, `python ...`.
+Subcommands: `run.sh check-env` (preflight), `audit ...`, `triage ...`, `lint ...`,
+`python ...`.
 On success it is transparent (runs the script, forwards its exit code); on a setup failure it
 prints `HALLUCITE_BOOTSTRAP_FAILED: <reason>` to stderr and exits non-zero -- that sentinel means
 **no audit ran**, so there is nothing to interpret.
@@ -89,7 +90,7 @@ and no venv is built. (In a repo clone you can equivalently use the `mise run ..
 ### Preflight (every session, before any audit)
 
 ```sh
-"$RUN" doctor    # must print `HALLUCITE_OK: <python> (hallucinator <version>)`
+"$RUN" check-env    # must print `HALLUCITE_OK: <python> (hallucinator <version>)`
 ```
 
 If it prints `HALLUCITE_BOOTSTRAP_FAILED:` instead, relay that line to the user and stop -- see the
