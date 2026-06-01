@@ -13,10 +13,10 @@ Three stages: extract and verify are local and deterministic (no LLM); triage is
 that uses an LLM, which can be a cloud or a local model. See [PLAN.md](PLAN.md) for the design and
 architecture.
 
-One repo serves two roles. It is the runnable project (the mise tasks below) and an installable
-Claude Code plugin: the repo root is the plugin, and `.claude-plugin/marketplace.json` makes it
-its own single-plugin marketplace. The bundled skill in `skills/hallucite/` drives the same
-scripts.
+One repo serves as the runnable project (the mise tasks below) and one shared plugin tree for
+Claude Code and Codex CLI. The Claude metadata lives under `.claude-plugin/`; the Codex metadata
+lives under `.codex-plugin/` and `.agents/plugins/marketplace.json`. The bundled skill in
+`skills/hallucite/` drives the same scripts for both tools.
 
 ## Setup (once)
 
@@ -62,8 +62,8 @@ hand each worker its own `worklist --paper <id>` slice (exact id match) instead 
 worklist, so a worker can't grab the wrong paper (e.g. `paper6` vs `paper66`); `record` locks the
 verdicts file, so concurrent workers don't lose each other's verdicts.
 
-Hand the worklist to an interactive LLM agent such as Claude Code ("triage the unverified
-references in `out`"), or use the installed plugin (below). The agent classifies each reference
+Hand the worklist to an interactive LLM agent such as Claude Code or Codex CLI ("triage the
+unverified references in `out`"), or use the installed plugin (below). The agent classifies each reference
 **title-first**: a `partial-match` is a real, locatable publication with the cited title but a
 slipped metadata field (a citation error); a title that matches no real publication is
 `likely-hallucinated`, not a partial-match — even when a different paper by the same authors exists.
@@ -93,17 +93,37 @@ Recent papers cite recent work, so an out-of-date database produces false "not f
 The audit checks the database's age at run time and prints a warning when `~/hallucite/dblp.db`
 is more than 30 days old. Rebuild it with `mise run build-dblp`.
 
-## Install as a Claude Code plugin
+## Install as a plugin
 
 ```sh
 claude plugin marketplace add se-uhd/hallucite      # GitHub once pushed, or a local clone path
 claude plugin install hallucite@se-uhd
 ```
 
-Then in any session: "check the references in `<dir>` for hallucinations" (or `/hallucite`). The
-skill (`skills/hallucite/SKILL.md`) drives the bundled scripts through
-`${CLAUDE_PLUGIN_ROOT}/skills/hallucite/scripts/run.sh`, a single entry point
-(`doctor | audit | triage | lint | python`). The installed plugin does not need mise: on first use
+For Codex CLI, install from a pushed release tag for normal use:
+
+```sh
+codex plugin marketplace add se-uhd/hallucite --ref v1.7.0
+codex plugin list --marketplace se-uhd
+codex plugin add hallucite@se-uhd
+```
+
+For local development, you can register a local checkout instead:
+
+```sh
+codex plugin marketplace add /path/to/hallucite
+codex plugin add hallucite@se-uhd
+```
+
+The local path install uses the `plugins/hallucite -> ..` compatibility shim and may copy the
+current working tree into Codex's plugin cache, including ignored local directories. Use a clean
+checkout when testing local installs.
+
+Then in any session: "check the references in `<dir>` for hallucinations" (or `/hallucite` in
+Claude Code). The skill (`skills/hallucite/SKILL.md`) resolves the bundled
+`skills/hallucite/scripts/run.sh` from a Claude plugin install, a Codex repo-local skill shim, a
+direct repo clone, or the Codex plugin cache. That wrapper is the single entry point
+(`doctor | audit | triage | lint | python`). Installed plugins do not need mise: on first use
 `run.sh` provisions a Python 3.12 that can `import hallucinator` at
 `${XDG_CACHE_HOME:-~/.cache}/hallucite/venv` (preferring `uv`, else a stdlib `venv` over a
 discovered 3.12), reuses it on later runs, and fails loud with a `HALLUCITE_BOOTSTRAP_FAILED:`
@@ -118,9 +138,9 @@ python skills/hallucite/scripts/tests/run_smoke.py
 ```
 
 A dependency-light smoke suite, also run in CI by `.github/workflows/smoke.yml`: version and
-packaging consistency, logic-contract checks on the per-paper JSON (including a guard that a
-`mismatch` reference reaches triage), Markdown lint, and an offline end-to-end audit against a tiny
-generated fixture DBLP database and a synthetic fixture PDF.
+Claude/Codex packaging consistency, logic-contract checks on the per-paper JSON (including a guard
+that a `mismatch` reference reaches triage), Markdown lint, and an offline end-to-end audit against
+a tiny generated fixture DBLP database and a synthetic fixture PDF.
 
 The repo's Markdown is checked with a vendored PyMarkdown (synced from
 [se-uhd/pymarkdown-skill](https://github.com/se-uhd/pymarkdown-skill); self-contained under

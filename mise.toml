@@ -1,11 +1,13 @@
 # mise config for the hallucite reference-audit pipeline (https://mise.jdx.dev).
 #
-# This repo is both the runnable project (these tasks) and a Claude Code plugin. Run mise
-# tasks from the repo root. Layout:
+# This repo is both the runnable project (these tasks) and a Claude Code/Codex CLI plugin. Run
+# mise tasks from the repo root. Layout:
 #
-#   hallucite/                  # repo root (also the plugin)
+#   hallucite/                  # repo root (also the shared plugin tree)
 #   ├── mise.toml  requirements.txt
-#   ├── .claude-plugin/         # plugin.json + marketplace.json
+#   ├── .claude-plugin/         # Claude Code plugin.json + marketplace.json
+#   ├── .codex-plugin/          # Codex CLI plugin.json
+#   ├── .agents/                # Codex CLI marketplace + repo-local skill shim
 #   ├── skills/hallucite/
 #   │   ├── SKILL.md
 #   │   └── scripts/            # pdf_references, audit_references, triage

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # run.sh -- the single entry point for the hallucite pipeline.
 #
-# Why this exists: when hallucite is installed as a Claude Code plugin, only SKILL.md and these
-# scripts ship -- no Python and no `hallucinator`. The dev-clone path (`mise run ...`) is not
-# available, and the agent's shell often does not have `uv`/`mise`/`python3.12` on PATH even when
-# they are installed under ~/.local/bin or Homebrew. Calling the .py scripts with a bare `python`
-# then fails in confusing, easy-to-misread ways. This wrapper makes the skill self-sufficient:
-# it resolves (or provisions) a Python 3.12 that can `import hallucinator`, then execs the
-# requested script with it.
+# Why this exists: when hallucite is installed as a Claude Code or Codex CLI plugin, only SKILL.md
+# and these scripts ship -- no Python and no `hallucinator`. The dev-clone path (`mise run ...`) is
+# not available, and the agent's shell often does not have `uv`/`mise`/`python3.12` on PATH even
+# when they are installed under ~/.local/bin or Homebrew. Calling the .py scripts with a bare
+# `python` then fails in confusing, easy-to-misread ways. This wrapper makes the skill
+# self-sufficient: it resolves (or provisions) a Python 3.12 that can `import hallucinator`, then
+# execs the requested script with it.
 #
 # Contract for callers (see SKILL.md "Stop conditions" and the "Preflight" subsection):
 #   - On success it is transparent: it runs the script and forwards its exit code.

@@ -5,12 +5,15 @@ contract and the plugin packaging. Run in CI (.github/workflows/smoke.yml) and l
     python skills/hallucite/scripts/tests/run_smoke.py
 
 Tiers (any failing check exits non-zero):
-  1  packaging/consistency -- version in sync across plugin.json / SKILL.md / CHANGELOG,
-                              JSON validity, SKILL.md frontmatter, every script compiles,
-                              referenced script paths exist, SKILL.md drives the pipeline via
-                              run.sh and states the stop conditions.
-  1b run.sh bootstrap        -- the wrapper syntax-checks, rejects an unknown command, and fails
+  1  packaging/consistency -- version in sync across Claude/Codex manifests / SKILL.md /
+                              CHANGELOG, JSON validity, SKILL.md frontmatter, every script
+                              compiles, referenced script paths exist, Claude and Codex
+                              marketplace shapes, repo-local symlink shims, AGENTS.md, and
+                              SKILL.md runner resolver branches.
+  1b run.sh bootstrap       -- the wrapper syntax-checks, rejects an unknown command, and fails
                               loud (sentinel + non-zero) when its Python lacks hallucinator.
+  1c Codex CLI marketplace  -- optional when `codex` is installed: register this repo in an
+                              isolated CODEX_HOME and assert hallucite@se-uhd is listed.
   3  logic contract        -- needs_triage / paper_status_counts on synthetic records,
                               including the "mismatch" status a past bug silently dropped,
                               and category/severity consistency. No network or DB.
@@ -70,20 +73,25 @@ C = Checks()
 
 def tier1_packaging() -> None:
     print("Tier 1: packaging / consistency")
-    plugin = json.loads((REPO / ".claude-plugin" / "plugin.json").read_text())
-    market = json.loads((REPO / ".claude-plugin" / "marketplace.json").read_text())
+    claude_plugin = json.loads((REPO / ".claude-plugin" / "plugin.json").read_text())
+    codex_plugin = json.loads((REPO / ".codex-plugin" / "plugin.json").read_text())
+    claude_market = json.loads((REPO / ".claude-plugin" / "marketplace.json").read_text())
+    codex_market = json.loads((REPO / ".agents" / "plugins" / "marketplace.json").read_text())
     skill = (HALLUCITE / "SKILL.md").read_text()
+    agents_md = (REPO / "AGENTS.md").read_text()
     changelog = (REPO / "CHANGELOG.md").read_text()
 
     parts = skill.split("---", 2)
     fm = parts[1] if len(parts) >= 3 else ""
-    pv = plugin.get("version")
+    pv = claude_plugin.get("version")
+    cpv = codex_plugin.get("version")
     m = re.search(r'^\s*version:\s*"([^"]+)"', fm, re.M)
     sv = m.group(1) if m else None
     m = re.search(r'^##\s*\[([0-9]+\.[0-9]+\.[0-9]+)\]', changelog, re.M)
     cv = m.group(1) if m else None
-    C.true(pv is not None and pv == sv == cv,
-           f"version in sync: plugin.json={pv}, SKILL.md={sv}, CHANGELOG latest={cv}")
+    C.true(pv is not None and pv == cpv == sv == cv,
+           "version in sync: "
+           f"Claude plugin={pv}, Codex plugin={cpv}, SKILL.md={sv}, CHANGELOG latest={cv}")
 
     try:
         tags = subprocess.run(["git", "-C", str(REPO), "tag", "-l", "v*"],
@@ -97,9 +105,55 @@ def tier1_packaging() -> None:
     else:
         C.skip(f"tag v{pv} not present yet (tag the release commit before publishing)")
 
-    C.eq(market.get("name"), "se-uhd", "marketplace name = se-uhd")
-    C.true(any(p.get("source") in ("./", ".") for p in (market.get("plugins") or [])),
-           "marketplace plugin source is the repo root")
+    C.eq(claude_market.get("name"), "se-uhd", "Claude marketplace name = se-uhd")
+    claude_entries = claude_market.get("plugins") or []
+    C.true(any(isinstance(p.get("source"), str) and p.get("source") in ("./", ".")
+               for p in claude_entries),
+           "Claude marketplace plugin source is the repo root string")
+    C.true(all(isinstance(p.get("source"), str) and "policy" not in p and "category" not in p
+               for p in claude_entries),
+           "Claude marketplace remains Claude-shaped (string source, no Codex policy/category)")
+
+    C.eq(codex_plugin.get("name"), "hallucite", "Codex manifest name = hallucite")
+    C.eq(codex_plugin.get("skills"), "./skills/", "Codex manifest skills = ./skills/")
+    interface = codex_plugin.get("interface") or {}
+    for field in ("displayName", "shortDescription", "longDescription",
+                  "developerName", "category"):
+        C.true(isinstance(interface.get(field), str) and interface[field].strip(),
+               f"Codex manifest interface.{field} is present")
+    C.true(isinstance(interface.get("capabilities"), list)
+           and all(isinstance(v, str) and v.strip() for v in interface["capabilities"]),
+           "Codex manifest interface.capabilities is an array of strings")
+    prompt = interface.get("defaultPrompt") or interface.get("default_prompt")
+    C.true(isinstance(prompt, list) and 1 <= len(prompt) <= 3
+           and all(isinstance(v, str) and v.strip() for v in prompt),
+           "Codex manifest interface.defaultPrompt has 1-3 prompts")
+
+    C.eq(codex_market.get("name"), "se-uhd", "Codex marketplace name = se-uhd")
+    codex_entries = codex_market.get("plugins") or []
+    codex_entry = next((p for p in codex_entries if p.get("name") == "hallucite"), None)
+    C.true(codex_entry is not None, "Codex marketplace has hallucite entry")
+    if codex_entry is not None:
+        C.eq(codex_entry.get("source"),
+             {"source": "local", "path": "./plugins/hallucite"},
+             "Codex marketplace source.path = ./plugins/hallucite")
+        C.eq((codex_entry.get("policy") or {}).get("installation"), "AVAILABLE",
+             "Codex marketplace policy.installation = AVAILABLE")
+        C.eq((codex_entry.get("policy") or {}).get("authentication"), "ON_INSTALL",
+             "Codex marketplace policy.authentication = ON_INSTALL")
+        C.true(isinstance(codex_entry.get("category"), str) and codex_entry["category"].strip(),
+               "Codex marketplace category is present")
+
+    plugin_shim = REPO / "plugins" / "hallucite"
+    C.true(plugin_shim.is_symlink(), "plugins/hallucite is a symlink")
+    C.eq(plugin_shim.resolve(), REPO.resolve(), "plugins/hallucite resolves to repo root")
+    skill_shim = REPO / ".agents" / "skills" / "hallucite"
+    C.true(skill_shim.is_symlink(), ".agents/skills/hallucite is a symlink")
+    C.eq(skill_shim.resolve(), HALLUCITE.resolve(),
+         ".agents/skills/hallucite resolves to shared skill")
+    C.true("CLAUDE.md" in agents_md and "[CLAUDE.md](CLAUDE.md)" in agents_md,
+           "AGENTS.md points to CLAUDE.md")
+
     C.true(re.search(r'^\s*name:\s*hallucite\s*$', fm, re.M) is not None,
            "SKILL.md frontmatter name = hallucite")
 
@@ -122,6 +176,53 @@ def tier1_packaging() -> None:
            "SKILL.md has no bare `python \"$SCRIPTS\"` calls (use run.sh)")
     C.true("Stop conditions" in skill and "No script output" in skill,
            "SKILL.md states the no-output-no-verdict stop conditions")
+    for label, needle in (
+        ("Claude plugin install", "CLAUDE_PLUGIN_ROOT"),
+        ("Codex repo-local skill shim", ".agents/skills/hallucite/scripts/run.sh"),
+        ("direct repo clone", "skills/hallucite/scripts/run.sh"),
+        ("Codex plugin cache root", "${CODEX_HOME:-$HOME/.codex}/plugins/cache"),
+        ("preferred se-uhd/hallucite cache", "*/se-uhd/hallucite/*/skills/hallucite/scripts/run.sh"),
+        ("fallback hallucite cache", "*/hallucite/*/skills/hallucite/scripts/run.sh"),
+        ("locator failure sentinel",
+         "HALLUCITE_BOOTSTRAP_FAILED: cannot locate hallucite scripts/run.sh"),
+    ):
+        C.true(needle in skill, f"SKILL.md documents runner resolver branch: {label}")
+
+
+def tier1c_codex_cli_marketplace() -> None:
+    print("Tier 1c: Codex CLI marketplace discovery (optional)")
+    codex = which("codex")
+    if codex is None:
+        C.skip("codex CLI not installed; Codex marketplace discovery skipped")
+        return
+
+    tmp_parent = Path("/private/tmp") if Path("/private/tmp").is_dir() else Path(tempfile.gettempdir())
+
+    def run_codex(args: list[str], env: dict[str, str]) -> subprocess.CompletedProcess[str] | None:
+        try:
+            return subprocess.run([codex, *args], capture_output=True, text=True,
+                                  env=env, timeout=30)
+        except subprocess.TimeoutExpired:
+            C.fail(f"codex {' '.join(args)} timed out")
+            return None
+
+    with tempfile.TemporaryDirectory(prefix="hallucite-codex-home-", dir=str(tmp_parent)) as home:
+        env = {**os.environ, "CODEX_HOME": home}
+        r = run_codex(["plugin", "marketplace", "add", str(REPO)], env)
+        if r is None:
+            return
+        C.true(r.returncode == 0, "codex plugin marketplace add <repo> succeeds"
+               + ("" if r.returncode == 0 else f" :: {(r.stderr or r.stdout).strip()[-300:]}"))
+        if r.returncode != 0:
+            return
+        r = run_codex(["plugin", "list", "--marketplace", "se-uhd"], env)
+        if r is None:
+            return
+        listing = r.stdout + r.stderr
+        C.true(r.returncode == 0, "codex plugin list --marketplace se-uhd succeeds"
+               + ("" if r.returncode == 0 else f" :: {listing.strip()[-300:]}"))
+        C.true("hallucite@se-uhd" in listing,
+               "codex plugin list shows hallucite@se-uhd")
 
 
 def tier1b_runner() -> None:
@@ -433,6 +534,7 @@ def tier4_end_to_end() -> None:
 def main() -> int:
     tier1_packaging()
     tier1b_runner()
+    tier1c_codex_cli_marketplace()
     tier3_logic()
     tier3b_triage_concurrency()
     tier3c_title_first_gate()

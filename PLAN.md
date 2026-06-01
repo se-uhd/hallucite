@@ -91,29 +91,36 @@ so a reviewer sees the discriminating fact without re-investigating.
 
 `skills/hallucite/scripts/tests/run_smoke.py` is a dependency-light smoke suite (run by
 `.github/workflows/smoke.yml` on push and pull request, and locally before a release): version and
-packaging consistency (including that `SKILL.md` drives the pipeline via `run.sh` and carries the
-stop conditions); the `run.sh` bootstrap contract (syntax, unknown-command rejection, fail-loud
-with the sentinel when its Python cannot import hallucinator, and subcommand+argument forwarding);
-logic-contract unit tests on synthetic per-paper records (a `mismatch` reference reaches triage;
-the title-first record gate; the verdicts lock under concurrent writes; per-paper worklist slice
-isolation, including the `paper6`/`paper66` prefix case; and the desk-reject heuristic); Markdown
-lint; and an offline end-to-end audit (driven through `run.sh`) against a generated fixture DBLP
-database and a synthetic fixture PDF. The full DBLP database, the online backends, and `run.sh`'s
-network auto-provision path are not exercised in CI.
+Claude/Codex packaging consistency (including that `SKILL.md` drives the pipeline via `run.sh`,
+carries the stop conditions, and documents every runner resolver branch); the `run.sh` bootstrap
+contract (syntax, unknown-command rejection, fail-loud with the sentinel when its Python cannot
+import hallucinator, and subcommand+argument forwarding); logic-contract unit tests on synthetic
+per-paper records (a `mismatch` reference reaches triage; the title-first record gate; the verdicts
+lock under concurrent writes; per-paper worklist slice isolation, including the `paper6`/`paper66`
+prefix case; and the desk-reject heuristic); Markdown lint; an optional isolated Codex CLI
+marketplace-list check when `codex` is installed; and an offline end-to-end audit (driven through
+`run.sh`) against a generated fixture DBLP database and a synthetic fixture PDF. The full DBLP
+database, the online backends, and `run.sh`'s network auto-provision path are not exercised in CI.
 
 ## Packaging
 
-One repo (`se-uhd/hallucite`) is the runnable project and an installable Claude Code plugin: its
-root is the plugin (`.claude-plugin/plugin.json`) and its own single-plugin marketplace
-(`.claude-plugin/marketplace.json`, name `se-uhd`, plugin `source "./"`). The scripts live once
-in `skills/hallucite/scripts/`, used both by mise and by the bundled skill. Generated artifacts
-under `out/` are gitignored. See `README.md` for commands.
+One repo (`se-uhd/hallucite`) is the runnable project and an installable plugin for Claude Code and
+Codex CLI. Claude Code uses `.claude-plugin/plugin.json` plus
+`.claude-plugin/marketplace.json` (name `se-uhd`, plugin `source "./"`). Codex CLI uses
+`.codex-plugin/plugin.json`, `.agents/plugins/marketplace.json` (name `se-uhd`, plugin
+`source.path "./plugins/hallucite"`), `plugins/hallucite -> ..` as the marketplace compatibility
+shim, and `.agents/skills/hallucite -> ../../skills/hallucite` for repo-local skill discovery.
+The scripts live once in `skills/hallucite/scripts/`, used by mise and by the bundled skill.
+Generated artifacts under `out/` are gitignored. See `README.md` for commands.
 
 The skill drives the scripts through `skills/hallucite/scripts/run.sh`, a single entry point
-(`doctor | audit | triage | lint | python`) referenced via `${CLAUDE_PLUGIN_ROOT}`. It resolves
-or, on first use, provisions a Python 3.12 that can `import hallucinator` (preferring `uv`, else a
-stdlib `venv` over a 3.12 found on PATH, in common install dirs, or via `mise where`), so the
-plugin does not depend on a bare `python`/`uv`/`mise` being on the shell's PATH. On any setup
-failure it prints a `HALLUCITE_BOOTSTRAP_FAILED:` sentinel and exits non-zero; `$HALLUCITE_PYTHON`
-reuses an existing environment and skips provisioning. This is also the guardrail behind the
-"never fabricate a verdict" rule: no script output means no verdict.
+(`doctor | audit | triage | lint | python`). It resolves the wrapper from a Claude Code plugin
+install, the Codex repo-local skill shim, a direct repo clone, or the Codex plugin cache (preferring
+`se-uhd/hallucite` and then any cached `hallucite`, with the lexicographically highest cached
+version). The wrapper resolves or, on first use, provisions a Python 3.12 that can
+`import hallucinator` (preferring `uv`, else a stdlib `venv` over a 3.12 found on PATH, in common
+install dirs, or via `mise where`), so installed plugins do not depend on a bare
+`python`/`uv`/`mise` being on the shell's PATH. On any setup failure it prints a
+`HALLUCITE_BOOTSTRAP_FAILED:` sentinel and exits non-zero; `$HALLUCITE_PYTHON` reuses an existing
+environment and skips provisioning. This is also the guardrail behind the "never fabricate a
+verdict" rule: no script output means no verdict.

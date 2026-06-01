@@ -1,0 +1,29 @@
+{
+  "name": "hallucite",
+  "version": "1.7.0",
+  "description": "Detect hallucinated (fabricated) references in academic paper PDF files: extract references, verify against offline DBLP + CrossRef/arXiv/OpenAlex, then triage the residue via web search and report likely-hallucinated citations.",
+  "author": {
+    "name": "se-uhd"
+  },
+  "homepage": "https://github.com/se-uhd/hallucite",
+  "repository": "https://github.com/se-uhd/hallucite",
+  "license": "MIT",
+  "keywords": ["references", "citations", "hallucination", "peer-review", "dblp", "bibliography"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "hallucite",
+    "shortDescription": "Detect fabricated references in academic PDFs.",
+    "longDescription": "Extracts references from academic paper PDFs, verifies them against DBLP and open bibliographic databases, then guides LLM triage for unresolved citations.",
+    "developerName": "se-uhd",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": [
+      "Check the references in this paper for hallucinations.",
+      "Audit a folder of PDFs for fabricated citations.",
+      "Triage unresolved references in an existing out directory."
+    ],
+    "brandColor": "#2563EB",
+    "composerIcon": "./assets/logo.png",
+    "logo": "./assets/logo-readme.png"
+  }
+}

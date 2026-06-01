@@ -8,9 +8,9 @@ description: >-
   without using an LLM, then triages only the database-unverified residue via web search and writes
   a report of likely-hallucinated references plus per-paper manual-verification sheets.
 license: MIT
-compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Only the plugin/marketplace packaging is Claude Code-specific.
+compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
-  version: "1.6.0"
+  version: "1.7.0"
 ---
 
 # hallucite
@@ -44,8 +44,36 @@ a Python 3.12 that can `import hallucinator`, so you never call a bare `python`/
 be missing from the plugin's shell. It is the single supported entry point.
 
 ```sh
-RUN="${CLAUDE_PLUGIN_ROOT}/skills/hallucite/scripts/run.sh"   # plugin install
-# RUN="skills/hallucite/scripts/run.sh"                        # repo clone
+resolve_hallucite_run() {
+  # 1. Claude Code plugin install.
+  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+    candidate="${CLAUDE_PLUGIN_ROOT}/skills/hallucite/scripts/run.sh"
+    [ -x "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
+  fi
+
+  # 2. Codex repo-local skill discovery shim.
+  candidate=".agents/skills/hallucite/scripts/run.sh"
+  [ -x "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
+
+  # 3. Direct repo clone.
+  candidate="skills/hallucite/scripts/run.sh"
+  [ -x "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
+
+  # 4. Codex plugin cache. Prefer se-uhd/hallucite, then any marketplace's hallucite,
+  # choosing the lexicographically highest cached version.
+  cache_root="${CODEX_HOME:-$HOME/.codex}/plugins/cache"
+  if [ -d "$cache_root" ]; then
+    candidate="$(find "$cache_root" -path '*/se-uhd/hallucite/*/skills/hallucite/scripts/run.sh' -type f 2>/dev/null | sort | tail -n 1)"
+    [ -n "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
+    candidate="$(find "$cache_root" -path '*/hallucite/*/skills/hallucite/scripts/run.sh' -type f 2>/dev/null | sort | tail -n 1)"
+    [ -n "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
+  fi
+
+  printf '%s\n' 'HALLUCITE_BOOTSTRAP_FAILED: cannot locate hallucite scripts/run.sh' >&2
+  return 3
+}
+
+RUN="$(resolve_hallucite_run)" || exit $?
 ```
 
 Subcommands: `run.sh doctor` (preflight), `audit ...`, `triage ...`, `lint ...`, `python ...`.

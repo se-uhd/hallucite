@@ -4,6 +4,25 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.7.0] - 2026-06-01
+
+### Added
+
+- Codex CLI packaging alongside the existing Claude Code plugin: `.codex-plugin/plugin.json`,
+  `.agents/plugins/marketplace.json`, `plugins/hallucite` as the marketplace compatibility shim,
+  `.agents/skills/hallucite` for repo-local Codex skill discovery, and `AGENTS.md` as a pointer to
+  the canonical repo guidance in `CLAUDE.md`.
+- Smoke coverage for dual manifests, Claude-vs-Codex marketplace shapes, Codex symlink shims,
+  `AGENTS.md`, the expanded runner resolver, and an optional isolated Codex CLI marketplace-list
+  check when `codex` is installed.
+
+### Changed
+
+- The bundled skill now resolves `run.sh` across Claude Code installs, repo-local Codex discovery,
+  direct repo clones, and Codex plugin caches, while keeping one shared skill and script tree.
+- README, PLAN, CLAUDE.md, `run.sh`, and `mise.toml` now describe support for both Claude Code and
+  Codex CLI.
+
 ## [1.6.0] - 2026-05-30
 
 ### Added
@@ -172,6 +191,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.7.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.7.0
 [1.6.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.6.0
 [1.5.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.5.1
 [1.5.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.5.0
