@@ -1,7 +1,7 @@
 {
-  "name": "se-uhd",
+  "name": "hallucite",
   "interface": {
-    "displayName": "se-uhd"
+    "displayName": "hallucite"
   },
   "plugins": [
     {

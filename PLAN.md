@@ -106,8 +106,8 @@ database, the online backends, and `run.sh`'s network auto-provision path are no
 
 One repo (`se-uhd/hallucite`) is the runnable project and an installable plugin for Claude Code and
 Codex CLI. Claude Code uses `.claude-plugin/plugin.json` plus
-`.claude-plugin/marketplace.json` (name `se-uhd`, plugin `source "./"`). Codex CLI uses
-`.codex-plugin/plugin.json`, `.agents/plugins/marketplace.json` (name `se-uhd`, plugin
+`.claude-plugin/marketplace.json` (name `hallucite`, plugin `source "./"`). Codex CLI uses
+`.codex-plugin/plugin.json`, `.agents/plugins/marketplace.json` (name `hallucite`, plugin
 `source.path "./plugins/hallucite"`), `plugins/hallucite -> ..` as the marketplace compatibility
 shim, and `.agents/skills/hallucite -> ../../skills/hallucite` for repo-local skill discovery.
 The scripts live once in `skills/hallucite/scripts/`, used by mise and by the bundled skill.
@@ -116,8 +116,8 @@ Generated artifacts under `out/` are gitignored. See `README.md` for commands.
 The skill drives the scripts through `skills/hallucite/scripts/run.sh`, a single entry point
 (`check-env | audit | triage | lint | python`). It resolves the wrapper from a Claude Code plugin
 install, the Codex repo-local skill shim, a direct repo clone, or the Codex plugin cache (preferring
-`se-uhd/hallucite` and then any cached `hallucite`, with the lexicographically highest cached
-version). The wrapper resolves or, on first use, provisions a Python 3.12 that can
+the `hallucite` marketplace's cached plugin and then any cached `hallucite`, with the
+lexicographically highest cached version). The wrapper resolves or, on first use, provisions a Python 3.12 that can
 `import hallucinator` (preferring `uv`, else a stdlib `venv` over a 3.12 found on PATH, in common
 install dirs, or via `mise where`), so installed plugins do not depend on a bare
 `python`/`uv`/`mise` being on the shell's PATH. On any setup failure it prints a

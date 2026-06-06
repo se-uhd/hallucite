@@ -97,29 +97,29 @@ is more than 30 days old. Rebuild it with `mise run build-dblp`.
 
 ```sh
 claude plugin marketplace add se-uhd/hallucite      # GitHub once pushed, or a local clone path
-claude plugin install hallucite@se-uhd
+claude plugin install hallucite@hallucite
 ```
 
 For Codex CLI, add the marketplace and install the plugin:
 
 ```sh
 codex plugin marketplace add se-uhd/hallucite
-codex plugin list --marketplace se-uhd
-codex plugin add hallucite@se-uhd
+codex plugin list --marketplace hallucite
+codex plugin add hallucite@hallucite
 ```
 
 To update later:
 
 ```sh
-codex plugin marketplace upgrade se-uhd
-codex plugin add hallucite@se-uhd
+codex plugin marketplace upgrade hallucite
+codex plugin add hallucite@hallucite
 ```
 
 For local development, you can register a local checkout instead:
 
 ```sh
 codex plugin marketplace add /path/to/hallucite
-codex plugin add hallucite@se-uhd
+codex plugin add hallucite@hallucite
 ```
 
 The local path install uses the `plugins/hallucite -> ..` compatibility shim and may copy the

@@ -1,9 +1,9 @@
 {
-  "name": "se-uhd",
+  "name": "hallucite",
   "owner": {
     "name": "se-uhd"
   },
-  "description": "se-uhd Claude Code plugins.",
+  "description": "hallucite Claude Code plugin.",
   "plugins": [
     {
       "name": "hallucite",

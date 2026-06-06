@@ -59,11 +59,11 @@ resolve_hallucite_run() {
   candidate="skills/hallucite/scripts/run.sh"
   [ -x "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
 
-  # 4. Codex plugin cache. Prefer se-uhd/hallucite, then any marketplace's hallucite,
-  # choosing the lexicographically highest cached version.
+  # 4. Codex plugin cache. Prefer the hallucite marketplace's hallucite, then any
+  # marketplace's hallucite, choosing the lexicographically highest cached version.
   cache_root="${CODEX_HOME:-$HOME/.codex}/plugins/cache"
   if [ -d "$cache_root" ]; then
-    candidate="$(find "$cache_root" -path '*/se-uhd/hallucite/*/skills/hallucite/scripts/run.sh' -type f 2>/dev/null | sort | tail -n 1)"
+    candidate="$(find "$cache_root" -path '*/hallucite/hallucite/*/skills/hallucite/scripts/run.sh' -type f 2>/dev/null | sort | tail -n 1)"
     [ -n "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
     candidate="$(find "$cache_root" -path '*/hallucite/*/skills/hallucite/scripts/run.sh' -type f 2>/dev/null | sort | tail -n 1)"
     [ -n "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }

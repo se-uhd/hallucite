@@ -9,7 +9,7 @@ Stage 3 (triage the database-unverified residue) is the LLM step, done interacti
 
 One repo, two roles: it is the runnable project (mise tasks) and an installable plugin for Claude
 Code and Codex CLI. Claude Code uses `.claude-plugin/plugin.json` plus
-`.claude-plugin/marketplace.json` (name `se-uhd`, plugin `source: "./"`). Codex CLI uses
+`.claude-plugin/marketplace.json` (name `hallucite`, plugin `source: "./"`). Codex CLI uses
 `.codex-plugin/plugin.json`, `.agents/plugins/marketplace.json`, `plugins/hallucite -> ..`, and
 `.agents/skills/hallucite -> ../../skills/hallucite`. The pipeline scripts live once in
 `skills/hallucite/scripts/`, used by mise and by the bundled skill (`skills/hallucite/SKILL.md`).

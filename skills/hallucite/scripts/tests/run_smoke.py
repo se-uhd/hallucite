@@ -13,7 +13,7 @@ Tiers (any failing check exits non-zero):
   1b run.sh bootstrap       -- the wrapper syntax-checks, rejects an unknown command, and fails
                               loud (sentinel + non-zero) when its Python lacks hallucinator.
   1c Codex CLI marketplace  -- optional when `codex` is installed: register this repo in an
-                              isolated CODEX_HOME and assert hallucite@se-uhd is listed.
+                              isolated CODEX_HOME and assert hallucite@hallucite is listed.
   3  logic contract        -- needs_triage / paper_status_counts on synthetic records,
                               including the "mismatch" status a past bug silently dropped,
                               and category/severity consistency. No network or DB.
@@ -105,7 +105,7 @@ def tier1_packaging() -> None:
     else:
         C.skip(f"tag v{pv} not present yet (tag the release commit before publishing)")
 
-    C.eq(claude_market.get("name"), "se-uhd", "Claude marketplace name = se-uhd")
+    C.eq(claude_market.get("name"), "hallucite", "Claude marketplace name = hallucite")
     claude_entries = claude_market.get("plugins") or []
     C.true(any(isinstance(p.get("source"), str) and p.get("source") in ("./", ".")
                for p in claude_entries),
@@ -129,7 +129,7 @@ def tier1_packaging() -> None:
            and all(isinstance(v, str) and v.strip() for v in prompt),
            "Codex manifest interface.defaultPrompt has 1-3 prompts")
 
-    C.eq(codex_market.get("name"), "se-uhd", "Codex marketplace name = se-uhd")
+    C.eq(codex_market.get("name"), "hallucite", "Codex marketplace name = hallucite")
     codex_entries = codex_market.get("plugins") or []
     codex_entry = next((p for p in codex_entries if p.get("name") == "hallucite"), None)
     C.true(codex_entry is not None, "Codex marketplace has hallucite entry")
@@ -181,7 +181,7 @@ def tier1_packaging() -> None:
         ("Codex repo-local skill shim", ".agents/skills/hallucite/scripts/run.sh"),
         ("direct repo clone", "skills/hallucite/scripts/run.sh"),
         ("Codex plugin cache root", "${CODEX_HOME:-$HOME/.codex}/plugins/cache"),
-        ("preferred se-uhd/hallucite cache", "*/se-uhd/hallucite/*/skills/hallucite/scripts/run.sh"),
+        ("preferred hallucite/hallucite cache", "*/hallucite/hallucite/*/skills/hallucite/scripts/run.sh"),
         ("fallback hallucite cache", "*/hallucite/*/skills/hallucite/scripts/run.sh"),
         ("locator failure sentinel",
          "HALLUCITE_BOOTSTRAP_FAILED: cannot locate hallucite scripts/run.sh"),
@@ -215,14 +215,14 @@ def tier1c_codex_cli_marketplace() -> None:
                + ("" if r.returncode == 0 else f" :: {(r.stderr or r.stdout).strip()[-300:]}"))
         if r.returncode != 0:
             return
-        r = run_codex(["plugin", "list", "--marketplace", "se-uhd"], env)
+        r = run_codex(["plugin", "list", "--marketplace", "hallucite"], env)
         if r is None:
             return
         listing = r.stdout + r.stderr
-        C.true(r.returncode == 0, "codex plugin list --marketplace se-uhd succeeds"
+        C.true(r.returncode == 0, "codex plugin list --marketplace hallucite succeeds"
                + ("" if r.returncode == 0 else f" :: {listing.strip()[-300:]}"))
-        C.true("hallucite@se-uhd" in listing,
-               "codex plugin list shows hallucite@se-uhd")
+        C.true("hallucite@hallucite" in listing,
+               "codex plugin list shows hallucite@hallucite")
 
 
 def tier1b_runner() -> None:
