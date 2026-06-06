@@ -4,6 +4,16 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.8.0] - 2026-06-06
+
+### Changed
+
+- Renamed the plugin marketplace from `se-uhd` to `hallucite` in both the Claude Code
+  (`.claude-plugin/marketplace.json`) and Codex (`.agents/plugins/marketplace.json`) manifests, so
+  it installs as `hallucite@hallucite` and lists under `--marketplace hallucite`. The Codex plugin
+  cache resolver now prefers the `hallucite` marketplace's cached copy. The GitHub repo location
+  (`se-uhd/hallucite`), owning org, and plugin author/developer are unchanged.
+
 ## [1.7.1] - 2026-06-01
 
 ### Changed
@@ -198,6 +208,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.8.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.0
 [1.7.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.7.1
 [1.7.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.7.0
 [1.6.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.6.0
