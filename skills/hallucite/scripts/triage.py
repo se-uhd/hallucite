@@ -191,10 +191,14 @@ def _record_verdict(out_dir: Path, key: str, entry: dict) -> int:
 
 def load_papers(out_dir: Path) -> list[dict]:
     """Per-paper JSON records in out_dir (any filename), naturally sorted. A file is a paper record
-    iff it parses to a dict with a "references" list and a "paper_id"; this excludes the pipeline's
-    own outputs (summary / worklist / verdicts) by content -- so a paper whose name happens to
-    collide with one of those is still included -- and skips any stray/unreadable .json rather than
-    crashing the whole run."""
+    iff it parses to a dict with a "references" list plus usable "paper_id" (str), "pdf_path"
+    (str), and "num_references" (int) fields -- the consumers read them, and status/report would
+    crash on a missing or null one. This excludes the pipeline's own outputs (summary / worklist /
+    verdicts) by content -- so a paper whose name happens to collide with one of those is still
+    included -- and skips any stray/unreadable .json rather than crashing the whole run. A
+    near-miss (a "references" dict whose other fields are missing or malformed, e.g. after an
+    audit schema drift) is skipped with a warning, not silently, so a whole corpus cannot vanish
+    from Stage 3 undiagnosed."""
     out: list[dict] = []
     for f in sorted(out_dir.glob("*.json"), key=lambda f: _natural_key(f.name)):
         try:
@@ -202,8 +206,15 @@ def load_papers(out_dir: Path) -> list[dict]:
         except (json.JSONDecodeError, OSError):
             print(f"warning: skipping unreadable JSON {f.name}", file=sys.stderr)
             continue
-        if isinstance(rec, dict) and isinstance(rec.get("references"), list) and "paper_id" in rec:
-            out.append(rec)
+        if not (isinstance(rec, dict) and isinstance(rec.get("references"), list)):
+            continue
+        bad = [k for k, t in (("paper_id", str), ("pdf_path", str), ("num_references", int))
+               if not isinstance(rec.get(k), t)]
+        if bad:
+            print(f"warning: skipping {f.name}: looks like a paper record but lacks "
+                  f"valid {', '.join(bad)}", file=sys.stderr)
+            continue
+        out.append(rec)
     return out
 
 

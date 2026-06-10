@@ -8,7 +8,7 @@
     {
       "name": "hallucite",
       "source": "./",
-      "description": "Detect hallucinated references in academic paper PDF files: extract -> verify against offline DBLP + CrossRef/arXiv/OpenAlex -> triage the residue -> report likely-hallucinated citations."
+      "description": "Detect hallucinated references in academic paper PDF files: extract -> verify against offline DBLP + CrossRef/arXiv/Semantic Scholar and other open databases -> triage the residue -> report likely-hallucinated citations."
     }
   ]
 }

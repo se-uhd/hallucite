@@ -5,13 +5,13 @@
 # hallucite
 
 Finds fabricated ("hallucinated") references in academic paper PDF files. Each reference is checked
-against academic databases (offline DBLP, plus CrossRef, arXiv, OpenAlex, and Semantic Scholar);
-references that no database can confirm are escalated to an interactive LLM triage step, which
-writes a report for human review.
+against academic databases (offline DBLP, plus CrossRef, arXiv, Semantic Scholar, and other open
+bibliographic databases); references that no database can confirm are escalated to an interactive
+LLM triage step, which writes a report for human review.
 
-Three stages: extract and verify are local and deterministic (no LLM); triage is the only step
-that uses an LLM, which can be a cloud or a local model. See [PLAN.md](PLAN.md) for the design and
-architecture.
+Three stages: extract and verify use no LLM (verification queries the online databases unless
+`--offline` restricts it to the local ones); triage is the only step that uses an LLM, which can
+be a cloud or a local model. See [PLAN.md](PLAN.md) for the design and architecture.
 
 One repo serves as the runnable project (the mise tasks below) and one shared plugin tree for
 Claude Code and Codex CLI. The Claude metadata lives under `.claude-plugin/`; the Codex metadata
@@ -20,7 +20,8 @@ lives under `.codex-plugin/` and `.agents/plugins/marketplace.json`. The bundled
 
 ## Setup (once)
 
-Run from this directory. Requires [mise](https://mise.jdx.dev).
+Run from this directory. Requires [mise](https://mise.jdx.dev) and `pdftotext` from poppler,
+which the extractor shells out to (e.g. `brew install poppler`).
 
 ```sh
 mise install          # provision Python 3.12 + uv (auto-venv)
@@ -36,15 +37,17 @@ The offline DBLP database lives at `~/hallucite/dblp.db`, outside this repo, whi
 
 ```sh
 mise run audit -- <pdf-file-or-dir>            # required: a PDF file, or a directory of PDF files
-mise run audit -- <pdf-file-or-dir> <out-dir>  # optional 2nd arg sets the output dir (default: out)
+mise run audit -- <pdf-file-or-dir> [options]  # everything after the target is forwarded as-is
 ```
 
 Writes `out/<paper_id>.json` (every reference plus per-database verification) and
 `out/summary.json` (status counts plus the DBLP build date). Options: `--dblp PATH`, `--out DIR`,
-`--mailto EMAIL`, `--offline` (DBLP-only), `--no-verify`. The DBLP path defaults to
-`$HALLUCITE_DBLP` (else `~/hallucite/dblp.db`). A reference needs triage when its
-`db_verification.status` is anything other than `verified` (`not_found`, `mismatch`, or
-`unparsed`). Re-running into the
+`--mailto EMAIL`, `--offline` (no network; offline DBLP plus hallucinator's built-in Standards
+matcher, and a missing DBLP file disables DBLP rather than falling back to dblp.org),
+`--disable-dbs LIST` (comma-separated), `--no-verify`. The DBLP path defaults to
+`$HALLUCITE_DBLP` (else `~/hallucite/dblp.db`) and the output dir to `out`. A reference needs
+triage when its `db_verification.status` is anything other than `verified` (`not_found`,
+`mismatch`, or `unparsed`). Re-running into the
 same `--out` is idempotent (`triage_verdicts.json` accumulates by `paper_id:number`).
 
 ## Triage the residue (Stage 3, an interactive LLM agent)
@@ -96,7 +99,7 @@ is more than 30 days old. Rebuild it with `mise run build-dblp`.
 ## Install as a plugin
 
 ```sh
-claude plugin marketplace add se-uhd/hallucite      # GitHub once pushed, or a local clone path
+claude plugin marketplace add se-uhd/hallucite      # GitHub, or a local clone path
 claude plugin install hallucite@hallucite
 ```
 
@@ -133,10 +136,11 @@ direct repo clone, or the Codex plugin cache. That wrapper is the single entry p
 (`check-env | audit | triage | lint | python`). Installed plugins do not need mise: on first use
 `run.sh` provisions a Python 3.12 that can `import hallucinator` at
 `${XDG_CACHE_HOME:-~/.cache}/hallucite/venv` (preferring `uv`, else a stdlib `venv` over a
-discovered 3.12), reuses it on later runs, and fails loud with a `HALLUCITE_BOOTSTRAP_FAILED:`
-line rather than running half-configured. Set `$HALLUCITE_PYTHON` to reuse an existing
-hallucinator environment and skip provisioning. You still build the offline DBLP database once
-(see Setup). `run.sh check-env` reports whether the environment is ready.
+discovered 3.12; override the location with `$HALLUCITE_VENV`), reuses it on later runs, and
+fails loud with a `HALLUCITE_BOOTSTRAP_FAILED:` line rather than running half-configured. Set
+`$HALLUCITE_PYTHON` to reuse an existing hallucinator environment and skip provisioning. You
+still build the offline DBLP database once (see Setup). `run.sh check-env` reports whether the
+environment is ready, including a warning when `pdftotext` is missing.
 
 ## Tests and linting
 
@@ -145,9 +149,11 @@ python skills/hallucite/scripts/tests/run_smoke.py
 ```
 
 A dependency-light smoke suite, also run in CI by `.github/workflows/smoke.yml`: version and
-Claude/Codex packaging consistency, logic-contract checks on the per-paper JSON (including a guard
-that a `mismatch` reference reaches triage), Markdown lint, and an offline end-to-end audit against
-a tiny generated fixture DBLP database and a synthetic fixture PDF.
+Claude/Codex packaging consistency, the `run.sh` bootstrap contract, an optional Codex CLI
+marketplace check, logic-contract checks on the per-paper JSON (including a guard that a
+`mismatch` reference reaches triage), and an offline end-to-end audit against a tiny generated
+fixture DBLP database and a synthetic fixture PDF. Markdown lint runs as a separate CI step;
+locally, run `mise run lint-md` (below).
 
 The repo's Markdown is checked with a vendored PyMarkdown (synced from
 [se-uhd/pymarkdown-skill](https://github.com/se-uhd/pymarkdown-skill); self-contained under

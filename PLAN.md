@@ -9,8 +9,8 @@ Papers are identified by their id, the PDF file name (a file `paper1.pdf` has id
 ## Pipeline
 
 1. Extract (`pdf_references.py`): pull every reference from a paper's PDF file.
-2. Verify (`audit_references.py`): check each against DBLP (local offline database), CrossRef, arXiv,
-   OpenAlex, Semantic Scholar, and other open bibliographic databases. Anything a database
+2. Verify (`audit_references.py`): check each against DBLP (local offline database), CrossRef,
+   arXiv, Semantic Scholar, and other open bibliographic databases. Anything a database
    confirms is cleared. No LLM.
 3. Triage (`triage.py` with an interactive LLM agent): investigate only the database-unverified
    residue (DOI and publisher pages, Google Scholar, web search) and classify each **title-first** --
@@ -97,10 +97,12 @@ contract (syntax, unknown-command rejection, fail-loud with the sentinel when it
 import hallucinator, and subcommand+argument forwarding); logic-contract unit tests on synthetic
 per-paper records (a `mismatch` reference reaches triage; the title-first record gate; the verdicts
 lock under concurrent writes; per-paper worklist slice isolation, including the `paper6`/`paper66`
-prefix case; and the desk-reject heuristic); Markdown lint; an optional isolated Codex CLI
+prefix case; and the desk-reject heuristic); an optional isolated Codex CLI
 marketplace-list check when `codex` is installed; and an offline end-to-end audit (driven through
-`run.sh`) against a generated fixture DBLP database and a synthetic fixture PDF. The full DBLP
-database, the online backends, and `run.sh`'s network auto-provision path are not exercised in CI.
+`run.sh`) against a generated fixture DBLP database and a synthetic fixture PDF. Markdown lint
+runs as a separate CI step (`lint_markdown.py` over the tracked Markdown files; locally,
+`mise run lint-md`). The full DBLP database, the online backends, and `run.sh`'s network
+auto-provision path are not exercised in CI.
 
 ## Packaging
 
@@ -116,8 +118,9 @@ Generated artifacts under `out/` are gitignored. See `README.md` for commands.
 The skill drives the scripts through `skills/hallucite/scripts/run.sh`, a single entry point
 (`check-env | audit | triage | lint | python`). It resolves the wrapper from a Claude Code plugin
 install, the Codex repo-local skill shim, a direct repo clone, or the Codex plugin cache (preferring
-the `hallucite` marketplace's cached plugin and then any cached `hallucite`, with the
-lexicographically highest cached version). The wrapper resolves or, on first use, provisions a Python 3.12 that can
+the `hallucite` marketplace's cached plugin and then any cached `hallucite`, with the highest
+cached version, compared with `sort -V`). The wrapper resolves or, on first use, provisions a
+Python 3.12 that can
 `import hallucinator` (preferring `uv`, else a stdlib `venv` over a 3.12 found on PATH, in common
 install dirs, or via `mise where`), so installed plugins do not depend on a bare
 `python`/`uv`/`mise` being on the shell's PATH. On any setup failure it prints a

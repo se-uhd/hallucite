@@ -17,6 +17,10 @@ Tiers (any failing check exits non-zero):
   3  logic contract        -- needs_triage / paper_status_counts on synthetic records,
                               including the "mismatch" status a past bug silently dropped,
                               and category/severity consistency. No network or DB.
+  3b triage concurrency    -- worklist --paper slice isolation (the paper6/paper66 prefix case)
+                              and the fcntl verdicts lock under concurrent writers.
+  3c title-first gate      -- record --signals enforcement, is_fabrication, and the
+                              desk-reject report section.
   4  end-to-end (offline)   -- build a tiny fixture DBLP DB, run the real audit --offline on a
                               synthetic fixture PDF, assert verified/not_found. Needs the
                               hallucinator package and pdftotext (poppler); skipped if absent.
@@ -185,6 +189,8 @@ def tier1_packaging() -> None:
         ("fallback hallucite cache", "*/hallucite/*/skills/hallucite/scripts/run.sh"),
         ("locator failure sentinel",
          "HALLUCITE_BOOTSTRAP_FAILED: cannot locate hallucite scripts/run.sh"),
+        # Version sort, not lexicographic: plain `sort` picks 1.9.0 over 1.10.0.
+        ("version-sorted cache pick", "| sort -V | tail -n 1"),
     ):
         C.true(needle in skill, f"SKILL.md documents runner resolver branch: {label}")
 
@@ -276,6 +282,18 @@ def tier1b_runner() -> None:
                and "audit_references.py" in (r.stderr + r.stdout),
                "run.sh forwards a subcommand+args to the underlying script (argparse error, "
                "not a bootstrap failure)")
+        # The missing-pdftotext preflight warning must stay non-fatal and keep the HALLUCITE_OK
+        # contract. pdftotext may exist in find_exe's absolute fallback dirs (Homebrew etc.), so
+        # simulate its absence by probing a name that cannot exist anywhere.
+        with tempfile.TemporaryDirectory() as td:
+            patched = Path(td) / "run.sh"
+            patched.write_text(run_sh.read_text().replace(
+                "find_exe pdftotext >", "find_exe pdftotext-absent-for-smoke >"))
+            r = subprocess.run(["bash", str(patched), "check-env"], capture_output=True,
+                               text=True, env={**os.environ, "HALLUCITE_PYTHON": sys.executable})
+            C.true(r.returncode == 0 and "HALLUCITE_OK:" in r.stdout
+                   and "pdftotext" in r.stderr,
+                   "check-env warns on stderr about a missing pdftotext but stays OK (exit 0)")
     else:
         C.skip("hallucinator not importable from sys.executable; run.sh happy-path checks skipped")
 
@@ -325,8 +343,12 @@ def tier3b_triage_concurrency() -> None:
     import triage
 
     def paper(pid, nums):
-        return {"paper_id": pid, "references": [
-            {"original_number": n, "raw_citation": f"{pid} cite {n}",
+        # The full audit-written contract (see PLAN.md): load_papers treats a JSON without
+        # pdf_path/num_references as a stray, not a paper record, and cmd_report reads each
+        # reference's "parsed" field unguarded.
+        return {"paper_id": pid, "pdf_path": f"{pid}.pdf", "num_references": len(nums),
+                "references": [
+            {"original_number": n, "raw_citation": f"{pid} cite {n}", "parsed": None,
              "db_verification": {"status": "not_found"}} for n in nums]}
 
     with tempfile.TemporaryDirectory() as td:
@@ -334,6 +356,13 @@ def tier3b_triage_concurrency() -> None:
         # Two paper_ids where one is a prefix of the other -- the paper6 / paper66 trap.
         (out / "p6.json").write_text(json.dumps(paper("esem26-seip-paper6", [3, 4, 5])))
         (out / "p66.json").write_text(json.dumps(paper("esem26-seip-paper66", [1, 2, 7, 10])))
+
+        # A stray JSON that has paper_id+references but not the other audit-written fields is
+        # skipped -- previously it passed load_papers and crashed status/report with a KeyError.
+        (out / "stray.json").write_text(json.dumps({"paper_id": "stray", "references": []}))
+        C.eq({p["paper_id"] for p in triage.load_papers(out)},
+             {"esem26-seip-paper6", "esem26-seip-paper66"},
+             "REGRESSION GUARD: stray JSON without pdf_path/num_references is skipped")
 
         # --paper emits exactly one paper's slice by EXACT id match: the prefix neither leaks in
         # nor steals the other's references.
@@ -523,6 +552,11 @@ def tier4_end_to_end() -> None:
         rec = json.loads(rec_path.read_text())
         C.eq(rec["num_references"], 4, "extracted 4 references")
         C.eq(rec["extraction"]["unparsed"], 0, "0 unparsed references")
+        # Couple the two stages' schemas: the audit's real output must pass Stage 3's paper-record
+        # test, so a field rename in audit_references.py cannot silently empty load_papers.
+        import triage
+        C.eq([p["paper_id"] for p in triage.load_papers(out)], [pdf.stem],
+             "load_papers accepts the audit's real output (Stage 1+2 -> Stage 3 contract)")
         st = {x["original_number"]: (x.get("db_verification") or {}).get("status")
               for x in rec["references"]}
         C.eq(st.get(1), "verified", "ref [1] verified (exact DBLP match)")

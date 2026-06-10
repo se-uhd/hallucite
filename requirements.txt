@@ -2,7 +2,7 @@
 #
 # `hallucinator` provides both reference extraction (PdfExtractor) and
 # multi-database verification (Validator: offline DBLP + CrossRef/arXiv/
-# OpenAlex/Semantic Scholar/...). It ships prebuilt wheels targeting
+# Semantic Scholar/...). It ships prebuilt wheels targeting
 # CPython 3.12 — mise.toml pins python = "3.12" so pip resolves a wheel
 # instead of building from source (which would need Rust + maturin).
 #

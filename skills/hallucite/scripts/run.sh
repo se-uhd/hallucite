@@ -122,11 +122,24 @@ esac
 
 PYTHON="$(resolve_python)"
 
+# The pipeline scripts shell out to pdftotext (poppler), which subprocess resolves via PATH alone.
+# Append the same fallback dirs find_exe searches, so a plugin shell that misses Homebrew or
+# ~/.local/bin on PATH still resolves it -- and the check-env probe below sees what the audit sees.
+for d in "$HOME/.local/bin" "$HOME/.cargo/bin" "/opt/homebrew/bin" "/usr/local/bin"; do
+  if [ -d "$d" ]; then
+    case ":$PATH:" in *":$d:"*) ;; *) PATH="$PATH:$d" ;; esac
+  fi
+done
+export PATH
+
 case "$cmd" in
   check-env)
     ver="$("$PYTHON" -c 'import importlib.metadata as m; print(m.version("hallucinator"))' \
            2>/dev/null || echo '?')"
-    printf 'HALLUCITE_OK: %s (hallucinator %s)\n' "$PYTHON" "$ver" ;;
+    printf 'HALLUCITE_OK: %s (hallucinator %s)\n' "$PYTHON" "$ver"
+    # Non-fatal: the audit's extraction step needs pdftotext; warn now rather than failing later.
+    find_exe pdftotext >/dev/null \
+      || printf 'warning: pdftotext (poppler) not found; the audit needs it for PDF text extraction (e.g. brew install poppler).\n' >&2 ;;
   audit)  exec "$PYTHON" "$SCRIPT_DIR/audit_references.py" "$@" ;;
   triage) exec "$PYTHON" "$SCRIPT_DIR/triage.py" "$@" ;;
   lint)   exec "$PYTHON" "$SCRIPT_DIR/lint_markdown.py" "$@" ;;

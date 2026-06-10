@@ -3,7 +3,8 @@
 ## What this is
 
 `hallucite` finds hallucinated (fabricated) references in academic paper PDF files. Stages 1 and 2
-(extract, then verify against DBLP, CrossRef, arXiv, and others) are local and deterministic.
+(extract, then verify against DBLP, CrossRef, arXiv, and others) use no LLM; verification queries
+the online databases unless `--offline` restricts it to the local ones.
 Stage 3 (triage the database-unverified residue) is the LLM step, done interactively by you. See
 `PLAN.md` for the design and architecture, `README.md` for commands.
 
@@ -25,7 +26,8 @@ No separate plugin repo, no submodule.
   never relying on a bare `python`/`uv`/`mise` being on the plugin shell's PATH (the failure that
   made the plugin silently un-runnable). It fails loud with a `HALLUCITE_BOOTSTRAP_FAILED:`
   sentinel and a non-zero exit; `$HALLUCITE_PYTHON` reuses an existing hallucinator environment and
-  skips provisioning. `run.sh check-env` is the preflight.
+  skips provisioning, and `$HALLUCITE_VENV` relocates the managed venv. `run.sh check-env` is the
+  preflight.
 - In a repo clone you can equivalently use mise tasks: `mise run install | install-cli |
   build-dblp | audit | lint-md`. Python is pinned to 3.12 (hallucinator's wheels). Both paths run
   the same scripts in `skills/hallucite/scripts/`.
@@ -55,8 +57,9 @@ No separate plugin repo, no submodule.
   audit wrote or Stage 3 web evidence you actually gathered -- never on reading the `.bib`/`.bbl`/PDF
   by eye. If `run.sh` exits non-zero or prints `HALLUCITE_BOOTSTRAP_FAILED:`, or output starts
   coming back empty, stop and report it verbatim; "the tool would not run" is the correct outcome,
-  not a hand-written report. This rule lives in full in `SKILL.md` ("Stop conditions") and is
-  guarded by smoke tier 1b.
+  not a hand-written report. This rule lives in full in `SKILL.md` ("Stop conditions"); smoke
+  tier 1 asserts SKILL.md carries it, and tier 1b guards the fail-loud `run.sh` contract the rule
+  keys on.
 - Investigate with parallel web queries; resolve DOIs via `api.crossref.org/works/<doi>`. If a
   narrow query (title + author) finds nothing, broaden to the bare title (unquoted) and screen the
   results before judging; obscure/predatory venues are poorly indexed, so "not found" on a narrow
@@ -105,8 +108,10 @@ No separate plugin repo, no submodule.
   them as a contract that can drift. Define "needs triage" by negation (`status != "verified"`),
   never by an allow-list of failure strings, and keep the invariant that every reference is
   verified, unverified, or pending (none silently dropped). Validate any hard-coded hallucinator
-  name against what the package actually emits (`run_smoke.py` and the audit's `--offline`
-  tripwire do this); a silent name mismatch is what caused both the `mismatch` and the
+  name against what the package actually emits: `run_smoke.py` covers the status strings, and the
+  audit validates backend names at run time -- online runs warn about configured names that never
+  appear (`DEFAULT_ONLINE_DBS`); `--offline` runs warn about live backends that are not known-local
+  (`KNOWN_LOCAL_DBS`). A silent name mismatch is what caused both the `mismatch` and the
   `DOI Resolver` bugs.
 - Plans and READMEs describe only the current approach. Do not narrate dropped or superseded
   ideas, or "out of scope" history. After a scope change, rewrite the doc as if the final

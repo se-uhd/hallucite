@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Stages 1+2 of the hallucinated-reference audit: extract references from paper
 PDF files and verify them against academic databases (offline DBLP + CrossRef/
-arXiv/OpenAlex/Semantic Scholar/...), with no LLM involvement.
+arXiv/Semantic Scholar/...), with no LLM involvement.
 
 Reference extraction is `lineno`-aware (see pdf_references.py); each extracted
 reference is parsed and verified with the `hallucinator` package.
@@ -19,7 +19,10 @@ Options:
                         (default: $HALLUCITE_DBLP, else ~/hallucite/dblp.db)
     --out DIR           Output directory (default: out)
     --mailto EMAIL      CrossRef polite-pool contact (optional; recommended for CrossRef)
-    --offline           DBLP-only: disable the online database backends
+    --offline           No network: disable the online database backends.
+                        Offline DBLP and hallucinator's built-in Standards
+                        matcher stay live; a missing DBLP file disables DBLP
+                        rather than falling back to dblp.org.
     --disable-dbs LIST  Comma-separated DB names to disable (passed to hallucinator)
     --no-verify         Extract only; skip database verification (fast, offline)
 """
@@ -69,6 +72,14 @@ DEFAULT_ONLINE_DBS = [
     "CrossRef", "arXiv", "Semantic Scholar", "ACL Anthology",
     "Europe PMC", "PubMed", "DOI", "Open Library",
 ]
+
+# Backends expected to stay live in --offline mode because they make no network calls: the offline
+# DBLP database (build_config() disables DBLP entirely when its file is missing, since hallucinator
+# would otherwise fall back to dblp.org) and the built-in Standards pattern matcher. Any other name
+# appearing in --offline db_results means an online backend survived the disable list (the inverse
+# drift direction of the DEFAULT_ONLINE_DBS tripwire in main()), e.g. a backend hallucinator added
+# or renamed upstream.
+KNOWN_LOCAL_DBS = ["DBLP", "Standards"]
 
 
 def now_iso() -> str:
@@ -181,6 +192,7 @@ def _dblp_age_days(dblp_path: Path) -> float | None:
 
 def build_config(args) -> ValidatorConfig:
     cfg = ValidatorConfig()
+    disabled = list(DEFAULT_ONLINE_DBS) if args.offline else []
     dblp = Path(args.dblp)
     if dblp.exists():
         cfg.dblp_offline_path = str(dblp.resolve())
@@ -188,12 +200,18 @@ def build_config(args) -> ValidatorConfig:
         if age is not None and age > DBLP_STALE_DAYS:
             print(f"warning: offline DBLP database is {age:.0f} days old (> {DBLP_STALE_DAYS} days); "
                   f"recent papers may be missing. Rebuild with: mise run build-dblp", file=sys.stderr)
+    elif args.offline:
+        # Without an offline DB hallucinator's DBLP backend falls back to querying dblp.org, which
+        # would break --offline's no-network promise; disable the backend outright instead.
+        disabled.append("DBLP")
+        print(f"warning: offline DBLP database not found at {args.dblp}; DBLP is disabled for "
+              f"this --offline run (it would otherwise query dblp.org). Build it with: "
+              f"mise run build-dblp", file=sys.stderr)
     else:
         print(f"warning: offline DBLP database not found at {args.dblp}; DBLP will be queried "
               f"online if available. Build it with: mise run build-dblp", file=sys.stderr)
     if args.mailto:
         cfg.crossref_mailto = args.mailto
-    disabled = list(DEFAULT_ONLINE_DBS) if args.offline else []
     if args.disable_dbs:
         disabled += [d.strip() for d in args.disable_dbs.split(",") if d.strip()]
     if disabled:
@@ -271,7 +289,9 @@ def main() -> int:
                    help="Offline DBLP SQLite DB ($HALLUCITE_DBLP, else ~/hallucite/dblp.db)")
     p.add_argument("--out", default="out", help="Output directory")
     p.add_argument("--mailto", default="", help="CrossRef polite-pool contact (recommended)")
-    p.add_argument("--offline", action="store_true", help="DBLP-only (disable online DBs)")
+    p.add_argument("--offline", action="store_true",
+                   help="no network (disable online DBs; offline DBLP + the local Standards "
+                        "matcher stay live)")
     p.add_argument("--disable-dbs", default="", help="Comma-separated DB names to disable")
     p.add_argument("--no-verify", action="store_true", help="Extract only; skip DB verification")
     args = p.parse_args()
@@ -352,6 +372,15 @@ def main() -> int:
                 print(f"warning: configured online-backend name(s) {stale} never appeared in any "
                       f"db_results; hallucinator may have renamed/removed them, so --offline would "
                       f"not actually disable them. Update DEFAULT_ONLINE_DBS.", file=sys.stderr)
+        # The inverse direction: a backend that ran in --offline mode but is not known-local is an
+        # online backend the disable list missed (new or renamed upstream), i.e. --offline silently
+        # stopped meaning "no network" for it.
+        if args.offline and seen_dbs:
+            unexpected = sorted(seen_dbs - set(KNOWN_LOCAL_DBS))
+            if unexpected:
+                print(f"warning: backend(s) {unexpected} ran despite --offline and are not in "
+                      f"KNOWN_LOCAL_DBS; if they query the network, add them to "
+                      f"DEFAULT_ONLINE_DBS so --offline disables them.", file=sys.stderr)
     errored = [p for p in summary_papers if "error" in p]
     if errored:
         ids = ", ".join(p["paper_id"] for p in errored)

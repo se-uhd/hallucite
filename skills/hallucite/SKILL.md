@@ -4,9 +4,10 @@ description: >-
   Detect hallucinated (fabricated) references in academic paper PDF files. Use when the user asks
   to check, audit, or verify the references/bibliography of one or more papers for hallucinated or
   fabricated citations, or names a paper PDF file (or directory of PDF files) to check. Extracts each
-  reference, verifies it against academic databases (offline DBLP plus CrossRef/arXiv/OpenAlex)
-  without using an LLM, then triages only the database-unverified residue via web search and writes
-  a report of likely-hallucinated references plus per-paper manual-verification sheets.
+  reference, verifies it against academic databases (offline DBLP plus CrossRef, arXiv, Semantic
+  Scholar, and other open databases) without using an LLM, then triages only the
+  database-unverified residue via web search and writes a report of likely-hallucinated
+  references plus per-paper manual-verification sheets.
 license: MIT
 compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
@@ -15,8 +16,9 @@ metadata:
 
 # hallucite
 
-Detect fabricated references in academic paper PDF files. Three stages: extract and verify are
-local and deterministic (no LLM); triage is the only step that uses an LLM (cloud or local), run
+Detect fabricated references in academic paper PDF files. Three stages: extract and verify use no
+LLM (verification queries the online databases unless `--offline` restricts it to the local ones);
+triage is the only step that uses an LLM (cloud or local), run
 on the references that no database could confirm.
 
 ## Stop conditions -- never fabricate a verdict
@@ -60,12 +62,13 @@ resolve_hallucite_run() {
   [ -x "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
 
   # 4. Codex plugin cache. Prefer the hallucite marketplace's hallucite, then any
-  # marketplace's hallucite, choosing the lexicographically highest cached version.
+  # marketplace's hallucite, choosing the highest cached version (sort -V, so
+  # 1.10.0 beats 1.9.0 -- plain lexicographic sort would invert them).
   cache_root="${CODEX_HOME:-$HOME/.codex}/plugins/cache"
   if [ -d "$cache_root" ]; then
-    candidate="$(find "$cache_root" -path '*/hallucite/hallucite/*/skills/hallucite/scripts/run.sh' -type f 2>/dev/null | sort | tail -n 1)"
+    candidate="$(find "$cache_root" -path '*/hallucite/hallucite/*/skills/hallucite/scripts/run.sh' -type f 2>/dev/null | sort -V | tail -n 1)"
     [ -n "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
-    candidate="$(find "$cache_root" -path '*/hallucite/*/skills/hallucite/scripts/run.sh' -type f 2>/dev/null | sort | tail -n 1)"
+    candidate="$(find "$cache_root" -path '*/hallucite/*/skills/hallucite/scripts/run.sh' -type f 2>/dev/null | sort -V | tail -n 1)"
     [ -n "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
   fi
 
@@ -83,7 +86,8 @@ prints `HALLUCITE_BOOTSTRAP_FAILED: <reason>` to stderr and exits non-zero -- th
 **no audit ran**, so there is nothing to interpret.
 
 First run builds a cached venv at `${XDG_CACHE_HOME:-~/.cache}/hallucite/venv` (needs `uv` or a
-Python 3.12, plus network for `pip install hallucinator`); later runs reuse it and are instant.
+Python 3.12, plus network for `pip install hallucinator`); set `$HALLUCITE_VENV` to relocate it.
+Later runs reuse it and are instant.
 To reuse an environment that already has hallucinator, set `$HALLUCITE_PYTHON` to its interpreter
 and no venv is built. (In a repo clone you can equivalently use the `mise run ...` tasks.)
 
@@ -122,8 +126,10 @@ against the directory the user means (ask if ambiguous).
 
 Writes `<outdir>/<paper_id>.json` (every reference, parsed fields plus per-database verification)
 and `<outdir>/summary.json`. The offline DBLP DB defaults to `$HALLUCITE_DBLP` (else
-`~/hallucite/dblp.db`); override it with `--dblp PATH`. Flags: `--offline` (DBLP-only, no
-network), `--no-verify` (extraction only). Extraction is `lineno`- and two-column-aware and handles numeric,
+`~/hallucite/dblp.db`); override it with `--dblp PATH`. Flags: `--offline` (no network: offline
+DBLP plus hallucinator's built-in Standards matcher; a missing DBLP file disables DBLP rather
+than falling back to dblp.org), `--disable-dbs LIST` (disable named backends, comma-separated),
+`--no-verify` (extraction only). Extraction is `lineno`- and two-column-aware and handles numeric,
 bracket-label, and author-year bibliographies; the target is 0 unparsed references.
 
 If this exits non-zero -- whether a `HALLUCITE_BOOTSTRAP_FAILED:` line (no Python/hallucinator) or
