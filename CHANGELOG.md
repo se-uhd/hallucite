@@ -4,6 +4,51 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.8.1] - 2026-06-10
+
+### Fixed
+
+- `mise run audit` forwards everything after the target to the audit script, so the documented
+  flags (`--offline`, `--mailto`, `--no-verify`, ...) work; the task previously hard-coded
+  `--dblp`/`--out` and errored on any flag. The output directory is now set with `--out` instead
+  of a second positional argument (the script's own defaults already cover `--dblp` and `--out`).
+- The Codex plugin-cache resolver in `SKILL.md` compares cached versions with `sort -V`, so
+  `1.10.0` beats `1.9.0`; plain `sort` picked the lexicographically highest and would have run a
+  stale cached plugin once the version reached two digits.
+- Docs and plugin manifests no longer claim OpenAlex verification: hallucinator's OpenAlex backend
+  is key-gated and the audit never configures a key, so it never ran. The database lists now name
+  Semantic Scholar and the other backends that actually run.
+- `--offline` is documented as "no network" rather than "DBLP-only", and now enforces it:
+  hallucinator's built-in Standards matcher (local, pattern-based) stays live and can set the
+  verification status for standards references, and a missing offline DBLP file disables the DBLP
+  backend for the run (hallucinator would otherwise silently fall back to querying dblp.org). A
+  second drift tripwire warns when a backend outside `KNOWN_LOCAL_DBS` appears in `--offline`
+  results -- the inverse direction of the `DEFAULT_ONLINE_DBS` warning, which only catches
+  configured names that never appear.
+- `triage.py` skips a stray JSON file whose `paper_id`/`pdf_path`/`num_references` are missing or
+  malformed (e.g. null) instead of crashing `status`/`report`, matching `load_papers`' documented
+  skip-don't-crash contract; a near-miss record is skipped with a warning, and a smoke check
+  feeds the audit's real output through `load_papers` so an audit schema drift cannot silently
+  empty Stage 3.
+- `run.sh check-env` warns (non-fatally) when `pdftotext` (poppler) is missing, and README's setup
+  section names the prerequisite; previously only `SKILL.md` and the extractor's error mentioned
+  it. `run.sh` also appends the common install dirs (Homebrew, `~/.local/bin`, ...) to `PATH`
+  before running the scripts, so the extractor resolves `pdftotext` the same way the preflight
+  probe does even in a plugin shell with a minimal `PATH`.
+
+### Changed
+
+- README and PLAN no longer list Markdown lint as part of the `run_smoke.py` suite; it runs as a
+  separate CI step and locally via `mise run lint-md`. The smoke suite's docstring now also lists
+  tiers 3b (triage concurrency) and 3c (title-first gate), which `main()` already ran.
+- Documented the existing `--disable-dbs` audit flag and the `$HALLUCITE_VENV` override in README
+  and `SKILL.md`; removed the stale "GitHub once pushed" hedge from README's install section.
+- Reworded the stage summary in README, `SKILL.md`, and `CLAUDE.md`: stages 1+2 use no LLM, and
+  verification queries online databases unless `--offline`; the old "local and deterministic"
+  claim only held for offline runs. `CLAUDE.md` also states which smoke tier guards the
+  stop-conditions rule (tier 1 for the SKILL.md text, tier 1b for the fail-loud `run.sh` contract)
+  and how status strings vs backend names are validated.
+
 ## [1.8.0] - 2026-06-06
 
 ### Changed
@@ -208,6 +253,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.8.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.1
 [1.8.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.0
 [1.7.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.7.1
 [1.7.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.7.0
