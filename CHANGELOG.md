@@ -4,6 +4,17 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.8.2] - 2026-06-11
+
+### Changed
+
+- Synced the vendored PyMarkdown linter to pymarkdown-skill 0.2.2. The lint wrapper now
+  invokes PyMarkdown under the `explicit` return-code scheme (a scan system error or a
+  file PyMarkdown refuses to scan now exits 2 instead of being reported as clean), the
+  pre-pass recognizes tilde and indented fences and follows the config's front-matter
+  settings, and `check_baseline.py`/`refresh_vendor.py`/the sync tooling carry the
+  accompanying robustness fixes. No change to hallucite's own behavior.
+
 ## [1.8.1] - 2026-06-10
 
 ### Fixed
