@@ -11,7 +11,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
-  version: "1.8.3"
+  version: "1.8.4"
 ---
 
 # hallucite
@@ -61,7 +61,20 @@ resolve_hallucite_run() {
   candidate="skills/hallucite/scripts/run.sh"
   [ -x "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
 
-  # 4. Codex plugin cache. Prefer the hallucite marketplace's hallucite, then any
+  # 4. Claude Code plugin cache (version-scan fallback for when CLAUDE_PLUGIN_ROOT
+  # is unset in the tool shell, which skips branch 1 even on a valid install).
+  # Choose the highest cached version (sort -V) so a marketplace update always
+  # wins here -- and so a stale Codex cache copy can never be preferred over a
+  # current Claude install.
+  claude_cache_root="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache"
+  if [ -d "$claude_cache_root" ]; then
+    candidate="$(find "$claude_cache_root" -path '*/hallucite/hallucite/*/skills/hallucite/scripts/run.sh' -type f 2>/dev/null | sort -V | tail -n 1)"
+    [ -n "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
+    candidate="$(find "$claude_cache_root" -path '*/hallucite/*/skills/hallucite/scripts/run.sh' -type f 2>/dev/null | sort -V | tail -n 1)"
+    [ -n "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
+  fi
+
+  # 5. Codex plugin cache. Prefer the hallucite marketplace's hallucite, then any
   # marketplace's hallucite, choosing the highest cached version (sort -V, so
   # 1.10.0 beats 1.9.0 -- plain lexicographic sort would invert them).
   cache_root="${CODEX_HOME:-$HOME/.codex}/plugins/cache"

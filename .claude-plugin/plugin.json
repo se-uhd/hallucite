@@ -1,6 +1,6 @@
 {
   "name": "hallucite",
-  "version": "1.8.3",
+  "version": "1.8.4",
   "description": "Detect hallucinated (fabricated) references in academic paper PDF files: extract references, verify against offline DBLP + CrossRef/arXiv/Semantic Scholar and other open databases, then triage the residue via web search and report likely-hallucinated citations.",
   "author": {
     "name": "se-uhd"

@@ -4,6 +4,20 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.8.4] - 2026-06-24
+
+### Fixed
+
+- The `SKILL.md` `run.sh` resolver scans the Claude Code plugin cache
+  (`${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache`) for the highest installed version before
+  falling back to the Codex plugin cache. Branch 1 (the `CLAUDE_PLUGIN_ROOT` path) is skipped when
+  that variable is unset in the tool shell, as it is for an ordinary Bash call, which left the Codex
+  cache as the only version-scanning branch; a `/plugin marketplace update` on the Claude side then
+  had no effect, and a stale Codex-cached copy (e.g. an older `se-uhd/hallucite`) ran instead of the
+  current install. The new branch resolves to the newest Claude-cached version regardless of
+  `CLAUDE_PLUGIN_ROOT`, and is ordered ahead of the Codex fallback so a current Claude install
+  always wins.
+
 ## [1.8.3] - 2026-06-24
 
 ### Fixed
@@ -279,6 +293,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.8.4]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.4
 [1.8.3]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.3
 [1.8.2]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.2
 [1.8.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.1
