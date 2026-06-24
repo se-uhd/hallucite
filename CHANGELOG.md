@@ -4,6 +4,21 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.8.3] - 2026-06-24
+
+### Fixed
+
+- Reference extraction handles a bracket-numeric bibliography ("[1]" ... "[59]") printed under
+  LaTeX `lineno` margin numbers that `pdftotext -layout` renders inconsistently and that restart on
+  each page. The bibliography was read as plain numeric, so segmentation anchored on the margin
+  numbers rather than the "[N]" labels: it dropped the first entry and, at every per-page
+  line-number reset, merged the remaining references into a single segment. A new bracket-numeric
+  style anchors on the bracketed label and strips the gutter margin number from both entry and
+  continuation lines, so margin numbers no longer masquerade as entries. On the paper that surfaced
+  this, extraction goes from 45 mangled references (6 unparsed; references 22-59 merged into one) to
+  59 cleanly segmented references, none unparsed. Smoke tier 4b reproduces the layout with invented
+  references and guards the fix.
+
 ## [1.8.2] - 2026-06-11
 
 ### Changed
@@ -264,6 +279,8 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.8.3]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.3
+[1.8.2]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.2
 [1.8.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.1
 [1.8.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.0
 [1.7.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.7.1

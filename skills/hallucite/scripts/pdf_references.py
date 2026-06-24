@@ -14,7 +14,10 @@ Pipeline:
      stops the "References" header from sharing a line with the other column.
   3. Detect `lineno` and strip the leading margin number from every line.
   4. Find the References section.
-  5. Auto-detect the entry style (numeric / bracket-label / author-year) and segment.
+  5. Auto-detect the entry style (numeric / bracket-numeric / author-year-bracket / author-year)
+     and segment. Bracket-numeric ("[12]") anchors on the bracketed label, not any leading
+     `lineno` margin number, which otherwise hijacks the sequence and collapses the tail of the
+     bibliography after a per-page line-number reset.
 """
 
 from __future__ import annotations
@@ -31,11 +34,20 @@ _STOP_SECTION = re.compile(r"^(appendix|acknowledg)", re.I)
 _LINENO_PREFIX = re.compile(r"^\s*\d{2,4}\s")
 _MARGIN_LINENO = re.compile(r"^\s*\d{1,4}\s+")
 
-# Entry-start patterns for the three bibliography styles.
+# Entry-start patterns for the bibliography styles.
 _NUM = re.compile(r"^\[?(\d{1,3})\]?[.)]?\s+\S")          # "1 ", "1.", "[1] "
 _YEAR = re.compile(r"\((?:19|20)\d{2}[a-z]?\)")
 _BRACKET = re.compile(r"^\[[^\]]*(?:19|20)\d{2}[a-z]?[^\]]*\]")  # "[Smith et al.(2024)]"
 _AUTHORYEAR = re.compile(r"^[^\W\d_][\w’'.\-]*,\s+[A-Z]")        # "Surname, I. ..."
+
+# A bracket-numeric entry label "[12]", optionally preceded by a `lineno` margin number that
+# pdftotext -layout leaves in a wide left column ("12   [13]  Author ..."). The two numbers are a
+# trap: when the margin number bleeds in, plain numeric segmentation locks onto it instead of the
+# real "[13]" label, and a per-page line-number reset then collapses the rest of the bibliography
+# into one segment. Anchoring on the bracketed label avoids both.
+_BRACKET_NUM = re.compile(r"^(?:\d{1,4}\s{2,})?\[(\d{1,3})\][.)]?\s+\S")
+_MARGIN_NUM_ONLY = re.compile(r"^\d{1,4}$")        # a `lineno` number alone on a line (drop)
+_LEAD_MARGIN_NUM = re.compile(r"^\d{1,4}\s{2,}")   # a `lineno` number in the gutter before content
 
 
 @dataclass
@@ -151,22 +163,57 @@ def _numeric_anchor(section: list[str]) -> int:
     return min(runs) if runs else min(present)
 
 
+def _bracket_numeric_anchor(section: list[str]) -> int:
+    """`_numeric_anchor` for bracket-numeric labels: the smallest "[N]" that starts a real
+    ascending run, so a stray "[1]" inside a reference does not anchor the sequence below the
+    first real entry."""
+    present = {int(_BRACKET_NUM.match(s).group(1)) for s in (ln.strip() for ln in section)
+               if s and _BRACKET_NUM.match(s)}
+    if not present:
+        return 1
+    runs = [n for n in present if n + 1 in present and n + 2 in present]
+    return min(runs) if runs else min(present)
+
+
+def _is_new_bracket_numeric(s: str, last: int) -> int | None:
+    """The label number if `s` starts a new "[N]" entry continuing the running sequence (advances
+    1-3 from `last`); else None. Keyed on the bracketed label, not any leading `lineno` margin
+    number, so margin numbers cannot masquerade as entries and a per-page margin reset cannot
+    collapse the tail of the bibliography into one segment."""
+    m = _BRACKET_NUM.match(s)
+    if not m:
+        return None
+    num = int(m.group(1))
+    return num if 0 < num - last <= 3 else None
+
+
+def _strip_bracket_label(s: str) -> str:
+    return re.sub(r"^(?:\d{1,4}\s{2,})?\[\d{1,3}\][.)]?\s+", "", s, count=1)
+
+
 def _strip_numeric_label(s: str) -> str:
     return re.sub(r"^\[?\d{1,3}\]?[.)]?\s+", "", s, count=1)
 
 
 def _dominant_style(section: list[str]) -> str:
-    num = brk = ay = 0
+    num = brk = bnum = ay = 0
     for line in section:
         s = line.strip()
         if not s:
             continue
-        if _BRACKET.match(s):
+        if _BRACKET.match(s):           # "[Smith 2024]" author-year bracket
             brk += 1
-        elif _NUM.match(s):
+        elif _BRACKET_NUM.match(s):     # "[12]" numeric bracket (maybe lineno-prefixed)
+            bnum += 1
+        elif _NUM.match(s):             # "12." / "12  ..." (also lineno-prefixed continuations)
             num += 1
         elif _AUTHORYEAR.match(s) and _YEAR.search(s[:300]):
             ay += 1
+    # A plain-numeric bibliography never carries bracketed numeric labels, so a handful of "[N]"
+    # entry markers settle the style even when lineno-prefixed continuation lines push the bare
+    # "numeric" tally higher.
+    if bnum >= 3 and bnum >= brk and bnum >= ay:
+        return "bracket-numeric"
     if max(num, brk, ay) == 0:
         return "none"
     return max((("numeric", num), ("bracket", brk), ("author-year", ay)),
@@ -190,11 +237,20 @@ def _segment(section: list[str], style: str) -> list[tuple[int, str]]:
     refs: list[tuple[int, str]] = []
     cur: str | None = None
     cur_num = 0
-    last = (_numeric_anchor(section) - 1) if style == "numeric" else 0  # numeric sequentiality anchor
+    if style == "numeric":
+        last = _numeric_anchor(section) - 1          # numeric sequentiality anchor
+    elif style == "bracket-numeric":
+        last = _bracket_numeric_anchor(section) - 1  # bracket-label sequentiality anchor
+    else:
+        last = 0
     seq = 0    # sequential counter (bracket / author-year)
     for line in section:
         s = line.strip()
         if not s or "???:" in s or s in repeated:  # blank / anonymized footer / repeated watermark
+            continue
+        # A `lineno` margin number alone on a line is noise between entries; drop it so it neither
+        # starts a phantom entry nor pollutes the previous reference's text.
+        if style == "bracket-numeric" and _MARGIN_NUM_ONLY.match(s):
             continue
         # Stop at a trailing Appendix/Acknowledgments *heading* (short, standalone), but not at a
         # reference whose text merely begins with one of those words.
@@ -208,6 +264,11 @@ def _segment(section: list[str], style: str) -> list[tuple[int, str]]:
             if num is not None:
                 last = new_num = num
                 new_text = _strip_numeric_label(s)
+        elif style == "bracket-numeric":
+            num = _is_new_bracket_numeric(s, last)
+            if num is not None:
+                last = new_num = num
+                new_text = _strip_bracket_label(s)
         elif style == "bracket":
             if _BRACKET.match(s):
                 seq = new_num = seq + 1
@@ -222,6 +283,10 @@ def _segment(section: list[str], style: str) -> list[tuple[int, str]]:
                 refs.append((cur_num, cur))
             cur, cur_num = new_text, new_num
         elif cur is not None:
+            # Strip the gutter `lineno` number off a continuation line before joining it, so margin
+            # digits do not land inside titles, venues, or page ranges.
+            if style == "bracket-numeric":
+                s = _LEAD_MARGIN_NUM.sub("", s, count=1)
             cur = _append(cur, s)
     if cur is not None:
         refs.append((cur_num, cur))

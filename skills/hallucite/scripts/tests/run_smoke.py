@@ -24,6 +24,10 @@ Tiers (any failing check exits non-zero):
   4  end-to-end (offline)   -- build a tiny fixture DBLP DB, run the real audit --offline on a
                               synthetic fixture PDF, assert verified/not_found. Needs the
                               hallucinator package and pdftotext (poppler); skipped if absent.
+  4b extraction segmentation -- a bracket-numeric bibliography under LaTeX lineno margins, across a
+                              page-break margin reset, segments as [1]..[N] (the margin numbers do
+                              not hijack the sequence, drop the first entry, or collapse the tail).
+                              Pure pdf_references logic; no network, DB, or poppler.
 
 Tier 2 (Markdown lint) runs as a separate CI step via lint_markdown.py.
 The fixture PDF (tests/fixtures/synthetic_paper.pdf) was generated from the adjacent .txt
@@ -565,6 +569,79 @@ def tier4_end_to_end() -> None:
         C.eq(sum(1 for s in st.values() if s == "verified"), 2, "exactly 2 verified")
 
 
+def tier4b_extraction_lineno() -> None:
+    """Regression for a real paper (a bracket-numeric bibliography under LaTeX `lineno` margin
+    numbers, spanning a page break that resets the margin count) that extraction once mangled:
+    plain numeric segmentation locked onto the margin numbers instead of the "[N]" labels, dropped
+    the first entry, and collapsed every reference after the page reset into one segment. These
+    lines reproduce that layout with invented authors/titles -- the `pdftotext -layout` shape after
+    the section header, margin numbers and all. No network, DB, or poppler.
+
+    Failure shape this guards against: 10 references, numbered [1]..[10], must each segment; the
+    margin numbers (single- and multi-digit, some standalone, and a per-page reset between [5] and
+    [6]) must not become entry numbers, drop [1], or merge the tail into one blob."""
+    print("Tier 4b: bracket-numeric extraction under lineno margins (no network/DB)")
+    import pdf_references as R
+
+    # As `_references_section` returns it: margin numbers retained (their inconsistent rendering
+    # defeats line-number stripping), entries are "[N]", margins reset to 1 between [5] and [6].
+    section = [
+        " 1",
+        " 2",
+        "     [1]    Anna Apple and Ben Berry. Toward effective adoption of placeholder practices.",
+        " 3",
+        "            A trailing title fragment with no margin number.",
+        " 4   [2]    Carla Cherry and Dan Date. 2014. Foundations of fictional static analysis tools.",
+        " 5          J. Imaginary Tooling 10, 2 (2014), 93–98. DOI:https://doi.org/10.0000/fake.2014.1",
+        " 6   [3]    Erin Elder. 2021. A study of nonexistent program repair effectiveness.",
+        " 7          Imaginary Softw. Eng. 26, 5 (2021). DOI:https://doi.org/10.0000/fake.2021.2",
+        " 8   [4]    Fred Fig and Gail Gold. 2018. Security in the fictional development lifecycle. (2018).",
+        " 9   [5]    Hugo Hill, Iris Ash, and Jo Kemp. 2023. Placeholder DevSecOps tools and monitoring.",
+        "10          Proc. Imaginary Conf. (2023), 201–205. DOI:https://doi.org/10.0000/fake.2023.3",
+        "11",
+        "     [6]    Karl Knot, Lena Lime, and Mona Moss. Invented coding for web apps and the role of models.",
+        " 1          A continuation line that opens with a reset margin number.",
+        " 2   [7]    Nora Nest, Otto Oak, Paul Pine, and Quinn Reed. 2009. Imaginary literature reviews.",
+        " 3          Inf. Softw. Tech. 51, 1 (2009), 7–15. DOI:https://doi.org/10.0000/fake.2009.4",
+        " 4   [8]    Rita Rose. 2025. A placeholder report on insecure code. Retrieved from https://e.invalid/x",
+        " 5   [9]    Sam Stone, Tia Vale, and Uma Wood. 2020. Can this fault be found: a study on detection.",
+        " 6          J. Imaginary Softw. 170 (2020), 110769. DOI:https://doi.org/10.0000/fake.2020.5",
+        " 7   [10]   Vic Wren. 2023. The last fictional reference, with no trailing content.",
+        " 8",
+    ]
+
+    style = R._dominant_style(section)
+    C.eq(style, "bracket-numeric", "lineno bracket-numeric bibliography detected as bracket-numeric")
+
+    segs = R._segment(section, style)
+    nums = [n for n, _ in segs]
+    text = {n: t for n, t in segs}
+    C.eq(nums, list(range(1, 11)),
+         "REGRESSION GUARD: entries segment as [1]..[10] (no margin hijack, no dropped [1], no collapse)")
+    C.true(1 in text and text[1].startswith("Anna Apple"),
+           "ref [1] is recovered (was dropped when margin numbers anchored the sequence)")
+    C.true(6 in text and "Invented coding for web apps" in text[6]
+           and "Imaginary literature reviews" not in text[6],
+           "REGRESSION GUARD: the post-reset entry [6] does not swallow [7]..[10]")
+    # Margin numbers must not bleed into the joined text: [7]'s venue continuation had a "3" gutter
+    # number, [6]'s had a reset "1"; neither should survive, and no standalone margin line either.
+    C.true(7 in text and "Inf. Softw. Tech. 51" in text[7] and "3 Inf. Softw." not in text[7],
+           "a continuation's gutter margin number is stripped before joining")
+    C.true(6 in text and "1 A continuation line" not in text[6]
+           and "A continuation line" in text[6],
+           "a reset margin number on a continuation line is stripped, the content kept")
+
+    # A plain-numeric bibliography (no bracket labels) must stay numeric, not be pulled into the
+    # new style by a stray bracket.
+    plain = [
+        "1. Xavier Xu. 2019. A numeric-style entry without brackets. Venue (2019).",
+        "2. Yara Young. 2020. Another numeric entry [see 1]. Venue (2020).",
+        "3. Zack Zeal. 2021. A third numeric entry. Venue (2021).",
+    ]
+    C.eq(R._dominant_style(plain), "numeric",
+         "a plain numeric bibliography is not misclassified as bracket-numeric")
+
+
 def main() -> int:
     tier1_packaging()
     tier1b_runner()
@@ -573,6 +650,7 @@ def main() -> int:
     tier3b_triage_concurrency()
     tier3c_title_first_gate()
     tier4_end_to_end()
+    tier4b_extraction_lineno()
     print()
     if C.failed:
         print(f"SMOKE FAILED: {C.failed} check(s) failed, {C.skipped} skipped")
