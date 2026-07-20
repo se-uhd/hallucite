@@ -31,6 +31,17 @@ _.python.venv = { path = ".venv", create = true }
 description = "Install Python dependencies into the venv"
 run = "uv pip install -r requirements.txt"
 
+[tasks.upgrade]
+# The repo venv and the plugin's managed venv are separate installs, so upgrade both: a dev clone
+# that only bumps .venv keeps auditing through whichever one run.sh resolves. Neither updates
+# itself -- see the note at the top of skills/hallucite/scripts/run.sh.
+description = "Upgrade hallucinator in the repo venv and in run.sh's managed venv"
+run = """
+set -euo pipefail
+uv pip install --upgrade hallucinator
+skills/hallucite/scripts/run.sh upgrade
+"""
+
 [tasks.install-cli]
 description = "Download the hallucinator CLI prebuilt binary into .bin/ (checksum-verified, no curl|sh)"
 run = """

@@ -11,7 +11,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
-  version: "1.8.4"
+  version: "1.9.0"
 ---
 
 # hallucite
@@ -92,7 +92,7 @@ resolve_hallucite_run() {
 RUN="$(resolve_hallucite_run)" || exit $?
 ```
 
-Subcommands: `run.sh check-env` (preflight), `audit ...`, `triage ...`, `lint ...`,
+Subcommands: `run.sh check-env` (preflight), `upgrade`, `audit ...`, `triage ...`, `lint ...`,
 `python ...`.
 On success it is transparent (runs the script, forwards its exit code); on a setup failure it
 prints `HALLUCITE_BOOTSTRAP_FAILED: <reason>` to stderr and exits non-zero -- that sentinel means
@@ -112,6 +112,24 @@ and no venv is built. (In a repo clone you can equivalently use the `mise run ..
 
 If it prints `HALLUCITE_BOOTSTRAP_FAILED:` instead, relay that line to the user and stop -- see the
 stop conditions above.
+
+Two different versions show up around this skill; keep them apart when reporting one. `check-env`
+prints the **`hallucinator` package** version (the extract/verify library inside the venv), which
+is not the **hallucite plugin/skill** version in `metadata.version` above.
+
+### Keeping hallucinator current
+
+The managed venv is reused as soon as it can import hallucinator, so it never upgrades on its own
+and can sit on a months-old release indefinitely. `check-env` compares it against PyPI and warns
+when a newer one exists; act on that warning:
+
+```sh
+"$RUN" upgrade      # -> `HALLUCITE_OK: hallucinator <old> -> <new> at <python>`
+```
+
+It refuses when `$HALLUCITE_PYTHON` is set, since that interpreter is yours and run.sh does not
+modify it -- upgrade it yourself there. Set `$HALLUCITE_NO_VERSION_CHECK` to skip the PyPI lookup
+when offline.
 
 ## Setup (once)
 

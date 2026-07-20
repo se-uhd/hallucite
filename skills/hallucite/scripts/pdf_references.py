@@ -12,12 +12,16 @@ Pipeline:
   2. Column-aware linearization: detect a two-column gutter per page and read the
      left column fully, then the right (single-column pages pass through). This also
      stops the "References" header from sharing a line with the other column.
-  3. Detect `lineno` and strip the leading margin number from every line.
+  3. Detect `lineno` and blank out the margin number on every line -- overwriting it with spaces
+     rather than deleting it, so the bibliography's hanging indent survives intact (see
+     `_blank_margin`).
   4. Find the References section.
   5. Auto-detect the entry style (numeric / bracket-numeric / author-year-bracket / author-year)
      and segment. Bracket-numeric ("[12]") anchors on the bracketed label, not any leading
      `lineno` margin number, which otherwise hijacks the sequence and collapses the tail of the
-     bibliography after a per-page line-number reset.
+     bibliography after a per-page line-number reset. Author-year anchors on the hanging indent
+     when the section has one, because an author-year entry carries no label to anchor on and its
+     year may sit on the following line.
 """
 
 from __future__ import annotations
@@ -31,14 +35,33 @@ _SECTION_HEADERS = ("references", "bibliography", "references and notes",
                     "literature cited", "works cited")
 _HEADER_NUM = re.compile(r"^(?:\d+|[ivxlc]+)[.)]?\s+", re.I)  # "7 ", "7. ", "VII. " before a header
 _STOP_SECTION = re.compile(r"^(appendix|acknowledg)", re.I)
-_LINENO_PREFIX = re.compile(r"^\s*\d{2,4}\s")
-_MARGIN_LINENO = re.compile(r"^\s*\d{1,4}\s+")
+
+# A `lineno` margin number, in the two shapes `pdftotext -layout` produces. Which one you get
+# depends on whether the number's baseline lands on the text line's grid row, so a single paper
+# switches between them mid-page -- both must count towards the detection ratio below, or a
+# heavily line-numbered paper reads as un-numbered and every margin digit becomes data.
+_MARGIN_BARE = re.compile(r"^\s*\d{1,4}\s*$")             # the number alone on its own line
+_MARGIN_GUTTER = re.compile(r"^\s*\d{1,4}\s{2,}(?=\S)")   # the number in the gutter before content
 
 # Entry-start patterns for the bibliography styles.
 _NUM = re.compile(r"^\[?(\d{1,3})\]?[.)]?\s+\S")          # "1 ", "1.", "[1] "
 _YEAR = re.compile(r"\((?:19|20)\d{2}[a-z]?\)")
 _BRACKET = re.compile(r"^\[[^\]]*(?:19|20)\d{2}[a-z]?[^\]]*\]")  # "[Smith et al.(2024)]"
-_AUTHORYEAR = re.compile(r"^[^\W\d_][\w’'.\-]*,\s+[A-Z]")        # "Surname, I. ..."
+
+# An author-list opening, in the two conventions that dominate: APA-ish "Surname, I." and the
+# Springer/Elsevier "Surname AB, Surname CD" (initials after the surname, no comma between the
+# two). Matching only the former silently reclassifies every Springer bibliography as some other
+# style. A leading lowercase particle ("de Dieu MJ", "van Rijn A") and an apostrophe or hyphen
+# inside the surname ("D’Souza AR", "Yorke-Smith N") are both common enough to allow for.
+# Initials are capitals; matching them case-insensitively lets any short lowercase word stand in
+# for them, and a running head ("... Questions on Stack Overflow") then parses as an author list.
+_UP = r"[A-ZÀ-ÖØ-Þ]"
+_PARTICLE = r"(?:(?:d[aeiou]|van|von|del|della|der|den|dos|la|le|ten|ter)\s+)?"
+_AUTHORYEAR = re.compile(
+    rf"^{_PARTICLE}{_UP}[\w’'.\-]*"                       # surname
+    rf"(?:\s+{_UP}[\w’'.\-]*)*?"                          # further surname words
+    rf"(?:,\s+{_UP}|\s+{_UP}{{1,4}}[,(\s])",              # ", I." (APA) or " AB," (Springer)
+    re.UNICODE)
 
 # A bracket-numeric entry label "[12]", optionally preceded by a `lineno` margin number that
 # pdftotext -layout leaves in a wide left column ("12   [13]  Author ..."). The two numbers are a
@@ -48,6 +71,9 @@ _AUTHORYEAR = re.compile(r"^[^\W\d_][\w’'.\-]*,\s+[A-Z]")        # "Surname, I
 _BRACKET_NUM = re.compile(r"^(?:\d{1,4}\s{2,})?\[(\d{1,3})\][.)]?\s+\S")
 _MARGIN_NUM_ONLY = re.compile(r"^\d{1,4}$")        # a `lineno` number alone on a line (drop)
 _LEAD_MARGIN_NUM = re.compile(r"^\d{1,4}\s{2,}")   # a `lineno` number in the gutter before content
+# The gap `-layout` leaves between a running title and its page number. Justified reference text
+# never contains one, so it distinguishes page furniture from a real entry.
+_WIDE_GAP = re.compile(r"\S\s{8,}\S")
 
 
 @dataclass
@@ -115,13 +141,25 @@ def _linearize(pdf_path: str) -> list[str]:
     return out
 
 
+def _blank_margin(line: str) -> str:
+    """Replace a `lineno` margin number with the spaces it occupied, keeping every remaining
+    character in its original column. Deleting the digits instead would shift a numbered line left
+    relative to an unnumbered one, destroying the bibliography's hanging indent -- the only signal
+    that separates an author-year entry from its continuation lines."""
+    if _MARGIN_BARE.match(line):
+        return ""
+    m = _MARGIN_GUTTER.match(line)
+    return " " * m.end() + line[m.end():] if m else line
+
+
 def _strip_line_numbers(lines: list[str]) -> tuple[list[str], bool]:
     nb = [l for l in lines if l.strip()]
     if not nb:
         return lines, False
-    if sum(bool(_LINENO_PREFIX.match(l)) for l in nb) / len(nb) <= 0.5:
+    hits = sum(bool(_MARGIN_BARE.match(l) or _MARGIN_GUTTER.match(l)) for l in nb)
+    if hits / len(nb) <= 0.5:
         return lines, False
-    return [_MARGIN_LINENO.sub("", l) for l in lines], True
+    return [_blank_margin(l) for l in lines], True
 
 
 def _references_section(lines: list[str]) -> list[str]:
@@ -187,6 +225,69 @@ def _is_new_bracket_numeric(s: str, last: int) -> int | None:
     return num if 0 < num - last <= 3 else None
 
 
+def _common_cols(section: list[str]) -> list[int]:
+    """The indents the section's text block actually uses, in order. A column has to carry real
+    weight to count: thresholding on a bare line count instead lets three stray page numbers in the
+    right margin pass for a column of body text, which stretches the block far enough to swallow
+    the furniture the block is meant to exclude."""
+    cols = Counter(len(l) - len(l.lstrip()) for l in section if l.strip())
+    total = sum(cols.values())
+    return sorted(c for c, n in cols.items() if n >= max(3, total * 0.05))
+
+
+def _body_col(section: list[str]) -> int:
+    """The deepest column the bibliography's own text block uses. Anything well past it is page
+    furniture or a submission-system attachment slip, not a reference."""
+    return max(_common_cols(section), default=0)
+
+
+def _entry_indent(section: list[str]) -> int | None:
+    """The column an author-year entry starts at, when the section is laid out with a hanging
+    indent (entries flush at one column, their continuations at a deeper one); else None.
+
+    Author-year entries carry no "[12]"-style label to anchor segmentation on, and the `(year)` is
+    not reliably on the entry's first line -- an author list long enough to wrap pushes it onto the
+    next one. Indentation is what actually delimits the entries, and it is unambiguous once
+    `_blank_margin` has preserved the columns. Without it, every continuation line that happens to
+    open with a name ("Joseph N, Brockman G, et al. (2021b) ...") starts a phantom reference."""
+    counts = Counter(len(l) - len(l.lstrip()) for l in section if l.strip())
+    total = sum(counts.values())
+    if not total:
+        return None
+    # Require at least two weighted levels, so a stray indented line cannot invent a hanging
+    # indent, and require them to cover the section, so a ragged layout falls back to the regex.
+    common = _common_cols(section)
+    if len(common) < 2:
+        return None
+    if sum(counts[c] for c in common) / total < 0.8 or counts[common[0]] < 3:
+        return None
+    return common[0]
+
+
+def _running_heads(section: list[str]) -> set[str]:
+    """Lines to drop as page furniture: running heads and footers. They repeat on every page of a
+    long bibliography but differ in their page number, so they must be compared with digits
+    removed. That comparison alone is too blunt -- short continuation lines like "pp 164-171"
+    collapse onto each other too -- so a repeated line also has to sit outside the text block, in
+    one of the two ways a running head does: it keeps the wide gap `-layout` renders between a
+    running title and its page number, or (once `_blank_margin` has taken that page number away) it
+    is indented far past any column the bibliography itself uses. Justified reference text is
+    neither."""
+    body = _body_col(section)
+    counts: Counter[str] = Counter()
+    furniture: set[str] = set()
+    for line in section:
+        s = line.strip()
+        if not s:
+            continue
+        n = re.sub(r"\s+", " ", re.sub(r"\d+", "", s)).strip()
+        counts[n] += 1
+        # Judge the shape on the raw line -- normalizing collapses the very gap we look for.
+        if _WIDE_GAP.search(s) or (len(line) - len(line.lstrip())) > body + 10:
+            furniture.add(n)
+    return {n for n, c in counts.items() if c >= 2 and n and n in furniture}
+
+
 def _strip_bracket_label(s: str) -> str:
     return re.sub(r"^(?:\d{1,4}\s{2,})?\[\d{1,3}\][.)]?\s+", "", s, count=1)
 
@@ -234,6 +335,7 @@ def _segment(section: list[str], style: str) -> list[tuple[int, str]]:
     # occurs 2+ times is running noise to drop (generic; no venue name hardcoded).
     repeated = {ln for ln, n in Counter(l.strip() for l in section if l.strip()).items()
                 if n >= 2 and len(ln) <= 50}
+    heads = _running_heads(section)
     refs: list[tuple[int, str]] = []
     cur: str | None = None
     cur_num = 0
@@ -243,10 +345,22 @@ def _segment(section: list[str], style: str) -> list[tuple[int, str]]:
         last = _bracket_numeric_anchor(section) - 1  # bracket-label sequentiality anchor
     else:
         last = 0
+    # Only author-year needs the hanging indent; the labelled styles anchor on their own labels.
+    entry_col = _entry_indent(section) if style == "author-year" else None
+    body_col = _body_col(section)
     seq = 0    # sequential counter (bracket / author-year)
     for line in section:
         s = line.strip()
         if not s or "???:" in s or s in repeated:  # blank / anonymized footer / repeated watermark
+            continue
+        if re.sub(r"\s+", " ", re.sub(r"\d+", "", s)).strip() in heads:  # running head / footer
+            continue
+        indent = len(line) - len(line.lstrip())
+        # Once the hanging indent is known, the entry column is the left edge of the bibliography
+        # and `body_col` its right-most; text outside that block belongs to something else -- a
+        # stray page number, or the "Click here to download ..." slip an editorial system staples
+        # after the last reference, which otherwise lands inside it.
+        if entry_col is not None and not entry_col <= indent <= body_col + 10:
             continue
         # A `lineno` margin number alone on a line is noise between entries; drop it so it neither
         # starts a phantom entry nor pollutes the previous reference's text.
@@ -274,7 +388,12 @@ def _segment(section: list[str], style: str) -> list[tuple[int, str]]:
                 seq = new_num = seq + 1
                 new_text = _BRACKET.sub("", s, count=1).strip()
         elif style == "author-year":
-            if _AUTHORYEAR.match(s) and _YEAR.search(s[:300]):
+            # With a hanging indent the column is authoritative: it alone separates an entry from a
+            # continuation that opens with a name, and it admits an entry whose `(year)` wrapped
+            # onto the next line. Without one, fall back to requiring the year on the entry line.
+            starts = (indent <= entry_col if entry_col is not None
+                      else bool(_YEAR.search(s[:300])))
+            if starts and _AUTHORYEAR.match(s):
                 seq = new_num = seq + 1
                 new_text = s
 

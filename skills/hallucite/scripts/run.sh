@@ -16,15 +16,23 @@
 #
 # Usage:
 #   run.sh check-env              # provision if needed, then print HALLUCITE_OK / fail loud
+#   run.sh upgrade                # upgrade hallucinator in the managed venv
 #   run.sh audit  <pdf|dir> [...] # -> audit_references.py
 #   run.sh triage <subcmd> [...]  # -> triage.py
 #   run.sh lint   [...]           # -> lint_markdown.py
 #   run.sh python [...]           # exec the resolved interpreter (escape hatch)
 #
+# Why `upgrade` exists: `resolve_python` reuses the managed venv as soon as it can import
+# hallucinator, so the unpinned `pip install hallucinator` below runs only when that venv is first
+# created. With no explicit upgrade path the venv silently stays on whatever version was current
+# the day it was built, for the life of the install, and audits keep running on stale verification
+# logic with nothing to show for it. `check-env` warns when a newer release exists.
+#
 # Environment overrides:
 #   HALLUCITE_PYTHON  a python that already has hallucinator (used as-is; never modified)
 #   HALLUCITE_VENV    where to create/use the managed venv
 #                     (default: ${XDG_CACHE_HOME:-~/.cache}/hallucite/venv)
+#   HALLUCITE_NO_VERSION_CHECK  set to any value to skip check-env's PyPI lookup (offline/CI)
 
 set -euo pipefail
 
@@ -47,6 +55,22 @@ find_exe() {
 }
 
 py_ok() { [ -n "${1:-}" ] && [ -x "$1" ] && "$1" -c 'import hallucinator' >/dev/null 2>&1; }
+
+hallucinator_version() {
+  "$1" -c 'import importlib.metadata as m; print(m.version("hallucinator"))' 2>/dev/null \
+    || echo '?'
+}
+
+# The newest hallucinator on PyPI, or nothing if the lookup is skipped, offline, or slow. Never
+# fatal: a version check must not be able to block an audit.
+pypi_latest() {
+  [ -n "${HALLUCITE_NO_VERSION_CHECK:-}" ] && return 0
+  local curl; curl="$(find_exe curl 2>/dev/null || true)"
+  [ -n "$curl" ] || return 0
+  "$curl" -fsS --max-time 3 https://pypi.org/pypi/hallucinator/json 2>/dev/null \
+    | "$1" -c 'import json,sys; print(json.load(sys.stdin)["info"]["version"])' 2>/dev/null \
+    || true
+}
 
 is_py312() {
   [ -x "${1:-}" ] && "$1" -c 'import sys; sys.exit(0 if sys.version_info[:2]==(3,12) else 1)' \
@@ -111,11 +135,11 @@ to a python that already has hallucinator."
 
 cmd="${1:-}"
 case "$cmd" in
-  check-env|audit|triage|lint|python) shift ;;
+  check-env|upgrade|audit|triage|lint|python) shift ;;
   ""|-h|--help)
-    printf 'usage: run.sh {check-env|audit|triage|lint|python} [args...]\n' >&2; exit 2 ;;
+    printf 'usage: run.sh {check-env|upgrade|audit|triage|lint|python} [args...]\n' >&2; exit 2 ;;
   *)
-    printf '%s unknown command %q (expected check-env|audit|triage|lint|python)\n' \
+    printf '%s unknown command %q (expected check-env|upgrade|audit|triage|lint|python)\n' \
       "$FAIL" "$cmd" >&2
     exit 2 ;;
 esac
@@ -134,12 +158,41 @@ export PATH
 
 case "$cmd" in
   check-env)
-    ver="$("$PYTHON" -c 'import importlib.metadata as m; print(m.version("hallucinator"))' \
-           2>/dev/null || echo '?')"
+    ver="$(hallucinator_version "$PYTHON")"
     printf 'HALLUCITE_OK: %s (hallucinator %s)\n' "$PYTHON" "$ver"
     # Non-fatal: the audit's extraction step needs pdftotext; warn now rather than failing later.
     find_exe pdftotext >/dev/null \
-      || printf 'warning: pdftotext (poppler) not found; the audit needs it for PDF text extraction (e.g. brew install poppler).\n' >&2 ;;
+      || printf 'warning: pdftotext (poppler) not found; the audit needs it for PDF text extraction (e.g. brew install poppler).\n' >&2
+    # Non-fatal: the managed venv never upgrades itself, so say so when it has fallen behind.
+    # `sort -V` rather than string compare, so a locally-built newer version is not called stale.
+    latest="$(pypi_latest "$PYTHON")"
+    if [ -n "$latest" ] && [ "$latest" != "$ver" ] \
+       && [ "$(printf '%s\n%s\n' "$ver" "$latest" | sort -V | tail -n 1)" = "$latest" ]; then
+      printf 'warning: hallucinator %s is installed but %s is available; run `run.sh upgrade` (the managed venv does not update itself).\n' \
+        "$ver" "$latest" >&2
+    fi ;;
+  upgrade)
+    if [ -n "${HALLUCITE_PYTHON:-}" ]; then
+      die "\$HALLUCITE_PYTHON is set ($HALLUCITE_PYTHON); run.sh never modifies an interpreter it \
+does not manage. Upgrade it yourself (\"$HALLUCITE_PYTHON\" -m pip install --upgrade hallucinator) \
+or unset HALLUCITE_PYTHON to use the managed venv."
+    fi
+    before="$(hallucinator_version "$PYTHON")"
+    uv="$(find_exe uv 2>/dev/null || true)"
+    if [ -n "$uv" ]; then
+      "$uv" pip install --python "$PYTHON" --upgrade hallucinator >&2 \
+        || die "'uv pip install --upgrade hallucinator' failed (network? see output above)."
+    else
+      "$PYTHON" -m pip install --upgrade hallucinator >&2 \
+        || die "'pip install --upgrade hallucinator' failed (network? see output above)."
+    fi
+    py_ok "$PYTHON" || die "after upgrading, $PYTHON can no longer 'import hallucinator'."
+    after="$(hallucinator_version "$PYTHON")"
+    if [ "$before" = "$after" ]; then
+      printf 'HALLUCITE_OK: hallucinator %s (already current) at %s\n' "$after" "$PYTHON"
+    else
+      printf 'HALLUCITE_OK: hallucinator %s -> %s at %s\n' "$before" "$after" "$PYTHON"
+    fi ;;
   audit)  exec "$PYTHON" "$SCRIPT_DIR/audit_references.py" "$@" ;;
   triage) exec "$PYTHON" "$SCRIPT_DIR/triage.py" "$@" ;;
   lint)   exec "$PYTHON" "$SCRIPT_DIR/lint_markdown.py" "$@" ;;

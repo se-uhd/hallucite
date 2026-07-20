@@ -4,6 +4,37 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.9.0] - 2026-07-20
+
+### Added
+
+- `run.sh upgrade` upgrades `hallucinator` in the managed venv, and `check-env` warns when PyPI has
+  a newer release. `resolve_python` reuses that venv as soon as it can import hallucinator, so the
+  unpinned `pip install hallucinator` ran only when the venv was first created: an install stayed on
+  whatever version was current the day it was built, for as long as it lived, with nothing to
+  indicate it. `upgrade` refuses when `$HALLUCITE_PYTHON` is set, since run.sh does not modify an
+  interpreter it did not provision, and `$HALLUCITE_NO_VERSION_CHECK` skips the PyPI lookup for
+  offline and CI runs. `mise run upgrade` covers the repo venv and the managed venv together.
+
+### Fixed
+
+- Reference extraction handles a Springer author-year bibliography ("Bacchelli A, D'Ambros M (2009)
+  ...") printed under LaTeX `lineno` margin numbers. Three faults compounded. `lineno` detection
+  required two or more digits followed by text, so single-digit numbers and numbers rendered alone
+  on a line went uncounted, and every margin digit survived into the text as data. The numbered
+  lines then read as a plain-numeric bibliography, so each physical line became its own reference,
+  splitting entries mid-title and truncating them. The author-year entry pattern matched only
+  "Surname, I.", never the Springer "Surname AB," convention, leaving the correct style unreachable.
+  Margin numbers are now overwritten with spaces rather than deleted, preserving the column
+  positions that carry the bibliography's hanging indent -- the only delimiter an author-year entry
+  has, given that it carries no label and its `(year)` may wrap onto the following line. Running
+  heads and text outside the bibliography's column block are dropped, so a page header no longer
+  becomes a reference and an editorial system's "Click here to download" slip no longer lands inside
+  the last one. On the paper that surfaced this, extraction goes from 32 mangled references (17
+  unparsed, entries split mid-sentence) to 93 cleanly segmented references, none unparsed, and
+  database verification from 7 to 85. Smoke tier 4c drives a generated fixture PDF that reproduces
+  the layout with invented references.
+
 ## [1.8.4] - 2026-06-24
 
 ### Fixed
@@ -293,6 +324,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.9.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.9.0
 [1.8.4]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.4
 [1.8.3]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.3
 [1.8.2]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.2
