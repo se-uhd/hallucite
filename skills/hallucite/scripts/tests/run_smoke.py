@@ -19,8 +19,12 @@ Tiers (any failing check exits non-zero):
                               and category/severity consistency. No network or DB.
   3b triage concurrency    -- worklist --paper slice isolation (the paper6/paper66 prefix case)
                               and the fcntl verdicts lock under concurrent writers.
-  3c title-first gate      -- record --signals enforcement, is_fabrication, and the
-                              desk-reject report section.
+  3c title-first gate      -- record --signals enforcement (including the contradictory
+                              unclear+title_match=no and unknown paper:number rejections),
+                              is_fabrication's category gate, and the desk-reject report section.
+  3g stale verdicts        -- a verdict recorded against reference text a re-audit then changed
+                              is quarantined: report shows it as stale/pending (never the old
+                              category against the new reference) and --pending resurfaces it.
   3d repeated entries      -- entries sharing authors+title under different citation keys are
                               grouped and classified: identical in every field = duplicate (a
                               fact), differing venue/volume/pages = conflicting (an open question).
@@ -650,7 +654,13 @@ def tier3c_title_first_gate() -> None:
              "likely-hallucinated with title_match=no is accepted")
         C.true(rec(out, 3, "unclear", {"title_match": "maybe"}) != 0,
                "an out-of-vocabulary signal value is rejected")
+        C.true(rec(out, 3, "unclear", {"title_match": "no"}) != 0,
+               "REGRESSION GUARD: unclear with title_match=no is rejected (it asserts the "
+               "likely-hallucinated finding while hedging the category)")
         C.eq(rec(out, 4, "real-published"), 0, "real-* without signals is accepted (optional)")
+        C.true(rec(out, 99, "real-published") != 0,
+               "REGRESSION GUARD: an unknown paper:number is an error, not a silently "
+               "unreportable verdict")
         # Grey literature (a web page, not a publication) uses title_match=na and needs no
         # matched_title -- the gate must not block it (the paper82 "Copy for AI" case).
         C.eq(rec(out, 5, "partial-match", {"title_match": "na", "venue_match": "yes"}), 0,
@@ -659,17 +669,25 @@ def tier3c_title_first_gate() -> None:
     # is_fabrication: a non-existent title (T) is itself the desk-reject trigger -- even with real
     # authors and a real venue otherwise intact (the paper33 case: invented title, real six-author
     # group, real ICSE 2020 association). Requiring a compounding signal would miss exactly this.
-    C.true(triage.is_fabrication({"signals": {"title_match": "no"}}),
+    # But only when the CATEGORY asserts fabrication: a hedged verdict must never be escalated
+    # past what it claims.
+    LH = "likely-hallucinated"
+    C.true(triage.is_fabrication({"category": LH, "signals": {"title_match": "no"}}),
            "REGRESSION GUARD: title_match=no alone is a desk-reject candidate (real authors/venue, invented title)")
-    C.true(triage.is_fabrication({"signals": {"title_match": "no", "authors_match": "yes", "venue_match": "no"}}),
+    C.true(triage.is_fabrication({"category": LH, "signals": {"title_match": "no", "authors_match": "yes", "venue_match": "no"}}),
            "is_fabrication: title_match=no with compounding signals")
-    C.true(not triage.is_fabrication({"signals": {"title_match": "yes", "venue_match": "no"}}),
+    C.true(not triage.is_fabrication({"category": "unclear", "signals": {"title_match": "no"}}),
+           "REGRESSION GUARD: a hedged (unclear) verdict never reaches Desk-reject candidates")
+    C.true(not triage.is_fabrication({"category": "partial-match",
+                                      "signals": {"title_match": "yes", "venue_match": "no"}}),
            "is_fabrication: a real title with a wrong venue is a citation error, not fabrication")
     # A dead/misresolving DOI on a real title is an honest citation error (the off-by-one-digit
     # case), NOT fabrication -- the title, not the DOI, is the decisive signal.
-    C.true(not triage.is_fabrication({"signals": {"title_match": "yes", "doi_status": "404"}}),
+    C.true(not triage.is_fabrication({"category": "partial-match",
+                                      "signals": {"title_match": "yes", "doi_status": "404"}}),
            "is_fabrication: a real title with a dead DOI is a citation error, not fabrication")
-    C.true(not triage.is_fabrication({"signals": {"title_match": "na", "venue_match": "no"}}),
+    C.true(not triage.is_fabrication({"category": "partial-match",
+                                      "signals": {"title_match": "na", "venue_match": "no"}}),
            "is_fabrication: a non-publication resource (na) is never a fabricated title")
 
     # report surfaces the discriminating facts and the desk-reject section.
@@ -688,6 +706,55 @@ def tier3c_title_first_gate() -> None:
         C.true("no publication bears the cited title" in rollup,
                "report shows the cited title matched no publication")
         C.true("title=no" in rollup, "report prints the structured signal summary")
+
+
+def tier3g_stale_verdicts() -> None:
+    """A verdict is keyed by paper_id:number, but author-year numbers are extraction-order: a
+    re-audit can renumber the bibliography and leave a verdict pointing at a different reference.
+    Every consumer must then treat that reference as un-triaged. The alternative -- reattaching
+    the old category -- printed a likely-hallucinated banner (with the desk-reject fabrication
+    line) against an innocent reference in every written report, while the actually-fabricated
+    one silently reverted to pending."""
+    print("Tier 3g: stale verdicts are quarantined, not reattached (no network/DB)")
+    import triage
+    triage_py = SCRIPTS / "triage.py"
+
+    def paper(refs):
+        return {"paper_id": "p", "pdf_path": "p.pdf", "num_references": len(refs),
+                "references": refs}
+
+    def ref(n, title):
+        return {"original_number": n, "raw_citation": f"Author A. {title}. Venue, 2020.",
+                "db_verification": {"status": "not_found"}, "parsed": {"title": title}}
+
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td)
+        (out / "p.json").write_text(json.dumps(paper([ref(1, "Innocent paper one"),
+                                                      ref(2, "Fabricated title")])))
+        r = subprocess.run([sys.executable, str(triage_py), "record", "p", "2",
+                            "likely-hallucinated", "no publication bears this title",
+                            "--signals", '{"title_match":"no"}', "--out", str(out)],
+                           capture_output=True, text=True)
+        C.eq(r.returncode, 0, "verdict records against the original reference")
+
+        # Re-audit: numbering shifts, so #2 is now a different, real reference.
+        (out / "p.json").write_text(json.dumps(paper([ref(1, "A new first entry"),
+                                                      ref(2, "Innocent paper one"),
+                                                      ref(3, "Fabricated title")])))
+        triage.cmd_report(out)
+        rollup = (out / "reports" / "potential-hallucinations.md").read_text()
+        check = (out / "reports" / "reference-check-p.md").read_text()
+        C.true("Innocent paper one" not in rollup,
+               "REGRESSION GUARD: a stale verdict does not flag the reference now holding its number")
+        C.true(not (out / "reports" / "verify-p.md").exists(),
+               "no verify sheet is generated from a stale verdict alone")
+        C.true("Stale verdict" in check and "(pending)" in check,
+               "the per-paper report marks the verdict stale and the reference pending")
+
+        triage.cmd_worklist(out, pending=True)
+        wl = json.loads((out / "triage_worklist.json").read_text())
+        C.eq(sorted(e["number"] for e in wl), [1, 2, 3],
+             "REGRESSION GUARD: --pending resurfaces a reference whose verdict went stale")
 
 
 def _build_fixture_db(path: Path) -> None:
@@ -824,8 +891,8 @@ def tier4b_extraction_lineno() -> None:
     C.eq(style, "bracket-numeric", "lineno bracket-numeric bibliography detected as bracket-numeric")
 
     segs = R._segment(section, style)
-    nums = [n for n, _ in segs]
-    text = {n: t for n, t in segs}
+    nums = [n for n, _, _ in segs]
+    text = {n: t for n, t, _ in segs}
     C.eq(nums, list(range(1, 11)),
          "REGRESSION GUARD: entries segment as [1]..[10] (no margin hijack, no dropped [1], no collapse)")
     C.true(1 in text and text[1].startswith("Anna Apple"),
@@ -850,6 +917,61 @@ def tier4b_extraction_lineno() -> None:
     ]
     C.eq(R._dominant_style(plain), "numeric",
          "a plain numeric bibliography is not misclassified as bracket-numeric")
+
+    # Soft line-break hyphens: the raw text keeps the hyphen (right for a compound broken at its
+    # own hyphen), and the alt variant drops it (right for a soft-hyphenated word) -- FTS phrase
+    # lookups miss the wrong form, which sent real, DBLP-indexed works into triage as not_found.
+    soft = [
+        "1. Alice Author. 2019. Benchmarking experimen-",
+        "   tation in fictional software tools. Venue (2019).",
+        "2. Bob Builder. 2020. A second fictional entry. Venue (2020).",
+        "3. Carol Coder. 2021. A third fictional entry. Venue (2021).",
+    ]
+    ssegs = R._segment(soft, "numeric")
+    C.true(bool(ssegs) and "experimen-tation" in ssegs[0][1],
+           "a line-break hyphen join keeps the hyphen in the raw text")
+    C.true(ssegs[0][2] is not None and "experimentation in fictional" in ssegs[0][2],
+           "REGRESSION GUARD: the dehyphenated alt variant is offered for verification retry")
+    C.true(ssegs[1][2] is None, "an entry with no soft join carries no alt variant")
+
+    # A running head that appears only ONCE inside the section (any two-page bibliography) must
+    # still be dropped when the document shows it repeating on other pages -- section-only
+    # counting glued the citing paper's own running head into a reference's title.
+    head = "     Placeholder Study of Imaginary Systems                                   31"
+    sec2 = [
+        "1. Dana Dev. 2018. First fictional entry. Venue (2018).",
+        head,
+        "2. Ed Eng. 2019. Second fictional entry. Venue (2019).",
+        "3. Fay Fix. 2020. Third fictional entry. Venue (2020).",
+    ]
+    doc = ["intro text"] + [head.replace("31", str(pg)) for pg in (27, 29)] + sec2
+    joined = " ".join(t for _, t, _ in R._segment(sec2, "numeric", doc))
+    C.true("Placeholder Study" not in joined,
+           "REGRESSION GUARD: a head seen once in the section is dropped via the document-wide count")
+
+    # A short number alone on a line at a continuation indent is content (a wrapped page number),
+    # not a lineno margin number -- blanking it silently truncated the citation it belonged to.
+    lineno_doc = []
+    for i in range(1, 40):
+        lineno_doc += [f"{i:>2}", "     Some body text line that carries the actual content."]
+    lineno_doc += ["40", "       654"]
+    stripped, on = R._strip_line_numbers(lineno_doc)
+    C.true(on, "margin numbers are detected in the synthetic lineno document")
+    C.true(any(l.strip() == "654" for l in stripped),
+           "REGRESSION GUARD: a wrapped page number at a continuation indent survives blanking")
+    C.true(not any(l.strip() == "40" for l in stripped),
+           "a true margin number at the margin column is still blanked")
+
+    # Two "(year)" author-blocks in one author-year segment is the shape of a silent merge (an
+    # entry whose year wrapped onto the next line, glued into its predecessor); it must surface
+    # as a suspect so the audit can warn that the second entry was never verified on its own.
+    merged = [R.ExtractedRef(1, "Anderson K (2019) First entry. Venue. "
+                                "Carter M (2020) Second entry. Venue.", None),
+              R.ExtractedRef(2, "Lewis V (2021) Third entry. Venue.", None)]
+    C.eq(R._suspect_merges(merged, "author-year"), [1],
+         "REGRESSION GUARD: a two-year author-year segment is flagged as a suspected merge")
+    C.eq(R._suspect_merges(merged, "numeric"), [],
+         "numeric styles are never merge-suspects (their labels delimit entries)")
 
 
 def tier4c_extraction_authoryear_lineno() -> None:
@@ -888,7 +1010,7 @@ def tier4c_extraction_authoryear_lineno() -> None:
     C.eq(R._entry_indent(section), 5, "the hanging indent's entry column is found")
 
     segs = R._segment(section, style)
-    text = {n: t for n, t in segs}
+    text = {n: t for n, t, _ in segs}
     C.eq(len(segs), 15, "REGRESSION GUARD: 15 entries segment (was 6, split at every margin number)")
     C.true(all(re.search(r"\((?:19|20)\d{2}[a-z]?\)", t) for t in text.values()),
            "every segment carries a (year) -- none is a stray fragment")
@@ -929,6 +1051,7 @@ def main() -> int:
     tier3f_degraded_verification()
     tier3b_triage_concurrency()
     tier3c_title_first_gate()
+    tier3g_stale_verdicts()
     tier4_end_to_end()
     tier4b_extraction_lineno()
     tier4c_extraction_authoryear_lineno()

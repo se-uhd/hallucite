@@ -29,7 +29,7 @@ from __future__ import annotations
 import re
 import subprocess
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 _SECTION_HEADERS = ("references", "bibliography", "references and notes",
                     "literature cited", "works cited")
@@ -81,6 +81,12 @@ class ExtractedRef:
     number: int            # printed number, or sequential index for non-numeric styles
     raw_text: str          # the reconstructed single-line citation text
     reference: object | None  # hallucinator.Reference, or None if it didn't parse
+    # `raw_text` with the hyphens closed by line-break joins removed ("Experimen-tation" ->
+    # "Experimentation"), or None when no such join happened. The kept-hyphen form is right for a
+    # real compound broken at its own hyphen and wrong for a soft-hyphenated word -- and FTS
+    # backends miss the wrong form entirely -- so verification tries this variant when the
+    # original fails.
+    alt_text: str | None = None
 
 
 @dataclass
@@ -89,6 +95,11 @@ class ExtractionInfo:
     lineno_on: bool
     section_found: bool
     style: str             # numeric | bracket | author-year | none
+    # Author-year references whose text carries two or more "(year)" author-block signatures:
+    # the shape a silently merged pair of entries leaves behind when no hanging indent delimits
+    # them and the second entry's year sat on a wrapped line. A warning, not a verdict -- but a
+    # merged entry never reaches verification on its own, so it must not stay invisible.
+    suspect_merged: list[int] = field(default_factory=list)
 
 
 # ── PDF text → linearized lines ──────────────────────────────────────────────
@@ -141,13 +152,21 @@ def _linearize(pdf_path: str) -> list[str]:
     return out
 
 
-def _blank_margin(line: str) -> str:
+def _blank_margin(line: str, margin_col: int) -> str:
     """Replace a `lineno` margin number with the spaces it occupied, keeping every remaining
     character in its original column. Deleting the digits instead would shift a numbered line left
     relative to an unnumbered one, destroying the bibliography's hanging indent -- the only signal
-    that separates an author-year entry from its continuation lines."""
+    that separates an author-year entry from its continuation lines.
+
+    A number ALONE on its line is blanked only at the margin column (within the 1-2 columns that
+    right-aligned digit widths shift it). A lone number at a continuation indent is *content* -- a
+    page number that wrapped onto its own line ("...19(3):619–" / "654") -- and blanking it
+    silently truncates the citation it belongs to. The gutter shape (number, gap, then text on
+    the same line) stays ungated: there the number is furniture whatever its column -- a `lineno`
+    margin or the page number of a running head -- and the text keeps its own position."""
     if _MARGIN_BARE.match(line):
-        return ""
+        indent = len(line) - len(line.lstrip())
+        return line if indent > margin_col + 2 else ""
     m = _MARGIN_GUTTER.match(line)
     return " " * m.end() + line[m.end():] if m else line
 
@@ -156,10 +175,14 @@ def _strip_line_numbers(lines: list[str]) -> tuple[list[str], bool]:
     nb = [l for l in lines if l.strip()]
     if not nb:
         return lines, False
-    hits = sum(bool(_MARGIN_BARE.match(l) or _MARGIN_GUTTER.match(l)) for l in nb)
-    if hits / len(nb) <= 0.5:
+    matches = [l for l in nb if _MARGIN_BARE.match(l) or _MARGIN_GUTTER.match(l)]
+    if len(matches) / len(nb) <= 0.5:
         return lines, False
-    return [_blank_margin(l) for l in lines], True
+    # The margin column is where the mass of the matches sits. Gate the blanking on it, so the
+    # rare wrapped page number ("654" alone at a continuation indent) survives as content while
+    # every true margin number -- vastly more frequent, all at the left margin -- is blanked.
+    margin_col = Counter(len(l) - len(l.lstrip()) for l in matches).most_common(1)[0][0]
+    return [_blank_margin(l, margin_col) for l in lines], True
 
 
 def _references_section(lines: list[str]) -> list[str]:
@@ -264,28 +287,35 @@ def _entry_indent(section: list[str]) -> int | None:
     return common[0]
 
 
-def _running_heads(section: list[str]) -> set[str]:
-    """Lines to drop as page furniture: running heads and footers. They repeat on every page of a
-    long bibliography but differ in their page number, so they must be compared with digits
-    removed. That comparison alone is too blunt -- short continuation lines like "pp 164-171"
-    collapse onto each other too -- so a repeated line also has to sit outside the text block, in
-    one of the two ways a running head does: it keeps the wide gap `-layout` renders between a
-    running title and its page number, or (once `_blank_margin` has taken that page number away) it
-    is indented far past any column the bibliography itself uses. Justified reference text is
-    neither."""
+def _head_norm(s: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"\d+", "", s)).strip()
+
+
+def _running_heads(section: list[str], doc: list[str] | None = None) -> set[str]:
+    """Lines to drop as page furniture: running heads and footers. They repeat on every page but
+    differ in their page number, so they must be compared with digits removed. That comparison
+    alone is too blunt -- short continuation lines like "pp 164-171" collapse onto each other too
+    -- so a repeated line also has to sit outside the text block, in one of the two ways a running
+    head does: it keeps the wide gap `-layout` renders between a running title and its page
+    number, or (once `_blank_margin` has taken that page number away) it is indented far past any
+    column the bibliography itself uses. Justified reference text is neither.
+
+    Repetition is counted over the whole document (`doc`), not the section: a head repeats on
+    every page of the paper, but a bibliography spanning n pages contains only n-1 of those
+    lines, so a two-page bibliography sees its head exactly once and a section-only count can
+    never reach 2 -- which is how a running head ended up glued into a reference's title."""
     body = _body_col(section)
-    counts: Counter[str] = Counter()
+    counts: Counter[str] = Counter(n for n in (_head_norm(l) for l in (doc or section))
+                                   if n)
     furniture: set[str] = set()
     for line in section:
         s = line.strip()
         if not s:
             continue
-        n = re.sub(r"\s+", " ", re.sub(r"\d+", "", s)).strip()
-        counts[n] += 1
         # Judge the shape on the raw line -- normalizing collapses the very gap we look for.
         if _WIDE_GAP.search(s) or (len(line) - len(line.lstrip())) > body + 10:
-            furniture.add(n)
-    return {n for n, c in counts.items() if c >= 2 and n and n in furniture}
+            furniture.add(_head_norm(s))
+    return {n for n in furniture if n and counts[n] >= 2}
 
 
 def _strip_bracket_label(s: str) -> str:
@@ -321,23 +351,44 @@ def _dominant_style(section: list[str]) -> str:
                key=lambda kv: kv[1])[0]
 
 
-def _append(cur: str, s: str) -> str:
+def _append(cur: str, s: str) -> tuple[str, int | None]:
+    """Join a continuation line onto the current reference. Returns the joined text and, when the
+    join closed a line-break hyphen, that hyphen's index in the joined text. The hyphen is kept --
+    it is correct for a real compound broken at its own hyphen -- but its position is recorded so
+    the caller can also offer the dehyphenated variant, which is correct for a soft-hyphenated
+    word ("Experimen-tation"). Neither form is right for both, and FTS lookups miss the wrong one."""
     if cur.endswith("-") and s[:1].islower():
-        return cur + s              # soft line-break hyphen: join, keep hyphen
-    return (cur + " " + s).strip()
+        return cur + s, len(cur) - 1  # soft line-break hyphen: join, keep hyphen, remember it
+    return (cur + " " + s).strip(), None
 
 
-def _segment(section: list[str], style: str) -> list[tuple[int, str]]:
-    """Split the references section into (number, text) pairs for the detected
-    style. Numeric entries keep their printed number; bracket and author-year
-    entries get a sequential index. Continuation lines append to the current ref."""
+def _dehyphenate(text: str, joins: list[int]) -> str | None:
+    """`text` with the soft-join hyphens at `joins` removed, or None when there were none."""
+    if not joins:
+        return None
+    out, prev = [], 0
+    for i in joins:
+        out.append(text[prev:i])
+        prev = i + 1
+    out.append(text[prev:])
+    return "".join(out)
+
+
+def _segment(section: list[str], style: str,
+             doc: list[str] | None = None) -> list[tuple[int, str, str | None]]:
+    """Split the references section into (number, text, dehyphenated-alt) triples for the
+    detected style. Numeric entries keep their printed number; bracket and author-year entries
+    get a sequential index. Continuation lines append to the current ref. The alt is the text
+    with line-break-join hyphens removed (None when no join happened); `doc` is the whole
+    document's lines, used to count running-head repetitions beyond the section."""
     # Page footers and venue watermarks repeat verbatim across pages; a short line that
     # occurs 2+ times is running noise to drop (generic; no venue name hardcoded).
     repeated = {ln for ln, n in Counter(l.strip() for l in section if l.strip()).items()
                 if n >= 2 and len(ln) <= 50}
-    heads = _running_heads(section)
-    refs: list[tuple[int, str]] = []
+    heads = _running_heads(section, doc)
+    refs: list[tuple[int, str, str | None]] = []
     cur: str | None = None
+    cur_joins: list[int] = []
     cur_num = 0
     if style == "numeric":
         last = _numeric_anchor(section) - 1          # numeric sequentiality anchor
@@ -353,7 +404,7 @@ def _segment(section: list[str], style: str) -> list[tuple[int, str]]:
         s = line.strip()
         if not s or "???:" in s or s in repeated:  # blank / anonymized footer / repeated watermark
             continue
-        if re.sub(r"\s+", " ", re.sub(r"\d+", "", s)).strip() in heads:  # running head / footer
+        if _head_norm(s) in heads:  # running head / footer
             continue
         indent = len(line) - len(line.lstrip())
         # Once the hanging indent is known, the entry column is the left edge of the bibliography
@@ -399,17 +450,29 @@ def _segment(section: list[str], style: str) -> list[tuple[int, str]]:
 
         if new_text is not None:
             if cur is not None:
-                refs.append((cur_num, cur))
-            cur, cur_num = new_text, new_num
+                refs.append((cur_num, cur, _dehyphenate(cur, cur_joins)))
+            cur, cur_num, cur_joins = new_text, new_num, []
         elif cur is not None:
             # Strip the gutter `lineno` number off a continuation line before joining it, so margin
             # digits do not land inside titles, venues, or page ranges.
             if style == "bracket-numeric":
                 s = _LEAD_MARGIN_NUM.sub("", s, count=1)
-            cur = _append(cur, s)
+            cur, join = _append(cur, s)
+            if join is not None:
+                cur_joins.append(join)
     if cur is not None:
-        refs.append((cur_num, cur))
+        refs.append((cur_num, cur, _dehyphenate(cur, cur_joins)))
     return refs
+
+
+def _suspect_merges(refs: list[ExtractedRef], style: str) -> list[int]:
+    """Author-year references whose text carries two or more "(year)" labels. An entry carries
+    exactly one; two is the shape a silent merge leaves behind -- with no hanging indent to
+    delimit entries, an entry whose year wrapped onto its next line is glued into its predecessor
+    and never verified on its own. A flag for the audit to warn about, never a verdict."""
+    if style != "author-year":
+        return []
+    return [r.number for r in refs if len(_YEAR.findall(r.raw_text)) >= 2]
 
 
 # ── Public API ───────────────────────────────────────────────────────────────
@@ -435,15 +498,16 @@ def extract_references(pdf_path: str, extractor) -> ExtractionInfo:
     lines, lineno_on = _strip_line_numbers(_linearize(pdf_path))
     section = _references_section(lines)
     style = _dominant_style(section) if section else "none"
-    segments = _segment(section, style) if style != "none" else []
+    segments = _segment(section, style, lines) if style != "none" else []
 
     refs: list[ExtractedRef] = []
     prev_authors: list[str] | None = None
-    for num, text in segments:
+    for num, text, alt in segments:
         parsed = _parse(extractor, text, prev_authors)
         if parsed is not None and parsed.authors:
             prev_authors = list(parsed.authors)
-        refs.append(ExtractedRef(number=num, raw_text=text, reference=parsed))
+        refs.append(ExtractedRef(number=num, raw_text=text, reference=parsed, alt_text=alt))
 
     return ExtractionInfo(refs=refs, lineno_on=lineno_on,
-                          section_found=bool(section), style=style)
+                          section_found=bool(section), style=style,
+                          suspect_merged=_suspect_merges(refs, style))

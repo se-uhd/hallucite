@@ -4,6 +4,58 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.11.0] - 2026-07-20
+
+### Fixed
+
+- A stale verdict is quarantined instead of reattached. A verdict is keyed by
+  `paper_id:number`, but author-year numbers are extraction-order, so a re-audit can renumber the
+  bibliography and leave a verdict pointing at a different reference. `report` used to detect
+  exactly this (via the stored reference fingerprint), warn on stderr, and then print the old
+  category anyway -- flagging an innocent reference as likely-hallucinated, with the desk-reject
+  banner, in every written artifact, while the actually-suspect reference reverted silently to
+  pending. `report` now shows the verdict as stale and the reference as pending, `worklist
+  --pending` resurfaces it, and `status` counts it as pending.
+- A hedged verdict can no longer reach **Desk-reject candidates**. `is_fabrication` now requires
+  the `likely-hallucinated` category alongside `title_match=no`, and `record` rejects `unclear`
+  with `title_match=no` as contradictory (that signal asserts the likely-hallucinated finding).
+  Previously an `unclear` verdict carrying `title_match=no` was escalated into the report's most
+  severe section, which does not display the category.
+- A running head that appears only once inside the References section is now dropped.
+  Repetition is counted over the whole document instead of the section, so a two-page
+  bibliography (which contains its head exactly once) no longer glues the citing paper's own
+  title and page number into a reference -- the corruption that sent a real paper to triage as
+  `not_found` with zero candidate leads.
+- A wrapped page number alone on a line ("...19(3):619–" / "654") is no longer blanked as a
+  `lineno` margin number: blanking is gated on the margin column, so short numbers at a
+  continuation indent survive as citation content.
+- `record` rejects a `paper_id:number` that matches no audited reference instead of storing a
+  verdict that could never appear in any report.
+
+### Added
+
+- Verification retries failed references with their line-break hyphens removed. The extractor
+  keeps the hyphen when joining a wrapped line ("Experimen-tation"), which is right for a real
+  compound and wrong for a soft-hyphenated word -- and FTS backends miss the wrong form, sending
+  real, DBLP-indexed works into triage as `not_found`. Each segmented reference now carries the
+  dehyphenated variant, and the audit re-verifies with it when the original fails, keeping the
+  result only when it verifies.
+- The audit warns about suspected merged entries: an author-year reference carrying two
+  "(year)" author-block labels is the shape left behind when a flat layout glues an entry whose
+  year wrapped onto the next line into its predecessor -- the second entry is then never verified
+  on its own. Flagged per paper and stored in the extraction record.
+- A closing warning aggregates papers that yielded 0 references (unsupported bibliography
+  layout, or no References section found), so an unchecked paper cannot scroll out of sight in a
+  long batch.
+
+### Changed
+
+- The triage rules bound the partial-match rescue: an independent identifier rescues one or two
+  slipped title words, never a wholly different title -- a real record stapled to an invented
+  title is `title_match=no`, not a citation error.
+- The verify sheets label the triager's text "Triage finding" (it is written by the LLM triage
+  step, not by the database check the sheet also shows).
+
 ## [1.10.2] - 2026-07-20
 
 ### Changed
@@ -403,6 +455,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.11.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.11.0
 [1.10.2]: https://github.com/se-uhd/hallucite/releases/tag/v1.10.2
 [1.10.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.10.1
 [1.10.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.10.0

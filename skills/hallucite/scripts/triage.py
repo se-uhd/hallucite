@@ -108,17 +108,27 @@ def _enforce_title_first(category: str, signals: dict | None) -> None:
                 "likely-hallucinated requires --signals with title_match=no (no publication bears "
                 "the cited title). If a work with the cited title exists use partial-match; if you "
                 "cannot tell use unclear.")
+    elif category == "unclear":
+        if tm == "no":
+            raise SystemExit(
+                "unclear with title_match=no is contradictory: title_match=no asserts your search "
+                "established that no publication bears the cited title, which is the "
+                "likely-hallucinated verdict. If the search was not conclusive, record "
+                "title_match=unsure; if it was, record likely-hallucinated.")
 
 
 def is_fabrication(verdict: dict) -> bool:
-    """Desk-reject heuristic: the cited title names no real publication (signal T). That alone is the
-    fabrication signature and the trigger -- a real author group attached to an invented title (with
-    the real authors and even the real venue otherwise intact) is the hardest and most important case
-    to catch, so requiring a compounding signal would miss it. A fabricated author constellation (A),
-    an impossible venue (V), or a dead/misresolving DOI (D) strengthen the case and are shown in the
-    report, but are not required. Distinct from an honest slipped field on a real, locatable work
-    (title_match=yes), which is a citation error, not a fabrication."""
-    return (verdict.get("signals") or {}).get("title_match") == "no"
+    """Desk-reject heuristic: a `likely-hallucinated` verdict whose cited title names no real
+    publication (signal T). That signal alone is the fabrication signature -- a real author group
+    attached to an invented title (with the real authors and even the real venue otherwise intact)
+    is the hardest and most important case to catch, so requiring a compounding signal would miss
+    it. A fabricated author constellation (A), an impossible venue (V), or a dead/misresolving DOI
+    (D) strengthen the case and are shown in the report, but are not required. The category gate
+    matters too: only a verdict that *asserts* fabrication may desk-reject -- a hedged verdict
+    must never be escalated past what its own category claims. Distinct from an honest slipped
+    field on a real, locatable work (title_match=yes): a citation error, not a fabrication."""
+    return (verdict.get("category") == "likely-hallucinated"
+            and (verdict.get("signals") or {}).get("title_match") == "no")
 
 
 def _signals_line(signals: dict | None) -> str | None:
@@ -140,6 +150,16 @@ def _ref_fp(raw: str) -> str:
     """Short fingerprint of a reference's raw text, stored alongside a verdict so the report can
     warn when a re-audit changed the reference the verdict was recorded against (numbering shifts)."""
     return hashlib.sha1((raw or "").encode("utf-8")).hexdigest()[:12]
+
+
+def _verdict_is_stale(verdict: dict | None, ref: dict) -> bool:
+    """True when the verdict was recorded against different reference text than `ref` now carries
+    -- a re-audit renumbered the bibliography (author-year indices are extraction-order, so any
+    extractor change can shift them). A stale verdict describes some *other* reference: applying
+    it here would print an accusation against the wrong entry, so every consumer must treat the
+    reference as un-triaged, not merely warn."""
+    return bool(verdict and verdict.get("ref_hash")
+                and verdict["ref_hash"] != _ref_fp(ref.get("raw_citation") or ""))
 
 
 def _atomic_write(path: Path, text: str) -> None:
@@ -357,8 +377,13 @@ def cmd_worklist(out_dir: Path, pending: bool = False, paper_id: str | None = No
         for ref in paper["references"]:
             if not needs_triage(ref):
                 continue
-            if pending and f"{paper['paper_id']}:{ref['original_number']}" in recorded:
-                continue
+            if pending:
+                v = recorded.get(f"{paper['paper_id']}:{ref['original_number']}")
+                # A stale verdict (recorded against different reference text, before a re-audit
+                # renumbered the bibliography) does not count as done: the reference resurfaces
+                # so it actually gets re-triaged, matching what report shows for it.
+                if v is not None and not _verdict_is_stale(v, ref):
+                    continue
             dv = ref["db_verification"]
             p = ref.get("parsed") or {}
             items.append({
@@ -431,7 +456,7 @@ def _verify_sheet(paper: dict, items: list) -> str:
                          "(desk-reject candidate).**")
         lines += _signal_report_lines(v)
         lines += [
-            f"- Automated finding: {v.get('finding', '')}",
+            f"- Triage finding: {v.get('finding', '')}",
             f"- Search: " + " · ".join(links),
             "",
         ]
@@ -538,10 +563,16 @@ def cmd_report(out_dir: Path) -> None:
             lines += ["## Triage", ""]
             for r in triage:
                 v = verdicts.get(f"{pid}:{r['original_number']}")
-                if v and v.get("ref_hash") and v["ref_hash"] != _ref_fp(r["raw_citation"]):
+                # A stale verdict belongs to whatever reference carried this number before the
+                # re-audit; printing its category (or fabrication banner) here would flag the
+                # wrong entry in the very files a reviewer acts on. Treat the reference as
+                # un-triaged in the report, not just in a stderr warning.
+                stale = _verdict_is_stale(v, r)
+                if stale:
                     print(f"warning: verdict {pid}:{r['original_number']} was recorded against "
-                          f"different reference text (re-audit changed it?); re-triage it.",
-                          file=sys.stderr)
+                          f"different reference text (re-audit changed it?); it is shown as "
+                          f"stale and the reference as pending -- re-triage it.", file=sys.stderr)
+                    v = None
                 cat = v["category"] if v else "(pending)"
                 sev = SEVERITY.get(cat, "-")
                 htitle = ((r["parsed"] or {}).get("title") or r["raw_citation"][:70]).rstrip(" .,;:!?")
@@ -563,6 +594,10 @@ def cmd_report(out_dir: Path) -> None:
                         f"{c['title']} -- {c.get('venue') or 'n/a'} {c.get('year') or ''} "
                         f"doi:{c.get('doi') or '-'}")
                 lines.append(f"- Category: **{cat}** (severity: {sev})")
+                if stale:
+                    lines.append("- **Stale verdict:** a verdict was recorded here against "
+                                 "different reference text (a re-audit renumbered this "
+                                 "bibliography). It is not shown; re-triage this reference.")
                 if v and is_fabrication(v):
                     lines.append("- **Fabrication signal: the cited title names no real "
                                  "publication (desk-reject candidate).**")
@@ -754,8 +789,9 @@ def cmd_record(out_dir: Path, paper_id: str, number: str, category: str, finding
         print(f"warning: {paper_id}:{number} recorded as {category} but title_match=no "
               f"(no publication bears the cited title?); re-check -- this looks fabricated.",
               file=sys.stderr)
-    # Surface typo'd keys: a verdict whose paper_id:number matches no audited reference would
-    # otherwise sit in triage_verdicts.json forever and never appear in any report.
+    # Reject typo'd keys: a verdict whose paper_id:number matches no audited reference would
+    # sit in triage_verdicts.json forever and never appear in any report -- a triage result
+    # silently discarded. Worklists are machine-generated, so an unknown key is an error.
     papers = load_papers(out_dir)
     refs = {f"{p['paper_id']}:{r['original_number']}": r.get("raw_citation", "")
             for p in papers for r in p["references"]}
@@ -769,14 +805,17 @@ def cmd_record(out_dir: Path, paper_id: str, number: str, category: str, finding
               f"verification was degraded (a backend failed to answer), so the absence of a "
               f"database record is not evidence here. Confirm the verdict rests entirely on your "
               f"own searches, or use 'unclear'.", file=sys.stderr)
-    if refs and key not in refs:
-        print(f"warning: {key} matches no reference in {out_dir}/ -- recording it anyway, but it "
-              f"will not appear in any report; re-check the paper_id and number.", file=sys.stderr)
-    entry = {"category": category, "finding": finding}
+    if not refs:
+        raise SystemExit(f"no audited paper records found in {out_dir}/ -- run the audit before "
+                         f"recording verdicts.")
+    if key not in refs:
+        raise SystemExit(f"{key} matches no reference in {out_dir}/ -- the verdict would never "
+                         f"appear in any report. Re-check the paper_id and number (the worklist "
+                         f"entry's `number` field).")
+    entry = {"category": category, "finding": finding,
+             "ref_hash": _ref_fp(refs[key])}
     if signals:
         entry["signals"] = signals
-    if key in refs:
-        entry["ref_hash"] = _ref_fp(refs[key])
     total = _record_verdict(out_dir, key, entry)
     print(f"recorded {paper_id}:{number} = {category} ({total} verdicts total)")
 
@@ -787,7 +826,10 @@ def cmd_status(out_dir: Path) -> None:
     for paper in load_papers(out_dir):
         pid = paper["paper_id"]
         needs = [r for r in paper["references"] if needs_triage(r)]
-        done = sum(1 for r in needs if f"{pid}:{r['original_number']}" in recorded)
+        # A stale verdict counts as pending, consistent with worklist --pending and report.
+        done = sum(1 for r in needs
+                   if (v := recorded.get(f"{pid}:{r['original_number']}")) is not None
+                   and not _verdict_is_stale(v, r))
         rows.append((pid, paper["num_references"], len(needs), done, len(needs) - done))
     print(f"{'paper':<28}{'refs':>6}{'needs':>7}{'done':>6}{'pending':>9}")
     for pid, refs, needs, done, pend in sorted(rows, key=lambda r: _natural_key(r[0])):

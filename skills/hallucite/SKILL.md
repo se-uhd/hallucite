@@ -11,7 +11,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
-  version: "1.10.2"
+  version: "1.11.0"
 ---
 
 # hallucite
@@ -171,7 +171,10 @@ backends are only ever asked about the residue -- the same references that reach
 is where rate limiting lands. The audit therefore marks any reference a backend failed to answer
 for as `degraded` and prints a per-backend tally at the end. A backend that answered nothing
 weakens every `not_found` it should have had a say in; if the tally looks bad, re-run before
-triaging rather than judging references on an incomplete check.
+triaging rather than judging references on an incomplete check. The closing warnings also list
+papers that yielded 0 references -- an unsupported bibliography layout means that paper was never
+checked at all -- and the per-paper output flags author-year references that look like two entries
+merged into one (the second was then never verified on its own); check those in the PDF.
 
 References are named by the handle a reader can actually find. A numbered bibliography keeps its
 printed `[12]`; an author-year one is named by its citation key (`de Dieu et al. (2025c)`), since
@@ -258,7 +261,10 @@ Match the title on meaning, not exact string, in two steps:
   `partial-match` -- the wrong title is the citation error. If only a loose resemblance links it to a
   real work -- a shared title template, the same topic, or a single shared author, with no resolving
   identifier -- the cited title names no real publication: `title_match=no` (`likely-hallucinated`,
-  or `unclear` if you cannot tell).
+  or `unclear` if you cannot tell). The rescue covers one or two slipped words, never a wholly
+  different title: when the cited and the real title share little beyond a template, the
+  identifier is not pinning a garbled title to its work -- it is a real record stapled to an
+  invented title, and that is `title_match=no`.
 
 Then assign the category:
 
@@ -301,9 +307,18 @@ publication's title), `authors_match`/`venue_match` (`yes`|`no`|`partial`|`unsur
 `doi_status` (`resolves`|`404`|`mismatch`|`none`|`unsure`). `record` enforces the title-first rule:
 a `partial-match` requires `title_match=yes` (plus a `matched_title`) or `na`, and
 `likely-hallucinated` requires `title_match=no` -- so a fabricated title cannot be filed as a mere
-citation error, nor vice versa. Use `unclear` when `title_match` is `unsure`. Signals are optional
-for `real-*`. `report` then prints each flag's matched title and signal summary and lists papers
-with a non-existent-title reference under a **Desk-reject candidates** heading.
+citation error, nor vice versa. Use `unclear` when `title_match` is `unsure`; `unclear` cannot
+carry `title_match=no`, which asserts the likely-hallucinated finding while hedging the category.
+`record` rejects a `<paper_id> <number>` that matches no audited reference (the verdict could
+never appear in a report). Signals are optional for `real-*`. `report` then prints each flag's
+matched title and signal summary and lists papers whose `likely-hallucinated` references have a
+non-existent title under a **Desk-reject candidates** heading.
+
+Each verdict is fingerprinted against the reference text it was recorded on. If a re-audit
+changes that text (author-year numbering is extraction-order, so numbers can shift), `report`
+marks the verdict stale and the reference pending -- it never reattaches the old category to the
+new text -- and `worklist --pending` resurfaces the reference. Re-triage it; do not trust the old
+category.
 
 Then assemble the reports:
 

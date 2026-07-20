@@ -51,7 +51,7 @@ except ImportError:
         "Run setup first:  mise run install   (see README.md / PLAN.md)"
     )
 
-from pdf_references import extract_references
+from pdf_references import _parse, extract_references
 
 SCHEMA_VERSION = "1.0"
 
@@ -347,14 +347,55 @@ def _retry_degraded(validator: Validator, refs: list, verifications: list[dict |
     return fixed
 
 
+def _retry_dehyphenated(validator: Validator, extractor: PdfExtractor,
+                        entries: list, verifications: list[dict]) -> int:
+    """Re-verify failed references using their dehyphenated variant, and keep a verifying result.
+
+    The extractor keeps the hyphen when it joins a line-break ("Experimen-tation") because that is
+    correct for a real compound broken at its own hyphen -- but for a soft-hyphenated word it is
+    wrong, and an FTS backend then misses a title it actually holds, sending a real, indexed work
+    into triage as `not_found`. Each entry carries the other variant (`alt_text`); trying it after
+    a miss can only improve: a reference is switched only when the variant *verifies*."""
+    pending = [i for i, (e, v) in enumerate(zip(entries, verifications))
+               if v["status"] != "verified" and e.alt_text]
+    alt_idx, alt_refs = [], []
+    for i in pending:
+        r = _parse(extractor, entries[i].alt_text, None)
+        if r is not None:
+            alt_idx.append(i)
+            alt_refs.append(r)
+    if not alt_refs:
+        return 0
+    try:
+        results = validator.check(alt_refs)
+    except Exception as exc:                          # a failed retry must not lose the first pass
+        print(f"    dehyphenated retry of {len(alt_refs)} reference(s) failed: {exc}",
+              file=sys.stderr)
+        return 0
+    fixed = 0
+    for i, ref, result in zip(alt_idx, alt_refs, results):
+        new = verification_dict(result)
+        if new["status"] == "verified":
+            verifications[i] = new
+            entries[i].reference = ref                # the variant is the title that verified
+            fixed += 1
+    return fixed
+
+
 def audit_pdf(pdf: Path, extractor: PdfExtractor, validator: Validator | None,
               retry_rounds: int = 1, retry_delay: float = 5.0,
               candidates: bool = False, mailto: str = "") -> dict:
     info = extract_references(str(pdf.resolve()), extractor)
 
-    parsed_refs = [e.reference for e in info.refs if e.reference is not None]
+    parsed_entries = [e for e in info.refs if e.reference is not None]
+    parsed_refs = [e.reference for e in parsed_entries]
     results = validator.check(parsed_refs) if (validator and parsed_refs) else []
     verifications = [verification_dict(r) for r in results]
+    if validator is not None and verifications:
+        n = _retry_dehyphenated(validator, extractor, parsed_entries, verifications)
+        if n:
+            print(f"    recovered {n} reference(s) by removing line-break hyphens")
+        parsed_refs = [e.reference for e in parsed_entries]
     if validator is not None and retry_rounds > 0 and verifications:
         n = _retry_degraded(validator, parsed_refs, verifications, retry_rounds, retry_delay)
         if n:
@@ -401,6 +442,7 @@ def audit_pdf(pdf: Path, extractor: PdfExtractor, validator: Validator | None,
             "section_found": info.section_found,
             "parsed": len(parsed_refs),
             "unparsed": len(info.refs) - len(parsed_refs),
+            "suspect_merged": info.suspect_merged,
         },
         "references": references,
     }
@@ -503,6 +545,11 @@ def main() -> int:
                   f"{'; no References section was found' if not ext['section_found'] else ''}"
                   f" -- this paper contributes nothing to triage; check the PDF/extraction.",
                   file=sys.stderr)
+        if ext.get("suspect_merged"):
+            labels = ", ".join(f"#{n}" for n in ext["suspect_merged"])
+            print(f"    warning: reference(s) {labels} carry two author-year blocks in one entry "
+                  f"-- possibly two entries merged by a wrapped year line; if so, the second was "
+                  f"never verified on its own. Check them in the PDF.", file=sys.stderr)
         if args.no_verify:
             print(f"    {record['num_references']} refs extracted "
                   f"({record['extraction']['unparsed']} unparsed)", flush=True)
@@ -563,6 +610,14 @@ def main() -> int:
                 print(f"warning: backend(s) {unexpected} ran despite --offline and are not in "
                       f"KNOWN_LOCAL_DBS; if they query the network, add them to "
                       f"DEFAULT_ONLINE_DBS so --offline disables them.", file=sys.stderr)
+    zero = [p for p in summary_papers if "error" not in p and p.get("num_references") == 0]
+    if zero:
+        # Aggregate the per-paper warnings, so one unsupported layout in a long batch cannot
+        # scroll out of sight: a paper with zero extracted references was never checked at all.
+        ids = ", ".join(p["paper_id"] for p in zero)
+        print(f"\nwarning: {len(zero)} of {len(pdfs)} paper(s) yielded 0 references (unsupported "
+              f"bibliography layout, or no References section) and were NOT checked: {ids}. "
+              f"Verify these by hand or fix the extraction.", file=sys.stderr)
     errored = [p for p in summary_papers if "error" in p]
     if errored:
         ids = ", ".join(p["paper_id"] for p in errored)
