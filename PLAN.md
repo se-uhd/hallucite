@@ -39,6 +39,19 @@ sequentiality guard, then hand each clean reference string to `parse_reference` 
 `min_title_words=1` for short book titles and a prefix-trim retry for venue tails), which
 reliably yields 0 unparsed references.
 
+Two gaps in hallucinator's offline DBLP backend are closed locally by `dblp_check.py`
+(hallucite-owned, written against the SQLite schema alone -- hallucinator is AGPL and its logic
+sits in a compiled extension, so nothing is vendored or patched): the backend compares a
+reference with a single FTS candidate, so a cited title that several publications share is judged
+against whichever ranks first ("Experimentation in Software Engineering" hits Basili's 1986
+article and the Wohlin book reports `not_found`), and the database's own author rows can be
+truncated. After hallucinator's pass, the audit re-asks the same file over *all* same-title
+candidates -- exact normalized-title equality plus an initials-aware match of every comparable
+author -- and a hit rewrites the verification as `verified` with source `DBLP (hallucite)`. The
+pass only ever clears references; it never flags one. The audit also retries failed references
+with their line-break-join hyphens removed, since the kept-hyphen form defeats FTS phrase
+matching.
+
 ## DBLP dump
 
 `hallucinator-cli update-dblp` builds the offline DB from DBLP's RDF N-Triples dump (~4.6 GB)

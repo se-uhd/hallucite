@@ -11,7 +11,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
-  version: "1.11.0"
+  version: "1.12.0"
 ---
 
 # hallucite
@@ -164,7 +164,9 @@ than falling back to dblp.org), `--disable-dbs LIST` (disable named backends, co
 answer for; default 1), `--no-candidates` (skip the CrossRef lookup that attaches candidate real
 records to unverified references; implied by `--offline`). Extraction is `lineno`- and
 two-column-aware and handles numeric, bracket-label, and author-year bibliographies; the target is
-0 unparsed references.
+0 unparsed references. References the backends miss get two automatic local recovery passes
+before they land in the worklist: an all-candidates title+author check against the offline DBLP
+file (shown as source `DBLP (hallucite)`), and a re-verification with line-break hyphens removed.
 
 Read the run's closing warnings. Verification stops at the first backend that matches, so later
 backends are only ever asked about the residue -- the same references that reach triage -- and that

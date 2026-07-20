@@ -38,6 +38,11 @@ Tiers (any failing check exits non-zero):
                               page-break margin reset, segments as [1]..[N] (the margin numbers do
                               not hijack the sequence, drop the first entry, or collapse the tail).
                               Pure pdf_references logic; no network, DB, or poppler.
+  4d DBLP second opinion    -- the all-candidates title+author check over the offline DBLP file:
+                              matches the right one of several same-title records (hallucinator's
+                              backend compares only the first FTS candidate), tolerates the DB's
+                              truncated author rows, and refuses wrong, padded, or invented
+                              citations. Pure dblp_check logic on a fixture DB; no network.
   4c author-year extraction -- a Springer author-year bibliography under LaTeX lineno margins,
                               driven through the real PDF: margin numbers must be detected in both
                               renderings and blanked (not deleted) so the hanging indent still
@@ -846,6 +851,72 @@ def tier4_end_to_end() -> None:
         C.eq(sum(1 for s in st.values() if s == "verified"), 2, "exactly 2 verified")
 
 
+def tier4d_dblp_second_opinion() -> None:
+    """hallucinator's offline DBLP backend judges a reference against a single FTS candidate, so
+    a cited title that several publications share is compared with whichever ranks first --
+    "Experimentation in Software Engineering" hit Basili's 1986 article and reported the Wohlin
+    book not_found. The second-opinion pass re-asks the same file over ALL same-title candidates,
+    and must stay strict: exact normalized title, and agreement of every comparable author (the
+    DB's own author rows can be truncated, so the shorter list sets the bar)."""
+    print("Tier 4d: offline DBLP second opinion, all-candidates title+author check (no network)")
+    import dblp_check as D
+
+    with tempfile.TemporaryDirectory() as td:
+        db = Path(td) / "dblp.db"
+        con = sqlite3.connect(str(db))
+        c = con.cursor()
+        c.executescript("""
+            CREATE TABLE authors (id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL);
+            CREATE TABLE publication_authors (pub_id INTEGER NOT NULL, author_id INTEGER NOT NULL,
+                PRIMARY KEY (pub_id, author_id));
+            CREATE TABLE publications (id INTEGER PRIMARY KEY, key TEXT UNIQUE NOT NULL, title TEXT NOT NULL);
+            CREATE VIRTUAL TABLE publications_fts USING fts5(title, content='publications', content_rowid='id');
+        """)
+        pubs = [
+            (1, "journals/x/First86", "A shared placeholder title about fictional pipelines",
+             ["Alpha Aaron", "Beta Brown"]),
+            # Same title, different punctuation/case; author rows truncated (as the real DB's are).
+            (2, "books/x/Second12", "A Shared Placeholder Title: About Fictional Pipelines",
+             ["Carla Chen", "Magnus D. Delta"]),
+            (3, "conf/x/Solo92", "Determining fictional sample sizes properly", ["Golf D. Hotel"]),
+        ]
+        aid: dict[str, int] = {}
+        for pid, key, title, authors in pubs:
+            c.execute("INSERT INTO publications(id,key,title) VALUES(?,?,?)", (pid, key, title))
+            for a in authors:
+                if a not in aid:
+                    c.execute("INSERT INTO authors(name) VALUES(?)", (a,))
+                    aid[a] = c.lastrowid
+                c.execute("INSERT INTO publication_authors(pub_id,author_id) VALUES(?,?)",
+                          (pid, aid[a]))
+        c.execute("INSERT INTO publications_fts(publications_fts) VALUES('rebuild')")
+        con.commit()
+        con.close()
+        db = str(db)
+
+        # The collision: the cited authors belong to the SECOND same-title record; the cited
+        # title carries a line-break hyphen and different casing on top.
+        m = D.second_opinion(db, "A shared placeholder ti-tle about fictional pipelines",
+                             ["Chen C", "Delta MD", "Foxtrot G", "Golf H"])
+        C.true(m is not None and m.key == "books/x/Second12",
+               "REGRESSION GUARD: the right same-title candidate matches, not the first FTS hit")
+        C.true(D.second_opinion(db, "A shared placeholder title about fictional pipelines",
+                                ["Fake F", "Invented I"]) is None,
+               "wrong authors on a real title stay unverified")
+        C.true(D.second_opinion(db, "A wholly invented title never stored anywhere",
+                                ["Alpha Aaron"]) is None,
+               "an invented title stays unverified")
+        C.true(D.second_opinion(db, "A shared placeholder title about fictional pipelines",
+                                ["Alpha Aaron", "Fake F", "Made M", "Up U"]) is None,
+               "REGRESSION GUARD: a padded author list is refuted, not rescued by one real name")
+        s = D.second_opinion(db, "Determining fictional sample sizes properly", ["Hotel GD"])
+        C.true(s is not None and s.key == "conf/x/Solo92",
+               "a single-author work matches on its one comparable author")
+        C.true(D.second_opinion(db, "A shared placeholder title about fictional pipelines",
+                                []) is None,
+               "no cited authors, no clearance -- the check never verifies on title alone")
+
+
 def tier4b_extraction_lineno() -> None:
     """Regression for a real paper (a bracket-numeric bibliography under LaTeX `lineno` margin
     numbers, spanning a page break that resets the margin count) that extraction once mangled:
@@ -1055,6 +1126,7 @@ def main() -> int:
     tier4_end_to_end()
     tier4b_extraction_lineno()
     tier4c_extraction_authoryear_lineno()
+    tier4d_dblp_second_opinion()
     print()
     if C.failed:
         print(f"SMOKE FAILED: {C.failed} check(s) failed, {C.skipped} skipped")

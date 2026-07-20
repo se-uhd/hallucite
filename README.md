@@ -45,7 +45,10 @@ Writes `out/<paper_id>.json` (every reference plus per-database verification) an
 `--mailto EMAIL`, `--offline` (no network; offline DBLP plus hallucinator's built-in Standards
 matcher, and a missing DBLP file disables DBLP rather than falling back to dblp.org),
 `--disable-dbs LIST` (comma-separated), `--no-verify`. The DBLP path defaults to
-`$HALLUCITE_DBLP` (else `~/hallucite/dblp.db`) and the output dir to `out`. A reference needs
+`$HALLUCITE_DBLP` (else `~/hallucite/dblp.db`) and the output dir to `out`. References the
+backends miss get two automatic local recovery passes -- an all-candidates title+author check
+against the offline DBLP file (source `DBLP (hallucite)`) and a re-verification with line-break
+hyphens removed -- before they reach triage. A reference needs
 triage when its `db_verification.status` is anything other than `verified` (`not_found`,
 `mismatch`, or `unparsed`). Re-running into the
 same `--out` is idempotent (`triage_verdicts.json` accumulates by `paper_id:number`).

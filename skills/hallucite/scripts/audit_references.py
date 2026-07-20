@@ -51,6 +51,7 @@ except ImportError:
         "Run setup first:  mise run install   (see README.md / PLAN.md)"
     )
 
+from dblp_check import second_opinion
 from pdf_references import _parse, extract_references
 
 SCHEMA_VERSION = "1.0"
@@ -80,11 +81,13 @@ DEFAULT_ONLINE_DBS = [
 
 # Backends expected to stay live in --offline mode because they make no network calls: the offline
 # DBLP database (build_config() disables DBLP entirely when its file is missing, since hallucinator
-# would otherwise fall back to dblp.org) and the built-in Standards pattern matcher. Any other name
+# would otherwise fall back to dblp.org), the built-in Standards pattern matcher, and hallucite's
+# own second-opinion pass over the same DBLP file (SECOND_OPINION_DB below). Any other name
 # appearing in --offline db_results means an online backend survived the disable list (the inverse
 # drift direction of the DEFAULT_ONLINE_DBS tripwire in main()), e.g. a backend hallucinator added
 # or renamed upstream.
-KNOWN_LOCAL_DBS = ["DBLP", "Standards"]
+SECOND_OPINION_DB = "DBLP (hallucite)"
+KNOWN_LOCAL_DBS = ["DBLP", "Standards", SECOND_OPINION_DB]
 
 
 def now_iso() -> str:
@@ -347,6 +350,37 @@ def _retry_degraded(validator: Validator, refs: list, verifications: list[dict |
     return fixed
 
 
+def _second_opinion_pass(dblp_path: str, entries: list, verifications: list[dict]) -> int:
+    """Confirm still-unverified references directly against the offline DBLP file, over ALL
+    same-title candidates (hallucinator's backend compares a single FTS candidate, so a title
+    that several publications share -- "Experimentation in Software Engineering" -- is judged
+    against whichever ranks first and reports not_found for the right one). Local, read-only,
+    and clear-only: a reference is switched exactly when a strict title+author match confirms
+    it; nothing is ever flagged here."""
+    fixed = 0
+    for i, (e, v) in enumerate(zip(entries, verifications)):
+        if v["status"] == "verified":
+            continue
+        r = e.reference
+        m = second_opinion(dblp_path, r.title or "", list(r.authors or []))
+        if m is None:
+            continue
+        url = f"https://dblp.org/rec/{m.key}"
+        verifications[i] = {
+            **v,
+            "status": "verified",
+            "degraded": False,
+            "source": SECOND_OPINION_DB,
+            "found_authors": m.authors,
+            "paper_url": url,
+            "db_results": (v.get("db_results") or []) + [{
+                "db": SECOND_OPINION_DB, "status": "verified", "elapsed_ms": 0,
+                "found_authors": m.authors, "paper_url": url}],
+        }
+        fixed += 1
+    return fixed
+
+
 def _retry_dehyphenated(validator: Validator, extractor: PdfExtractor,
                         entries: list, verifications: list[dict]) -> int:
     """Re-verify failed references using their dehyphenated variant, and keep a verifying result.
@@ -384,13 +418,20 @@ def _retry_dehyphenated(validator: Validator, extractor: PdfExtractor,
 
 def audit_pdf(pdf: Path, extractor: PdfExtractor, validator: Validator | None,
               retry_rounds: int = 1, retry_delay: float = 5.0,
-              candidates: bool = False, mailto: str = "") -> dict:
+              candidates: bool = False, mailto: str = "",
+              dblp_path: str | None = None) -> dict:
     info = extract_references(str(pdf.resolve()), extractor)
 
     parsed_entries = [e for e in info.refs if e.reference is not None]
     parsed_refs = [e.reference for e in parsed_entries]
     results = validator.check(parsed_refs) if (validator and parsed_refs) else []
     verifications = [verification_dict(r) for r in results]
+    # Local second opinion first (free), then the network retries on whatever remains.
+    if validator is not None and dblp_path and verifications:
+        n = _second_opinion_pass(dblp_path, parsed_entries, verifications)
+        if n:
+            print(f"    confirmed {n} reference(s) against offline DBLP (all-candidates "
+                  f"title+author check)")
     if validator is not None and verifications:
         n = _retry_dehyphenated(validator, extractor, parsed_entries, verifications)
         if n:
@@ -506,6 +547,7 @@ def main() -> int:
     pdfs = find_pdfs(Path(args.target))
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
+    dblp_file = Path(args.dblp)
 
     extractor = PdfExtractor()
     # We segment the bibliography ourselves, so every string handed to
@@ -522,7 +564,8 @@ def main() -> int:
             record = audit_pdf(pdf, extractor, validator,
                                retry_rounds=args.retry_degraded, retry_delay=args.retry_delay,
                                candidates=not (args.offline or args.no_candidates),
-                               mailto=args.mailto)
+                               mailto=args.mailto,
+                               dblp_path=str(dblp_file) if dblp_file.exists() else None)
         except Exception as exc:  # one bad PDF must not abort the batch
             print(f"    ERROR: {exc}", file=sys.stderr)
             traceback.print_exc()

@@ -4,6 +4,24 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.12.0] - 2026-07-20
+
+### Added
+
+- A second-opinion pass over the offline DBLP database (`dblp_check.py`). hallucinator's
+  offline backend compares a reference with a single FTS candidate, so a cited title that
+  several publications share is judged against whichever ranks first -- "Experimentation in
+  Software Engineering" hit Basili's 1986 TSE article and reported the Wohlin book `not_found`
+  -- and the database's own author rows can be truncated (the Wohlin book stores 3 of its 6
+  authors; `conf/sigsoft/MeyerFMZ14` lacks Meyer). After hallucinator's pass, the audit re-asks
+  the same SQLite file over all same-title candidates: exact normalized-title equality plus an
+  initials-aware match of every comparable author confirms the reference as `verified` with
+  source `DBLP (hallucite)`. The pass only ever clears references, never flags one, and it is
+  hallucite's own code written against the database schema -- hallucinator (AGPL, compiled
+  extension) is neither vendored nor patched. On the line-numbered author-year test paper it
+  clears 6 of the 13 offline-unverified references, every one to the correct DBLP record, while
+  wrong, padded, and invented citations stay unverified.
+
 ## [1.11.0] - 2026-07-20
 
 ### Fixed
@@ -455,6 +473,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.12.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.12.0
 [1.11.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.11.0
 [1.10.2]: https://github.com/se-uhd/hallucite/releases/tag/v1.10.2
 [1.10.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.10.1
