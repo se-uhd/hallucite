@@ -11,7 +11,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
-  version: "1.10.1"
+  version: "1.10.2"
 ---
 
 # hallucite
@@ -333,8 +333,10 @@ separates them because the evidence differs:
   preprint) sharing a title. Only what each key is cited for in the text settles it, so report the
   disagreement and leave the call to the author.
 
-Neither is a fabrication. Do not hedge the duplicate case -- and do not advise merging the
-conflicting one.
+Neither is a fabrication. Recommend only what the evidence carries: for a duplicate that is
+consolidation to a single key; for a conflict it is nothing yet, so report the disagreement and say
+what would settle it. Wrongly merging destroys distinct citations, while leaving them separate
+stays fixable -- so an unresolved conflict defaults to no action, not to a guess.
 
 `report` auto-lints every file it writes with the bundled Markdown linter
 (`lint_markdown.py`), so the reports are valid GFM without a manual pass.

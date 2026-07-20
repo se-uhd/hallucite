@@ -4,6 +4,18 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.10.2] - 2026-07-20
+
+### Changed
+
+- The repeated-entry guidance recommends what the evidence carries rather than banning an action.
+  1.10.1 ended with "do not advise merging the conflicting one", which restated the bullet above it
+  and forbade a conclusion that further evidence can legitimately reach: a conflict resolved by
+  checking the in-text usage of each key may well be one work, and consolidating it is then the
+  right advice. The rule now states the asymmetry instead -- wrongly merging destroys distinct
+  citations while leaving entries separate stays fixable, so an unresolved conflict defaults to no
+  action.
+
 ## [1.10.1] - 2026-07-20
 
 ### Changed
@@ -391,6 +403,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.10.2]: https://github.com/se-uhd/hallucite/releases/tag/v1.10.2
 [1.10.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.10.1
 [1.10.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.10.0
 [1.9.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.9.0
