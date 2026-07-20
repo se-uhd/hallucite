@@ -11,7 +11,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
-  version: "1.10.0"
+  version: "1.10.1"
 ---
 
 # hallucite
@@ -320,12 +320,21 @@ Then assemble the reports:
 - `<outdir>/reports/verify-<paper_id>.md`: for each paper with flags, a manual-verification
   checklist (per-reference verdict line plus one-click Scholar/Google/DOI/arXiv links).
 
-Both reports also list **indistinguishable entries**: different citation keys whose entries carry
-the same authors and title, so the bibliography asserts distinct works while giving no way to tell
-them apart. Verification cannot find these -- each entry is a real reference that verifies on its
-own -- and they only show up in a whole-bibliography pass. Report them; do not diagnose them. They
-are as likely to be one work duplicated as they are several works whose entries carry the wrong
-metadata, and only the in-text usage of each key settles which. Never advise merging them.
+Both reports also list **repeated bibliography entries**: different citation keys carrying the same
+authors and title. Verification cannot find these -- each entry is a real reference that verifies
+on its own -- so only a whole-bibliography pass does. They come in two kinds, and the report
+separates them because the evidence differs:
+
+- **Duplicate** -- every field matches: authors, title, venue, volume, pages. Two distinct articles
+  cannot share a venue, volume, and article number, so this is one work entered more than once.
+  State it plainly; there is nothing left to weigh.
+- **Conflicting** -- authors and title match, venue/volume/pages do not. Genuinely open: one work
+  whose entries disagree about where it appeared, or separate works (an extended version, a
+  preprint) sharing a title. Only what each key is cited for in the text settles it, so report the
+  disagreement and leave the call to the author.
+
+Neither is a fabrication. Do not hedge the duplicate case -- and do not advise merging the
+conflicting one.
 
 `report` auto-lints every file it writes with the bundled Markdown linter
 (`lint_markdown.py`), so the reports are valid GFM without a manual pass.

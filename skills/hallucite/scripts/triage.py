@@ -288,21 +288,53 @@ def _title_key(ref: dict) -> str | None:
     return key if len(key) >= 20 else None
 
 
-def duplicate_groups(paper: dict) -> list[list[dict]]:
-    """References that cite the same title more than once, grouped, in citation order.
+def _full_key(ref: dict) -> str:
+    """A comparison key for the whole citation -- authors, title, venue, volume, pages -- with the
+    disambiguation letter dropped, so "(2021a)" and "(2021b)" compare equal. Normalized like
+    `_title_key`, so a line-break hyphen or a capitalized venue word cannot split a match."""
+    raw = re.sub(r"\((\d{4})[a-z]\)", r"(\1)", ref.get("raw_citation") or "")
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", "", raw.lower().replace("-", ""))).strip()
 
-    A bibliography that lists one work twice is a citation-hygiene problem for the authors, not a
-    fabrication: it inflates the reference count and gives one work two labels ("2021a"/"2021b")
-    that later citations then split between. It is worth reporting because a reference check is
-    where anyone is actually looking at the bibliography as a whole, and neither database
-    verification nor triage can surface it -- both judge one reference at a time, and every entry
-    in a duplicate group verifies perfectly well on its own."""
+
+def duplicate_groups(paper: dict) -> list[dict]:
+    """Bibliography entries that cite the same authors and title under different citation keys,
+    grouped in citation order and classified by how much of the citation matches.
+
+    Two kinds, and the distinction is the whole point -- one is a fact, the other is a question:
+
+    * `kind="duplicate"` -- every bibliographic field matches: authors, title, venue, volume,
+      pages. Two distinct articles cannot share a journal, volume, and article number, so this is
+      one work entered twice. Say so; there is nothing to weigh.
+    * `kind="conflict"` -- the authors and title match but the venue, volume, or pages do not. Now
+      it is genuinely open: either one work whose entries disagree about where it appeared, or
+      separate works (an extended version, a preprint) sharing a title. Only what each citation key
+      is used for in the text settles it.
+
+    Neither is a fabrication, and neither is reachable by database verification -- every entry in
+    such a group verifies perfectly well on its own, so only a whole-bibliography pass finds them.
+    """
     groups: dict[str, list[dict]] = {}
     for ref in paper.get("references") or []:
         key = _title_key(ref)
         if key:
             groups.setdefault(key, []).append(ref)
-    return [g for g in groups.values() if len(g) > 1]
+
+    out = []
+    for members in groups.values():
+        if len(members) < 2:
+            continue
+        exact: dict[str, list[dict]] = {}
+        for ref in members:
+            exact.setdefault(_full_key(ref), []).append(ref)
+        # Report the identical-in-every-field subsets as duplicates, and only what is left over as
+        # a conflict, so a group that is part certain and part open reports both truthfully.
+        dupes = [subset for subset in exact.values() if len(subset) > 1]
+        for subset in dupes:
+            out.append({"kind": "duplicate", "refs": subset})
+        if len(exact) > 1:
+            out.append({"kind": "conflict",
+                        "refs": [subset[0] for subset in exact.values()]})
+    return out
 
 
 def cmd_worklist(out_dir: Path, pending: bool = False, paper_id: str | None = None) -> None:
@@ -492,8 +524,11 @@ def cmd_report(out_dir: Path) -> None:
         if retracted:
             lines.append(f"- **RETRACTED: {len(retracted)}**")
         if dupes:
-            lines.append(f"- Indistinguishable entries: {sum(len(g) for g in dupes)} references "
-                         f"in {len(dupes)} groups")
+            nd = sum(1 for g in dupes if g["kind"] == "duplicate")
+            nc = len(dupes) - nd
+            parts = ([f"{nd} duplicated work(s)"] if nd else []) + \
+                    ([f"{nc} conflicting group(s)"] if nc else [])
+            lines.append("- Repeated bibliography entries: " + ", ".join(parts))
         lines.append("")
         note = label_note(paper)
         if note:
@@ -555,19 +590,28 @@ def cmd_report(out_dir: Path) -> None:
                 all_retracted.append((paper, r))
 
         if dupes:
-            lines += ["## Indistinguishable entries", "",
-                      "Each group holds entries with the same authors and the same title, under "
-                      "**different citation keys** -- so the bibliography says these are different "
-                      "works while giving no way to tell them apart. Either they are accidental "
-                      "duplicates of one work, or at least one entry carries the wrong metadata. "
-                      "Do not assume the former: check what each key is cited for in the text "
-                      "before changing anything. Database verification cannot surface this, since "
-                      "every entry below verifies on its own.", ""]
-            for group in sorted(dupes, key=lambda g: ref_num(g[0])):
-                title = ((group[0]["parsed"] or {}).get("title") or "").rstrip(" .,;:!?")
-                keys = ", ".join(ref_label(r) for r in group)
-                lines += [f"### {keys}", "", f"Cited title: {title}", ""]
-                for r in group:
+            lines += ["## Repeated bibliography entries", ""]
+            for group in sorted(dupes, key=lambda g: ref_num(g["refs"][0])):
+                refs = group["refs"]
+                keys = ", ".join(ref_label(r) for r in refs)
+                title = ((refs[0]["parsed"] or {}).get("title") or "").rstrip(" .,;:!?")
+                if group["kind"] == "duplicate":
+                    lines += [f"### Duplicate: {keys}", "",
+                              "These entries are identical in every field -- authors, title, "
+                              "venue, volume, and pages. Two distinct works cannot share a venue, "
+                              "volume, and article number, so this is one work entered more than "
+                              "once under different citation keys. Fix the bibliography and point "
+                              "the in-text citations at a single key.", ""]
+                else:
+                    lines += [f"### Conflicting: {keys}", "",
+                              "Same authors and title, but the venue, volume, or pages disagree. "
+                              "Either one work whose entries disagree about where it appeared, or "
+                              "separate works (an extended version, a preprint) sharing a title -- "
+                              "check what each key is cited for in the text before changing "
+                              "anything.", ""]
+                lines.append(f"Cited title: {title}")
+                lines.append("")
+                for r in refs:
                     lines.append(f"- **{ref_label(r)}** -- {r['raw_citation']}")
                 lines.append("")
                 all_dupes.append((paper, group))
@@ -588,20 +632,29 @@ def cmd_report(out_dir: Path) -> None:
             roll.append(f"- **{paper['paper_id']}** {ref_key(r)}: {title}")
         roll.append("")
     if all_dupes:
-        papers_with = len({p["paper_id"] for p, _ in all_dupes})
-        roll += [f"## Indistinguishable entries ({len(all_dupes)} groups across "
-                 f"{papers_with} papers)", "",
-                 "Different citation keys whose entries share the same authors and title, so the "
-                 "bibliography claims distinct works but cannot distinguish them. A citation "
-                 "defect, not a fabrication: every entry verifies on its own, which is why only a "
-                 "whole-bibliography pass finds it. Check the in-text usage of each key before "
-                 "deciding whether they are duplicates or wrong metadata.", ""]
-        for paper, group in sorted(all_dupes,
-                                   key=lambda x: (_natural_key(x[0]["paper_id"]), ref_num(x[1][0]))):
-            title = ((group[0]["parsed"] or {}).get("title") or "").rstrip(" .,;:!?")
-            nums = ", ".join(ref_label(r) for r in group)
-            roll.append(f"- **{paper['paper_id']}** {nums}: {title}")
-        roll.append("")
+        dup = [(pp, g) for pp, g in all_dupes if g["kind"] == "duplicate"]
+        con = [(pp, g) for pp, g in all_dupes if g["kind"] == "conflict"]
+        roll += [f"## Repeated bibliography entries ({len(all_dupes)} groups)", "",
+                 "Not fabrications: every entry below verifies on its own, which is why only a "
+                 "whole-bibliography pass finds them.", ""]
+        if dup:
+            roll += [f"**Duplicates ({len(dup)})** -- identical in every field, so one work "
+                     "entered more than once under different citation keys.", ""]
+            for paper, g in sorted(dup, key=lambda x: (_natural_key(x[0]["paper_id"]),
+                                                       ref_num(x[1]["refs"][0]))):
+                keys = ", ".join(ref_label(r) for r in g["refs"])
+                title = ((g["refs"][0]["parsed"] or {}).get("title") or "").rstrip(" .,;:!?")
+                roll.append(f"- **{paper['paper_id']}** {keys}: {title}")
+            roll.append("")
+        if con:
+            roll += [f"**Conflicting ({len(con)})** -- same authors and title, but the venue, "
+                     "volume, or pages disagree; check the in-text usage of each key.", ""]
+            for paper, g in sorted(con, key=lambda x: (_natural_key(x[0]["paper_id"]),
+                                                       ref_num(x[1]["refs"][0]))):
+                keys = ", ".join(ref_label(r) for r in g["refs"])
+                title = ((g["refs"][0]["parsed"] or {}).get("title") or "").rstrip(" .,;:!?")
+                roll.append(f"- **{paper['paper_id']}** {keys}: {title}")
+            roll.append("")
     if not flagged:
         roll.append("No references were flagged as likely-hallucinated, partial-match, or unclear.")
     else:

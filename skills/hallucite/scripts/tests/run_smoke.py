@@ -21,9 +21,9 @@ Tiers (any failing check exits non-zero):
                               and the fcntl verdicts lock under concurrent writers.
   3c title-first gate      -- record --signals enforcement, is_fabrication, and the
                               desk-reject report section.
-  3d indistinguishable refs -- entries sharing authors+title under different citation keys are
-                              grouped, seeing through capitalization and line-break hyphens,
-                              without grouping short/unparsed ones.
+  3d repeated entries      -- entries sharing authors+title under different citation keys are
+                              grouped and classified: identical in every field = duplicate (a
+                              fact), differing venue/volume/pages = conflicting (an open question).
   3e reference labels      -- a numeric bibliography reports its printed "[N]"; an unnumbered
                               author-year one reports the citation key the paper itself uses, and
                               any tool-internal index is marked as not appearing in the paper.
@@ -365,41 +365,58 @@ def tier3_logic() -> None:
 
 
 def tier3d_duplicate_entries() -> None:
-    """Duplicate bibliography entries: one work listed under several entries. Database verification
-    cannot surface these -- each entry is a real reference that verifies on its own -- so grouping
-    happens at report time. The normalizer has to see through the differences that make a duplicate
-    look distinct: capitalization, punctuation, and the hyphen `pdftotext` leaves where a word broke
-    across lines ("architec-tural"), all of which occurred in the paper that prompted this."""
-    print("Tier 3d: duplicate bibliography entries (no network/DB)")
+    """Bibliography entries repeated under different citation keys, and how firmly that can be
+    called. Where every field matches -- authors, title, venue, volume, pages -- it is one work
+    entered twice, because two distinct articles cannot share a venue, volume, and article number;
+    the report says so outright. Where only the authors and title match, it is genuinely open
+    (an extended version or a preprint can share a title), and the report says that instead.
+    Collapsing the two into one hedged category loses the certain case; collapsing them into
+    "duplicate" produces bad advice on the open one."""
+    print("Tier 3d: repeated bibliography entries, duplicate vs conflicting (no network/DB)")
     import triage
 
-    def ref(n, title):
-        return {"original_number": n, "raw_citation": f"Author A ({2021}) {title}.",
+    # The year must be shared and only its disambiguation letter differ -- that is the whole shape
+    # under test: distinct citation keys pointing at the same bibliographic data.
+    def ref(n, year, title, tail):
+        return {"original_number": n, "label": f"Author et al. ({year})",
+                "raw_citation": f"Author A, Other B ({year}) {title}. {tail}",
                 "parsed": {"title": title}, "db_verification": {"status": "verified"}}
 
+    T1 = "Mining architecture tactics and quality attributes knowledge in stack overflow"
+    T2 = "How do users revise architectural related questions on stack overflow: an empirical study"
+    JSS, EMSE_A, EMSE_B = ("Journal of Systems and Software 180:111005",
+                           "Empirical Software Engineering 30(6):171",
+                           "Empirical Software Engineering 30:1-42")
     paper = {"paper_id": "p1", "references": [
-        ref(7, "Mining architecture tactics and quality attributes knowledge in stack overflow"),
-        ref(8, "Mining architecture tactics and quality attributes knowledge in Stack Overflow"),
-        ref(22, "How do users revise architectural related questions on stack overflow: an empirical study"),
-        ref(23, "How do users revise architec-tural related questions on stack overflow: An empirical study"),
-        ref(24, "How do users revise architectural related questions on stack overflow: An empirical study"),
-        ref(30, "A completely unrelated study of something else entirely"),
-        {"original_number": 31, "raw_citation": "unparsed fragment", "parsed": None,
-         "db_verification": {"status": "unparsed"}},
+        ref(1, "2021a", T1, JSS),
+        ref(2, "2021b", T1.replace("stack overflow", "Stack Overflow"), JSS),
+        ref(3, "2025c", T2, EMSE_A),
+        ref(4, "2025d", T2.replace("architectural", "architec-tural"), EMSE_B),
+        ref(5, "2025e", T2, EMSE_B),
+        ref(6, "2019", "A completely unrelated study of something else entirely", "Venue 1:1"),
     ]}
     groups = triage.duplicate_groups(paper)
-    by_first = {g[0]["original_number"]: [r["original_number"] for r in g] for g in groups}
-    C.eq(len(groups), 2, "two duplicated works are grouped")
-    C.eq(by_first.get(7), [7, 8], "capitalization-only difference groups as one work")
-    C.eq(by_first.get(22), [22, 23, 24],
-         "REGRESSION GUARD: a line-break hyphen ('architec-tural') does not split the group")
-    C.true(all(30 not in v and 31 not in v for v in by_first.values()),
-           "a unique title and an unparsed reference are not grouped")
+    by = {(g["kind"], tuple(r["original_number"] for r in g["refs"])) for g in groups}
 
-    # A title too short to be evidence, and a missing one, must not collapse into a phantom group.
-    stubs = {"paper_id": "p2", "references": [ref(1, "Short one"), ref(2, "Short two"),
-                                              ref(3, ""), ref(4, "")]}
-    C.eq(triage.duplicate_groups(stubs), [], "short and empty titles are not grouped")
+    C.true(("duplicate", (1, 2)) in by,
+           "REGRESSION GUARD: entries identical but for capitalization are called duplicates")
+    C.true(("duplicate", (4, 5)) in by,
+           "REGRESSION GUARD: a line-break hyphen does not stop an all-fields match")
+    C.true(("conflict", (3, 4)) in by,
+           "REGRESSION GUARD: same title, different pages -> conflicting, not duplicate")
+    C.true(not any(6 in nums for _, nums in by), "a unique reference is not grouped")
+    C.eq(len(groups), 3, "each distinct finding is reported once")
+
+    # An unparsed reference has no title to compare, and a stub title is not evidence.
+    stubs = {"paper_id": "p2", "references": [
+        ref(1, "2020a", "Short", "V"), ref(2, "2020b", "Short", "V"),
+        {"original_number": 3, "raw_citation": "fragment", "parsed": None,
+         "db_verification": {"status": "unparsed"}},
+        {"original_number": 4, "raw_citation": "fragment", "parsed": None,
+         "db_verification": {"status": "unparsed"}},
+    ]}
+    C.eq(triage.duplicate_groups(stubs), [],
+         "short titles and unparsed references are never grouped")
 
 
 def tier3e_reference_labels() -> None:

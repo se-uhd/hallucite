@@ -4,6 +4,20 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.10.1] - 2026-07-20
+
+### Changed
+
+- Repeated bibliography entries are classified instead of hedged. 1.10.0 reported every group of
+  same-author, same-title entries as "indistinguishable" and referred the whole question to the
+  author, which threw away the cases where the evidence is conclusive. Entries matching on *every*
+  field -- authors, title, venue, volume, pages -- are now reported as **duplicates** and stated as
+  fact, since two distinct articles cannot share a venue, volume, and article number. Only entries
+  whose venue, volume, or pages disagree are reported as **conflicting**, where an extended version
+  or a preprint sharing a title is a real possibility and the in-text usage of each key decides. A
+  group can produce both findings: of two groups in the paper that prompted this, one is a plain
+  duplicate, and the other holds a duplicate pair plus a third entry that conflicts with it.
+
 ## [1.10.0] - 2026-07-20
 
 ### Added
@@ -377,6 +391,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.10.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.10.1
 [1.10.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.10.0
 [1.9.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.9.0
 [1.8.4]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.4
