@@ -222,6 +222,25 @@ def is_retracted(ref: dict) -> bool:
     return bool((ref.get("db_verification") or {}).get("retraction_info"))
 
 
+def is_degraded(ref: dict) -> bool:
+    """True when a backend failed to answer for this reference, so its unverified status is not
+    a clean negative -- the databases that would have matched it may never have been asked."""
+    return bool((ref.get("db_verification") or {}).get("degraded"))
+
+
+def _matched_records(dv: dict) -> list[dict]:
+    """The records individual backends matched, with the authors they hold. A `mismatch` means some
+    backend found a candidate and disagreed about its fields -- that candidate, and how it differs,
+    is the whole evidence base for the verdict, so it has to travel with the worklist entry."""
+    out = []
+    for r in dv.get("db_results") or []:
+        if r.get("status") not in (None, "no_match", "skipped", "error", "rate_limited"):
+            out.append({"db": r.get("db"), "status": r.get("status"),
+                        "paper_url": r.get("paper_url"),
+                        "found_authors": r.get("found_authors") or []})
+    return out
+
+
 def needs_triage(ref: dict) -> bool:
     # Needs triage iff the validator checked the reference (db_verification present) but did not
     # confirm it. Defined by negation of "verified" rather than a hard-coded list of failure
@@ -229,6 +248,61 @@ def needs_triage(ref: dict) -> bool:
     # and be silently dropped from the worklist and the report.
     dv = ref.get("db_verification")
     return dv is not None and dv.get("status") != "verified"
+
+
+def ref_label(ref: dict) -> str:
+    """How to name a reference in a report. Falls back to the tool-internal index for records
+    written before the audit stored a label."""
+    return ref.get("label") or f"#{ref.get('original_number')}"
+
+
+def ref_key(ref: dict) -> str:
+    """The label plus, when they differ, the internal index that `triage record` takes. Numeric
+    bibliographies print their numbers, so label and key coincide there and nothing is repeated."""
+    label, num = ref_label(ref), ref.get("original_number")
+    return label if label in (f"[{num}]", f"#{num}") else f"{label} [#{num}]"
+
+
+def label_note(paper: dict) -> str | None:
+    """A line explaining the reference handles, when the paper's bibliography does not print
+    numbers. Without it a reader hunts the PDF for a "#22" that was never there."""
+    kinds = {r.get("label_kind") for r in paper.get("references") or []}
+    if kinds <= {"printed"} or not kinds:
+        return None
+    return ("This bibliography is not numbered, so references are named by their citation key as "
+            "the paper cites them. A trailing `[#n]` is hallucite's own index for that entry -- "
+            "it appears nowhere in the paper, and is only what `triage record` takes as its "
+            "`<number>` argument.")
+
+
+def _title_key(ref: dict) -> str | None:
+    """A comparison key for a reference's title, or None when there is too little to compare.
+
+    Normalizes away the differences that make one bibliography entry appear twice rather than
+    once: capitalization ("stack overflow" / "Stack Overflow"), punctuation, and the hyphen
+    `pdftotext` leaves behind where a word was broken across lines ("architec-tural"). Hyphens go
+    entirely rather than selectively, so a real compound compares equal to its line-broken form.
+    Short titles are skipped, since a stub is not evidence of anything."""
+    title = ((ref.get("parsed") or {}).get("title") or "").lower()
+    key = re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", "", title.replace("-", ""))).strip()
+    return key if len(key) >= 20 else None
+
+
+def duplicate_groups(paper: dict) -> list[list[dict]]:
+    """References that cite the same title more than once, grouped, in citation order.
+
+    A bibliography that lists one work twice is a citation-hygiene problem for the authors, not a
+    fabrication: it inflates the reference count and gives one work two labels ("2021a"/"2021b")
+    that later citations then split between. It is worth reporting because a reference check is
+    where anyone is actually looking at the bibliography as a whole, and neither database
+    verification nor triage can surface it -- both judge one reference at a time, and every entry
+    in a duplicate group verifies perfectly well on its own."""
+    groups: dict[str, list[dict]] = {}
+    for ref in paper.get("references") or []:
+        key = _title_key(ref)
+        if key:
+            groups.setdefault(key, []).append(ref)
+    return [g for g in groups.values() if len(g) > 1]
 
 
 def cmd_worklist(out_dir: Path, pending: bool = False, paper_id: str | None = None) -> None:
@@ -258,6 +332,9 @@ def cmd_worklist(out_dir: Path, pending: bool = False, paper_id: str | None = No
             items.append({
                 "paper_id": paper["paper_id"],
                 "number": ref["original_number"],
+                "label": ref_label(ref),
+                "degraded": is_degraded(ref),
+                "label_kind": ref.get("label_kind"),
                 "status": dv["status"],
                 "title": p.get("title"),
                 "authors": p.get("authors", []),
@@ -265,6 +342,14 @@ def cmd_worklist(out_dir: Path, pending: bool = False, paper_id: str | None = No
                 "arxiv_id": p.get("arxiv_id"),
                 "failed_dbs": dv.get("failed_dbs", []),
                 "raw_citation": ref["raw_citation"],
+                # What a "mismatch" actually matched. Without it the triager re-derives from
+                # scratch what the validator already had -- and cannot see that the candidate is
+                # sometimes an unrelated work (a thesis carrying the same title as its paper),
+                # which is what makes a mismatch a false positive rather than a citation error.
+                "matched": _matched_records(dv),
+                # Closest real records from CrossRef's fuzzy bibliographic search: leads to confirm
+                # or reject. An empty list is itself informative -- nothing resembles this title.
+                "candidates": ref.get("candidates", []),
             })
     # Per-paper slices go to their own file so concurrent workers never share (or clobber) the
     # corpus-wide triage_worklist.json.
@@ -300,7 +385,7 @@ def _verify_sheet(paper: dict, items: list) -> str:
         if p.get("arxiv_id"):
             links.append(f"[arXiv](https://arxiv.org/abs/{p['arxiv_id']})")
         lines += [
-            f"## [{ref['original_number']}] {v['category']} (severity {SEVERITY.get(v['category'], '-')})",
+            f"## {ref_key(ref)} -- {v['category']} (severity {SEVERITY.get(v['category'], '-')})",
             "",
             f"- **Verdict:** ____  (real / hallucinated / citation-error)",
             f"- Title: {title or '(not parsed)'}",
@@ -384,6 +469,7 @@ def cmd_report(out_dir: Path) -> None:
 
     flagged: list[tuple[dict, dict, dict]] = []  # (paper, ref, verdict)
     all_retracted: list[tuple[dict, dict]] = []  # (paper, ref) matched to a retracted record
+    all_dupes: list[tuple[dict, list[dict]]] = []  # (paper, group of same-title references)
     written: list = []
     today = dt.date.today().isoformat()
 
@@ -394,6 +480,7 @@ def cmd_report(out_dir: Path) -> None:
         triage = [r for r in paper["references"] if needs_triage(r)]
         retracted = [r for r in paper["references"] if is_retracted(r)]
         pending = [r for r in paper["references"] if r.get("db_verification") is None]
+        dupes = duplicate_groups(paper)
 
         lines = [f"# Reference check: {pid}", "",
                  f"- PDF: `{paper['pdf_path']}`",
@@ -404,7 +491,13 @@ def cmd_report(out_dir: Path) -> None:
             lines.append(f"- Not verified (--no-verify): {len(pending)}")
         if retracted:
             lines.append(f"- **RETRACTED: {len(retracted)}**")
+        if dupes:
+            lines.append(f"- Indistinguishable entries: {sum(len(g) for g in dupes)} references "
+                         f"in {len(dupes)} groups")
         lines.append("")
+        note = label_note(paper)
+        if note:
+            lines += [note, ""]
 
         if triage:
             lines += ["## Triage", ""]
@@ -418,10 +511,22 @@ def cmd_report(out_dir: Path) -> None:
                 sev = SEVERITY.get(cat, "-")
                 htitle = ((r["parsed"] or {}).get("title") or r["raw_citation"][:70]).rstrip(" .,;:!?")
                 _warn_signal_contradiction(pid, r["original_number"], v)
-                lines.append(f"### [{r['original_number']}] {htitle}")
+                lines.append(f"### {ref_key(r)} {htitle}")
                 lines.append("")
                 lines.append(f"- Raw: {r['raw_citation']}")
-                lines.append(f"- DB status: {r['db_verification']['status']}")
+                dv = r["db_verification"]
+                degraded = " **(degraded: " + ", ".join(dv.get("failed_dbs") or []) \
+                    + " did not answer -- not a clean negative)**" if is_degraded(r) else ""
+                lines.append(f"- DB status: {dv['status']}{degraded}")
+                for m in _matched_records(dv):
+                    lines.append(f"- Matched by {m['db']} ({m['status']}): {m['paper_url'] or '-'}"
+                                 + (f" -- authors there: {', '.join(m['found_authors'])}"
+                                    if m["found_authors"] else ""))
+                for c in r.get("candidates") or []:
+                    lines.append(
+                        f"- CrossRef candidate (title similarity {c['title_similarity']}): "
+                        f"{c['title']} -- {c.get('venue') or 'n/a'} {c.get('year') or ''} "
+                        f"doi:{c.get('doi') or '-'}")
                 lines.append(f"- Category: **{cat}** (severity: {sev})")
                 if v and is_fabrication(v):
                     lines.append("- **Fabrication signal: the cited title names no real "
@@ -439,7 +544,7 @@ def cmd_report(out_dir: Path) -> None:
                 p = r.get("parsed") or {}
                 rinfo = (r.get("db_verification") or {}).get("retraction_info") or {}
                 htitle = (p.get("title") or r["raw_citation"][:70]).rstrip(" .,;:!?")
-                lines += [f"### [{r['original_number']}] {htitle}", "",
+                lines += [f"### {ref_key(r)} {htitle}", "",
                           f"- Raw: {r['raw_citation']}",
                           f"- DB status: {(r.get('db_verification') or {}).get('status')}"]
                 if rinfo.get("retraction_doi"):
@@ -448,6 +553,24 @@ def cmd_report(out_dir: Path) -> None:
                     lines.append(f"- Source: {rinfo['retraction_source']}")
                 lines.append("")
                 all_retracted.append((paper, r))
+
+        if dupes:
+            lines += ["## Indistinguishable entries", "",
+                      "Each group holds entries with the same authors and the same title, under "
+                      "**different citation keys** -- so the bibliography says these are different "
+                      "works while giving no way to tell them apart. Either they are accidental "
+                      "duplicates of one work, or at least one entry carries the wrong metadata. "
+                      "Do not assume the former: check what each key is cited for in the text "
+                      "before changing anything. Database verification cannot surface this, since "
+                      "every entry below verifies on its own.", ""]
+            for group in sorted(dupes, key=lambda g: ref_num(g[0])):
+                title = ((group[0]["parsed"] or {}).get("title") or "").rstrip(" .,;:!?")
+                keys = ", ".join(ref_label(r) for r in group)
+                lines += [f"### {keys}", "", f"Cited title: {title}", ""]
+                for r in group:
+                    lines.append(f"- **{ref_label(r)}** -- {r['raw_citation']}")
+                lines.append("")
+                all_dupes.append((paper, group))
 
         report_path = reports / f"reference-check-{pid}.md"
         _atomic_write(report_path, "\n".join(lines).rstrip("\n") + "\n")
@@ -462,7 +585,22 @@ def cmd_report(out_dir: Path) -> None:
         for paper, r in sorted(all_retracted,
                                key=lambda x: (_natural_key(x[0]["paper_id"]), ref_num(x[1]))):
             title = (r.get("parsed") or {}).get("title") or r["raw_citation"][:80]
-            roll.append(f"- **{paper['paper_id']} [{r['original_number']}]**: {title}")
+            roll.append(f"- **{paper['paper_id']}** {ref_key(r)}: {title}")
+        roll.append("")
+    if all_dupes:
+        papers_with = len({p["paper_id"] for p, _ in all_dupes})
+        roll += [f"## Indistinguishable entries ({len(all_dupes)} groups across "
+                 f"{papers_with} papers)", "",
+                 "Different citation keys whose entries share the same authors and title, so the "
+                 "bibliography claims distinct works but cannot distinguish them. A citation "
+                 "defect, not a fabrication: every entry verifies on its own, which is why only a "
+                 "whole-bibliography pass finds it. Check the in-text usage of each key before "
+                 "deciding whether they are duplicates or wrong metadata.", ""]
+        for paper, group in sorted(all_dupes,
+                                   key=lambda x: (_natural_key(x[0]["paper_id"]), ref_num(x[1][0]))):
+            title = ((group[0]["parsed"] or {}).get("title") or "").rstrip(" .,;:!?")
+            nums = ", ".join(ref_label(r) for r in group)
+            roll.append(f"- **{paper['paper_id']}** {nums}: {title}")
         roll.append("")
     if not flagged:
         roll.append("No references were flagged as likely-hallucinated, partial-match, or unclear.")
@@ -506,7 +644,7 @@ def cmd_report(out_dir: Path) -> None:
                      "venue, or DOI problems. Confirm each before acting.", ""]
             for paper, ref, v in sorted(fab, key=lambda x: (_natural_key(x[0]["paper_id"]), ref_num(x[1]))):
                 title = (ref["parsed"] or {}).get("title") or ref["raw_citation"][:80]
-                roll.append(f"- **{paper['paper_id']} [{ref['original_number']}]**: {title}")
+                roll.append(f"- **{paper['paper_id']}** {ref_key(ref)}: {title}")
                 sline = _signals_line(v.get("signals"))
                 if sline:
                     roll.append(f"  - Signals: {sline}")
@@ -517,7 +655,7 @@ def cmd_report(out_dir: Path) -> None:
             roll.append("")
             for paper, ref, v in sorted(items, key=lambda x: ref_num(x[1])):
                 title = (ref["parsed"] or {}).get("title") or ""
-                roll.append(f"- **[{ref['original_number']}] {v['category']}** "
+                roll.append(f"- **{ref_key(ref)} -- {v['category']}** "
                             f"(severity {SEVERITY.get(v['category'], '-')}): {title}")
                 roll.append(f"  - Raw: {ref['raw_citation']}")
                 for extra in _signal_report_lines(v):
@@ -565,9 +703,19 @@ def cmd_record(out_dir: Path, paper_id: str, number: str, category: str, finding
               file=sys.stderr)
     # Surface typo'd keys: a verdict whose paper_id:number matches no audited reference would
     # otherwise sit in triage_verdicts.json forever and never appear in any report.
+    papers = load_papers(out_dir)
     refs = {f"{p['paper_id']}:{r['original_number']}": r.get("raw_citation", "")
-            for p in load_papers(out_dir) for r in p["references"]}
+            for p in papers for r in p["references"]}
+    degraded = {f"{p['paper_id']}:{r['original_number']}"
+                for p in papers for r in p["references"] if is_degraded(r)}
     key = f"{paper_id}:{number}"
+    # A degraded check means some databases never answered for this reference, so its "not_found"
+    # is not evidence of anything. The web search has to carry a fabrication verdict on its own.
+    if category == "likely-hallucinated" and key in degraded:
+        print(f"warning: {key} is being recorded as likely-hallucinated, but its database "
+              f"verification was degraded (a backend failed to answer), so the absence of a "
+              f"database record is not evidence here. Confirm the verdict rests entirely on your "
+              f"own searches, or use 'unclear'.", file=sys.stderr)
     if refs and key not in refs:
         print(f"warning: {key} matches no reference in {out_dir}/ -- recording it anyway, but it "
               f"will not appear in any report; re-check the paper_id and number.", file=sys.stderr)

@@ -11,7 +11,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
-  version: "1.9.0"
+  version: "1.10.0"
 ---
 
 # hallucite
@@ -160,8 +160,23 @@ and `<outdir>/summary.json`. The offline DBLP DB defaults to `$HALLUCITE_DBLP` (
 `~/hallucite/dblp.db`); override it with `--dblp PATH`. Flags: `--offline` (no network: offline
 DBLP plus hallucinator's built-in Standards matcher; a missing DBLP file disables DBLP rather
 than falling back to dblp.org), `--disable-dbs LIST` (disable named backends, comma-separated),
-`--no-verify` (extraction only). Extraction is `lineno`- and two-column-aware and handles numeric,
-bracket-label, and author-year bibliographies; the target is 0 unparsed references.
+`--no-verify` (extraction only), `--retry-degraded N` (re-check references a backend failed to
+answer for; default 1), `--no-candidates` (skip the CrossRef lookup that attaches candidate real
+records to unverified references; implied by `--offline`). Extraction is `lineno`- and
+two-column-aware and handles numeric, bracket-label, and author-year bibliographies; the target is
+0 unparsed references.
+
+Read the run's closing warnings. Verification stops at the first backend that matches, so later
+backends are only ever asked about the residue -- the same references that reach triage -- and that
+is where rate limiting lands. The audit therefore marks any reference a backend failed to answer
+for as `degraded` and prints a per-backend tally at the end. A backend that answered nothing
+weakens every `not_found` it should have had a say in; if the tally looks bad, re-run before
+triaging rather than judging references on an incomplete check.
+
+References are named by the handle a reader can actually find. A numbered bibliography keeps its
+printed `[12]`; an author-year one is named by its citation key (`de Dieu et al. (2025c)`), since
+nothing is numbered in the paper. A trailing `[#n]` is hallucite's own index, appears nowhere in
+the paper, and is only what `triage record` takes as its `<number>`.
 
 If this exits non-zero -- whether a `HALLUCITE_BOOTSTRAP_FAILED:` line (no Python/hallucinator) or
 a per-paper error from the audit -- stop and report it; do not infer verdicts by hand (see the stop
@@ -190,6 +205,17 @@ record in parallel without losing each other's verdicts.
 For each entry (references whose `db_verification.status` is anything other than `verified` --
 `not_found`, `mismatch`, or `unparsed`), investigate with parallel web queries and classify it:
 
+- **Start from the evidence the audit already gathered.** A worklist entry carries `candidates`
+  (CrossRef's closest real records, with their DOIs and a title similarity) and `matched` (what a
+  backend matched, and the authors it holds). Check those before searching: a high-similarity
+  candidate usually *is* the cited work, and confirming or rejecting it is faster and more reliable
+  than a blank-page search. For a `mismatch`, open the matched record first and diff it field by
+  field -- and confirm it is even the same work, since a backend can match a thesis, preprint, or
+  extended abstract that shares its paper's title.
+- **`degraded: true` means the check was incomplete** -- a backend errored or rate-limited, so the
+  databases that would have matched this reference may never have been asked. Its `not_found` is
+  not evidence of anything. A fabrication verdict on a degraded entry must rest entirely on your
+  own searches; if those are inconclusive, the answer is `unclear`, not `likely-hallucinated`.
 - Search in escalating breadth; only conclude "not found" after the broad pass. Start with the
   DOI (resolve `https://api.crossref.org/works/<doi>`; a 404, or resolution to an unrelated
   paper, is a strong fabrication signal), then the exact title in quotes plus the first-author
@@ -199,6 +225,14 @@ For each entry (references whose `db_verification.status` is anything other than
   results for a genuine match. Obscure or predatory venues are poorly indexed, so a narrow query
   returning nothing is not evidence of fabrication; broaden first, and fetch the venue page or
   any embedded DOI/URL directly.
+- **When a narrow search returns the same authors under different titles, that is the signal to
+  escalate, not a conclusion.** It is simultaneously the fabrication signature and exactly what a
+  real but poorly-indexed, very recent, or abbreviated-title paper looks like at narrow breadth.
+  Before any `title_match=no`, run a fuzzy metadata query --
+  `https://api.crossref.org/works?query.bibliographic=<title+first+authors>&rows=5&select=title,author,container-title,issued,DOI`
+  -- and a plain-keyword pass. A cited "LLMs as assistants in software architecture design" that a
+  quoted search could not find resolves this way to "**Large Language Models** as Assistants in
+  Software Architecture Design" in IEEE Software, with a DOI.
 Classify title-first. Two independent questions, asked in order -- do not collapse them:
 
 1. **Does a publication bearing the cited title exist?** Match on the *title* (allowing only
@@ -211,9 +245,12 @@ Classify title-first. Two independent questions, asked in order -- do not collap
 Match the title on meaning, not exact string, in two steps:
 
 - *Formatting-only differences are the same title* (`title_match=yes`, normally `real-*`): a present
-  or absent subtitle, spacing, hyphenation (including line-break hyphens such as `distribu-tional`),
-  capitalization, punctuation, `&` vs `and`, diacritics, ligatures, other OCR/extraction artifacts,
-  and British/American spelling.
+  or absent subtitle or volume designation, spacing, hyphenation (including line-break hyphens such
+  as `distribu-tional`), capitalization, punctuation, `&` vs `and`, diacritics, ligatures, other
+  OCR/extraction artifacts, and British/American spelling. **An abbreviation and its expansion of
+  the same term are the same title too** -- `LLMs` for `Large Language Models`, `ML` for `machine
+  learning`, an expanded or contracted venue acronym. These name the same thing, so they do not
+  change what the work is about; do not treat them as the wrong-content-word case below.
 - *A wrong, missing, or added content word* (one that changes what the work is about -- `PLS` where
   the real paper says `cluster analysis`) still counts as `title_match=yes` **only if an independent
   identifier pins the citation to one specific real publication**: a DOI that resolves to it, or an
@@ -274,12 +311,21 @@ Then assemble the reports:
 "$RUN" triage report --out <outdir>
 ```
 
-- `<outdir>/reports/reference-check-<paper_id>.md`: per paper.
+- `<outdir>/reports/reference-check-<paper_id>.md`: per paper, including an **Indistinguishable
+  entries** section (see below).
 - `<outdir>/reports/potential-hallucinations.md`: corpus rollup for human review, led by a
   per-paper severity table and a **Desk-reject candidates** section (references whose cited title
   matches no real publication, compounded by a fabricated author constellation, venue, or DOI).
+
 - `<outdir>/reports/verify-<paper_id>.md`: for each paper with flags, a manual-verification
   checklist (per-reference verdict line plus one-click Scholar/Google/DOI/arXiv links).
+
+Both reports also list **indistinguishable entries**: different citation keys whose entries carry
+the same authors and title, so the bibliography asserts distinct works while giving no way to tell
+them apart. Verification cannot find these -- each entry is a real reference that verifies on its
+own -- and they only show up in a whole-bibliography pass. Report them; do not diagnose them. They
+are as likely to be one work duplicated as they are several works whose entries carry the wrong
+metadata, and only the in-text usage of each key settles which. Never advise merging them.
 
 `report` auto-lints every file it writes with the bundled Markdown linter
 (`lint_markdown.py`), so the reports are valid GFM without a manual pass.

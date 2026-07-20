@@ -33,9 +33,14 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import sqlite3
 import sys
+import time
 import traceback
+import urllib.parse
+import urllib.request
+from difflib import SequenceMatcher
 from pathlib import Path
 
 try:
@@ -121,15 +126,21 @@ def _db_results(results) -> list[dict]:
 
 
 def verification_dict(result) -> dict:
+    failed = list(result.failed_dbs)
     return {
         "status": result.status,
+        # A "not_found" from a run where backends errored or rate-limited is not the same claim as
+        # a "not_found" from a complete run: the reference may simply never have been asked about.
+        # Kept as a separate flag rather than a new status value, so `status != "verified"` stays
+        # the single definition of "needs triage" and no consumer has to learn a new string.
+        "degraded": bool(failed) and result.status != "verified",
         "source": result.source,
         "found_authors": list(result.found_authors),
         "paper_url": result.paper_url,
         "doi_info": _doi_info(result.doi_info),
         "arxiv_info": _arxiv_info(result.arxiv_info),
         "retraction_info": _retraction_info(result.retraction_info),
-        "failed_dbs": list(result.failed_dbs),
+        "failed_dbs": failed,
         "db_results": _db_results(result.db_results),
     }
 
@@ -219,19 +230,145 @@ def build_config(args) -> ValidatorConfig:
     return cfg
 
 
-def audit_pdf(pdf: Path, extractor: PdfExtractor, validator: Validator | None) -> dict:
+_YEAR_IN_CITATION = re.compile(r"\(((?:19|20)\d{2}[a-z]?)\)")
+# Trailing initials on a Springer-style author ("de Dieu MJ" -> "de Dieu", "Bi T" -> "Bi").
+_TRAILING_INITIALS = re.compile(r"\s+[A-ZÀ-ÖØ-Þ]{1,4}$")
+
+
+def _surname(author: str) -> str:
+    a = author.strip()
+    if "," in a:                       # "Surname, I." (APA)
+        return a.split(",", 1)[0].strip()
+    return _TRAILING_INITIALS.sub("", a).strip() or a
+
+
+def reference_label(ref_number: int, raw: str, parsed: dict | None, style: str) -> dict:
+    """How to name this reference to someone reading the paper.
+
+    A numeric bibliography prints "[12]" next to the entry, so the number is a real handle. An
+    author-year bibliography prints no numbers at all -- there, the entry's handle is the citation
+    key the body text uses ("de Dieu et al. (2025c)"), and the sequential index the extractor
+    assigns is a tool-internal artifact that appears nowhere in the paper. Reporting that index as
+    though it were a reference number sends the reader looking for something that does not exist,
+    so it is only ever a fallback, and one that has to say what it is."""
+    if style in ("numeric", "bracket-numeric"):
+        return {"label": f"[{ref_number}]", "label_kind": "printed"}
+    authors = [a for a in ((parsed or {}).get("authors") or []) if a]
+    year = _YEAR_IN_CITATION.search(raw or "")
+    if authors and year:
+        names = [_surname(a) for a in authors]
+        who = (names[0] if len(names) == 1
+               else f"{names[0]} and {names[1]}" if len(names) == 2
+               else f"{names[0]} et al.")
+        return {"label": f"{who} ({year.group(1)})", "label_kind": "citation"}
+    return {"label": f"#{ref_number}", "label_kind": "internal"}
+
+
+CROSSREF_WORKS = "https://api.crossref.org/works"
+
+
+def _norm_title(t: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", "", (t or "").lower().replace("-", ""))).strip()
+
+
+def crossref_candidates(title: str, authors: list, mailto: str = "",
+                        rows: int = 5, timeout: float = 10.0, keep: int = 3) -> list[dict]:
+    """Real publications whose metadata resembles this reference, from CrossRef's bibliographic
+    search. Candidates only -- never a verdict.
+
+    The exact-title lookups the validator does will miss a citation that abbreviates or expands a
+    term ("LLMs" for "Large Language Models"), and a plain web search for such a title surfaces the
+    authors' *other* papers, which reads exactly like the fabrication signature. A fuzzy
+    bibliographic query finds the real record and hands triage something concrete to confirm or
+    reject, instead of a blank page."""
+    if not (title or "").strip():
+        return []
+    query = " ".join([title] + [str(a) for a in (authors or [])[:3]])
+    params = {"query.bibliographic": query, "rows": str(rows),
+              "select": "title,author,container-title,issued,DOI"}
+    if mailto:
+        params["mailto"] = mailto
+    url = f"{CROSSREF_WORKS}?{urllib.parse.urlencode(params)}"
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as fh:
+            items = json.load(fh).get("message", {}).get("items", []) or []
+    except Exception:
+        return []                       # a best-effort hint must never fail an audit
+
+    want = _norm_title(title)
+    out = []
+    for it in items:
+        got = (it.get("title") or [""])[0]
+        names = [" ".join(filter(None, (a.get("given"), a.get("family"))))
+                 for a in (it.get("author") or [])]
+        out.append({
+            "title": got,
+            "authors": names[:6],
+            "venue": (it.get("container-title") or [""])[0],
+            "year": ((it.get("issued") or {}).get("date-parts") or [[None]])[0][0],
+            "doi": it.get("DOI"),
+            "title_similarity": round(SequenceMatcher(None, want, _norm_title(got)).ratio(), 3),
+        })
+    out.sort(key=lambda c: -c["title_similarity"])
+    # Below ~0.6 a "candidate" is noise that would only invite a wrong match.
+    return [c for c in out[:keep] if c["title_similarity"] >= 0.6]
+
+
+def _retry_degraded(validator: Validator, refs: list, verifications: list[dict | None],
+                    rounds: int, delay: float) -> int:
+    """Re-check references whose verification had a backend failure, and keep the better result.
+
+    A backend only gets asked about the references an earlier one did not already match, so the
+    hard residue -- exactly the references a human will be asked to judge -- is where rate limiting
+    concentrates. Leaving those as a bare "not_found" overstates the evidence against them.
+    Retried results replace the originals only when they improve (a match, or fewer failed
+    backends), so a retry can never make a reference look worse than the first attempt."""
+    fixed = 0
+    for _ in range(rounds):
+        pending = [i for i, v in enumerate(verifications)
+                   if v is not None and v.get("degraded")]
+        if not pending:
+            break
+        time.sleep(delay)
+        try:
+            results = validator.check([refs[i] for i in pending])
+        except Exception as exc:                      # a failed retry must not lose the first pass
+            print(f"    retry of {len(pending)} degraded reference(s) failed: {exc}",
+                  file=sys.stderr)
+            break
+        for i, result in zip(pending, results):
+            new = verification_dict(result)
+            old = verifications[i]
+            better = (new["status"] == "verified"
+                      or len(new["failed_dbs"]) < len(old["failed_dbs"]))
+            if better:
+                verifications[i] = new
+                fixed += 1
+    return fixed
+
+
+def audit_pdf(pdf: Path, extractor: PdfExtractor, validator: Validator | None,
+              retry_rounds: int = 1, retry_delay: float = 5.0,
+              candidates: bool = False, mailto: str = "") -> dict:
     info = extract_references(str(pdf.resolve()), extractor)
 
     parsed_refs = [e.reference for e in info.refs if e.reference is not None]
     results = validator.check(parsed_refs) if (validator and parsed_refs) else []
-    result_iter = iter(results)
+    verifications = [verification_dict(r) for r in results]
+    if validator is not None and retry_rounds > 0 and verifications:
+        n = _retry_degraded(validator, parsed_refs, verifications, retry_rounds, retry_delay)
+        if n:
+            print(f"    recovered {n} degraded verification(s) on retry")
+    result_iter = iter(verifications)
 
     references = []
     for e in info.refs:
+        parsed = parsed_dict(e.reference)
         rec = {
             "original_number": e.number,
             "raw_citation": e.raw_text,
-            "parsed": parsed_dict(e.reference),
+            "parsed": parsed,
+            **reference_label(e.number, e.raw_text, parsed, info.style),
         }
         if e.reference is None:
             rec["db_verification"] = {
@@ -239,9 +376,17 @@ def audit_pdf(pdf: Path, extractor: PdfExtractor, validator: Validator | None) -
                 "note": "could not be parsed into fields; triage from raw_citation",
             }
         elif validator is not None:
-            rec["db_verification"] = verification_dict(next(result_iter))
+            rec["db_verification"] = next(result_iter)
         else:
             rec["db_verification"] = None  # --no-verify
+        # For a reference no database confirmed, offer the closest real records CrossRef knows
+        # of. These are leads for triage to confirm or reject, never a verdict.
+        dv = rec.get("db_verification") or {}
+        if candidates and dv.get("status") not in (None, "verified") and parsed:
+            found = crossref_candidates(parsed.get("title") or "",
+                                        parsed.get("authors") or [], mailto)
+            if found:
+                rec["candidates"] = found
         references.append(rec)
 
     return {
@@ -279,7 +424,18 @@ def paper_status_counts(record: dict) -> dict:
     # status -- e.g. hallucinator's "mismatch", which an earlier list silently dropped from both
     # the count and the worklist -- is always surfaced.
     counts["unverified"] = checked - counts["verified"]
+    counts["degraded"] = sum(1 for ref in record["references"]
+                             if (ref["db_verification"] or {}).get("degraded"))
     return counts
+
+
+def backend_failures(record: dict) -> dict:
+    """How often each backend failed to answer, across a paper's references."""
+    failures: dict = {}
+    for ref in record["references"]:
+        for db in (ref["db_verification"] or {}).get("failed_dbs") or []:
+            failures[db] = failures.get(db, 0) + 1
+    return failures
 
 
 def main() -> int:
@@ -294,6 +450,15 @@ def main() -> int:
                         "matcher stay live)")
     p.add_argument("--disable-dbs", default="", help="Comma-separated DB names to disable")
     p.add_argument("--no-verify", action="store_true", help="Extract only; skip DB verification")
+    p.add_argument("--no-candidates", action="store_true",
+                   help="Skip the CrossRef bibliographic lookup that attaches candidate real "
+                        "records to unverified references (implied by --offline)")
+    p.add_argument("--retry-degraded", type=int, default=1, metavar="N",
+                   help="Re-check references whose verification had a backend failure, N times "
+                        "(default 1; 0 disables). Rate limiting concentrates on exactly the "
+                        "references that reach triage.")
+    p.add_argument("--retry-delay", type=float, default=5.0, metavar="SECONDS",
+                   help="Pause before each degraded-reference retry (default 5)")
     args = p.parse_args()
 
     pdfs = find_pdfs(Path(args.target))
@@ -308,10 +473,14 @@ def main() -> int:
 
     summary_papers = []
     seen_dbs: set[str] = set()
+    all_failures: dict = {}
     for i, pdf in enumerate(pdfs, start=1):
         print(f"[{i}/{len(pdfs)}] {pdf.name} ...", flush=True)
         try:
-            record = audit_pdf(pdf, extractor, validator)
+            record = audit_pdf(pdf, extractor, validator,
+                               retry_rounds=args.retry_degraded, retry_delay=args.retry_delay,
+                               candidates=not (args.offline or args.no_candidates),
+                               mailto=args.mailto)
         except Exception as exc:  # one bad PDF must not abort the batch
             print(f"    ERROR: {exc}", file=sys.stderr)
             traceback.print_exc()
@@ -326,6 +495,8 @@ def main() -> int:
         for ref in record["references"]:
             for r in (ref.get("db_verification") or {}).get("db_results", []) or []:
                 seen_dbs.add(r["db"])
+        for db, n in backend_failures(record).items():
+            all_failures[db] = all_failures.get(db, 0) + n
         ext = record["extraction"]
         if record["num_references"] == 0 or not ext["section_found"]:
             print(f"    warning: extracted {record['num_references']} reference(s)"
@@ -338,6 +509,7 @@ def main() -> int:
         else:
             print(f"    {record['num_references']} refs | {counts['verified']} verified, "
                   f"{counts['unverified']} unverified"
+                  f"{', ' + str(counts['degraded']) + ' degraded' if counts['degraded'] else ''}"
                   f"{', ' + str(counts['retracted']) + ' RETRACTED' if counts['retracted'] else ''}",
                   flush=True)
 
@@ -354,11 +526,21 @@ def main() -> int:
         "dblp_db": dblp_build_info(Path(args.dblp)),
         "num_papers": len(pdfs),
         "totals": totals,
+        "backend_failures": all_failures,
         "papers": summary_papers,
     }
     _atomic_write(out_dir / "summary.json",
                   json.dumps(summary, indent=2, ensure_ascii=False))
 
+    if all_failures:
+        # Say it out loud: a backend that answered nothing is invisible in the per-paper counts,
+        # yet it silently weakens every "not_found" it should have had a say in.
+        worst = ", ".join(f"{db} ({n})" for db, n in
+                          sorted(all_failures.items(), key=lambda kv: -kv[1]))
+        print(f"\nwarning: backends failed to answer on some references -- {worst}. "
+              f"{totals.get('degraded', 0)} reference(s) carry a degraded verification: their "
+              f"status is not a clean negative, and triage must not treat it as evidence of "
+              f"fabrication.", file=sys.stderr)
     print(f"\nDone. Per-paper JSON + summary.json written to {out_dir}/")
     if not args.no_verify:
         print(f"Unverified references to triage: {totals.get('unverified', 0)} "

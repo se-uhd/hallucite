@@ -4,6 +4,59 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.10.0] - 2026-07-20
+
+### Added
+
+- Unverified references carry `candidates`: the closest real records from CrossRef's fuzzy
+  bibliographic search, with title similarity, DOI, venue, and year. The validator's exact-title
+  lookups miss a citation that abbreviates or expands a term, and a quoted web search for such a
+  title returns only the authors' *other* papers -- which reads exactly like the fabrication
+  signature, and nearly produced a false accusation. A reference cited as "Llms as assistants in
+  software architecture design" now resolves at 0.855 similarity to "Large Language Models as
+  Assistants in Software Architecture Design" (IEEE Software, doi 10.1109/ms.2026.3663353) before
+  any searching. Candidates are leads to confirm or reject, never verdicts; an invented title
+  matches nothing, so an empty list carries information too. `--no-candidates` skips the lookup and
+  `--offline` implies it.
+- Worklist entries and reports carry `matched`: the record each backend matched and the authors it
+  holds. A `mismatch` is only judgeable against the thing that mismatched -- and the matched record
+  is sometimes not the same work at all (for one reference, CrossRef matched a thesis sharing its
+  paper's title while DBLP matched the right paper under an incomplete author list).
+- Reports list **indistinguishable entries**: different citation keys whose entries carry the same
+  authors and title, so the bibliography asserts distinct works while giving no way to tell them
+  apart. Database verification cannot surface this, since every such entry verifies on its own.
+  The report states the problem without diagnosing it: these are as likely to be one duplicated
+  work as several works with wrong metadata, and only the in-text usage of each key settles which.
+- `--retry-degraded N` (default 1) re-checks references a backend failed to answer for, keeping the
+  retried result only when it improves.
+
+### Changed
+
+- References are named by the handle a reader can find. A numbered bibliography keeps its printed
+  `[12]`; an unnumbered author-year one is named by the citation key the paper itself uses
+  (`de Dieu et al. (2025c)`). Reports previously printed the extractor's sequential index as though
+  it were a reference number, sending a reviewer hunting a `[22]` that appears nowhere in the
+  paper. Where that index is still needed -- it is what `triage record` takes -- it is shown as
+  `[#n]` and the report says it is hallucite's own.
+
+### Fixed
+
+- A `not_found` produced while a backend errored or rate-limited is flagged `degraded` and is no
+  longer presented as a clean negative. Verification stops at the first backend that matches, so
+  later backends are only ever asked about the residue -- the same references that reach triage --
+  and that is where rate limiting lands: on the run that prompted this, every one of the 9 triaged
+  references had a backend that never answered, one of them three, with nothing to indicate it. The
+  audit now prints a per-backend failure tally, `record` warns when a `likely-hallucinated` verdict
+  rests on a degraded check, and the skill instructs triage to treat such an absence as no evidence
+  at all. `degraded` is a separate flag rather than a new status value, so `status != "verified"`
+  remains the single definition of "needs triage".
+- The triage rules no longer point at a false accusation for an abbreviated title. An abbreviation
+  and its expansion of the same term ("LLMs" / "Large Language Models") are now stated to be the
+  same title, where the previous wording made them a wrong *content word* -- which demands an
+  identifier to rescue the citation and otherwise lands on `likely-hallucinated`. The rules also
+  name the escalation trap explicitly: a narrow search returning the same authors under different
+  titles is the trigger to broaden, not a conclusion.
+
 ## [1.9.0] - 2026-07-20
 
 ### Added
@@ -324,6 +377,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.10.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.10.0
 [1.9.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.9.0
 [1.8.4]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.4
 [1.8.3]: https://github.com/se-uhd/hallucite/releases/tag/v1.8.3

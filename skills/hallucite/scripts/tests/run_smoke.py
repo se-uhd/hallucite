@@ -21,6 +21,12 @@ Tiers (any failing check exits non-zero):
                               and the fcntl verdicts lock under concurrent writers.
   3c title-first gate      -- record --signals enforcement, is_fabrication, and the
                               desk-reject report section.
+  3d indistinguishable refs -- entries sharing authors+title under different citation keys are
+                              grouped, seeing through capitalization and line-break hyphens,
+                              without grouping short/unparsed ones.
+  3e reference labels      -- a numeric bibliography reports its printed "[N]"; an unnumbered
+                              author-year one reports the citation key the paper itself uses, and
+                              any tool-internal index is marked as not appearing in the paper.
   4  end-to-end (offline)   -- build a tiny fixture DBLP DB, run the real audit --offline on a
                               synthetic fixture PDF, assert verified/not_found. Needs the
                               hallucinator package and pdftotext (poppler); skipped if absent.
@@ -356,6 +362,177 @@ def tier3_logic() -> None:
     checked = sum(1 for r in record["references"] if r["db_verification"] is not None)
     C.eq(counts["verified"] + counts["unverified"], checked,
          "INVARIANT: verified + unverified == checked references (none silently dropped)")
+
+
+def tier3d_duplicate_entries() -> None:
+    """Duplicate bibliography entries: one work listed under several entries. Database verification
+    cannot surface these -- each entry is a real reference that verifies on its own -- so grouping
+    happens at report time. The normalizer has to see through the differences that make a duplicate
+    look distinct: capitalization, punctuation, and the hyphen `pdftotext` leaves where a word broke
+    across lines ("architec-tural"), all of which occurred in the paper that prompted this."""
+    print("Tier 3d: duplicate bibliography entries (no network/DB)")
+    import triage
+
+    def ref(n, title):
+        return {"original_number": n, "raw_citation": f"Author A ({2021}) {title}.",
+                "parsed": {"title": title}, "db_verification": {"status": "verified"}}
+
+    paper = {"paper_id": "p1", "references": [
+        ref(7, "Mining architecture tactics and quality attributes knowledge in stack overflow"),
+        ref(8, "Mining architecture tactics and quality attributes knowledge in Stack Overflow"),
+        ref(22, "How do users revise architectural related questions on stack overflow: an empirical study"),
+        ref(23, "How do users revise architec-tural related questions on stack overflow: An empirical study"),
+        ref(24, "How do users revise architectural related questions on stack overflow: An empirical study"),
+        ref(30, "A completely unrelated study of something else entirely"),
+        {"original_number": 31, "raw_citation": "unparsed fragment", "parsed": None,
+         "db_verification": {"status": "unparsed"}},
+    ]}
+    groups = triage.duplicate_groups(paper)
+    by_first = {g[0]["original_number"]: [r["original_number"] for r in g] for g in groups}
+    C.eq(len(groups), 2, "two duplicated works are grouped")
+    C.eq(by_first.get(7), [7, 8], "capitalization-only difference groups as one work")
+    C.eq(by_first.get(22), [22, 23, 24],
+         "REGRESSION GUARD: a line-break hyphen ('architec-tural') does not split the group")
+    C.true(all(30 not in v and 31 not in v for v in by_first.values()),
+           "a unique title and an unparsed reference are not grouped")
+
+    # A title too short to be evidence, and a missing one, must not collapse into a phantom group.
+    stubs = {"paper_id": "p2", "references": [ref(1, "Short one"), ref(2, "Short two"),
+                                              ref(3, ""), ref(4, "")]}
+    C.eq(triage.duplicate_groups(stubs), [], "short and empty titles are not grouped")
+
+
+def tier3e_reference_labels() -> None:
+    """How a reference is named in the reports. A numeric bibliography prints "[12]" beside the
+    entry, so that number is a real handle. An author-year bibliography prints no numbers at all --
+    the handle there is the citation key the body text uses, and the extractor's sequential index
+    is a tool-internal artifact. Reporting that index as a reference number sends a reviewer
+    hunting the PDF for a "[22]" that was never printed, which is what happened on the paper that
+    prompted this."""
+    print("Tier 3e: reference labels follow the bibliography style (no network/DB)")
+    try:
+        from audit_references import reference_label
+    except SystemExit:
+        C.skip("hallucinator absent; audit_references import skipped")
+        return
+    import triage
+
+    def lab(n, raw, authors, style):
+        return reference_label(n, raw, {"authors": authors} if authors else None, style)
+
+    # Numeric: the printed number is the handle.
+    r = lab(12, "[12] Bai, Y., Kadavath, S.: A title. Venue (2022)", ["Bai, Y."], "numeric")
+    C.eq((r["label"], r["label_kind"]), ("[12]", "printed"), "numeric style keeps the printed [N]")
+    C.eq(triage.ref_key({**r, "original_number": 12}), "[12]",
+         "a printed number is not repeated as a tool index")
+
+    # Author-year: the citation key, by author count.
+    cases = [
+        (["de Dieu MJ", "Liang P", "Shahin M", "Khan AA"],
+         "de Dieu MJ, Liang P, Shahin M, Khan AA (2025c) How do users revise...",
+         "de Dieu et al. (2025c)", "three or more authors -> et al., keeping the year suffix"),
+        (["Baldwin CY", "Clark KB"], "Baldwin CY, Clark KB (2000) Design Rules",
+         "Baldwin and Clark (2000)", "two authors -> 'A and B'"),
+        (["Israel GD"], "Israel GD (1992) Determining sample size",
+         "Israel (1992)", "one author -> bare surname"),
+        (["Bai, Y.", "Kadavath, S.", "Kundu, S."], "Bai, Y., Kadavath, S., Kundu, S. (2022) T",
+         "Bai et al. (2022)", "an APA 'Surname, I.' author still yields the surname"),
+    ]
+    for authors, raw, want, why in cases:
+        got = lab(22, raw, authors, "author-year")
+        C.eq((got["label"], got["label_kind"]), (want, "citation"), why)
+
+    # REGRESSION GUARD: the year suffix distinguishes the keys, so near-identical entries stay
+    # separately addressable -- exactly the 2021a/2021b and 2025c/d/e case.
+    a = lab(7, "Bi T, Liang P (2021a) Mining...", ["Bi T", "Liang P"], "author-year")["label"]
+    b = lab(8, "Bi T, Liang P (2021b) Mining...", ["Bi T", "Liang P"], "author-year")["label"]
+    C.true(a != b and a.endswith("(2021a)") and b.endswith("(2021b)"),
+           "REGRESSION GUARD: the a/b year suffix keeps two similar entries distinguishable")
+
+    # Fallback: nothing to build a key from -> the internal index, marked as such.
+    r = lab(40, "garbled text with no parsable year", [], "author-year")
+    C.eq((r["label"], r["label_kind"]), ("#40", "internal"),
+         "with no author/year the tool-internal index is used")
+    C.true("#40" in triage.ref_key({**r, "original_number": 40}),
+           "the internal index is shown as #n, never as a bracketed [n]")
+
+    # The reports must say when a number is hallucite's own and not in the paper.
+    numeric_paper = {"references": [{"label": "[1]", "label_kind": "printed"}]}
+    ay_paper = {"references": [{"label": "Bi et al. (2021a)", "label_kind": "citation"}]}
+    C.eq(triage.label_note(numeric_paper), None, "a numbered bibliography needs no note")
+    note = triage.label_note(ay_paper) or ""
+    C.true("appears nowhere in the paper" in note,
+           "REGRESSION GUARD: an unnumbered bibliography gets a note that #n is tool-internal")
+
+
+def tier3f_degraded_verification() -> None:
+    """A "not_found" produced while backends were erroring or rate-limited is not the same claim as
+    one from a complete run. Verification short-circuits on the first match, so later backends are
+    only ever asked about the residue -- precisely the references that reach triage -- and that is
+    where rate limiting lands. On the run that prompted this, all 9 triaged references had at least
+    one backend that never answered, and nothing said so."""
+    print("Tier 3f: degraded verification is not a clean negative (no network/DB)")
+    import triage
+    try:
+        import audit_references as audit
+    except SystemExit:
+        C.skip("hallucinator absent; audit_references import skipped")
+        return
+
+    def ref(status, failed=()):
+        return {"original_number": 1, "raw_citation": "R", "parsed": {"title": "T"},
+                "db_verification": {"status": status, "failed_dbs": list(failed),
+                                    "degraded": bool(failed) and status != "verified"}}
+
+    C.true(not triage.is_degraded(ref("not_found")), "a complete not_found is not degraded")
+    C.true(triage.is_degraded(ref("not_found", ["Semantic Scholar"])),
+           "REGRESSION GUARD: not_found with a failed backend is marked degraded")
+    C.true(not triage.is_degraded(ref("verified", ["Semantic Scholar"])),
+           "a verified reference is never degraded (a match settles it)")
+
+    # `degraded` must not disturb the needs-triage contract, which is defined by negation.
+    C.true(triage.needs_triage(ref("not_found", ["Semantic Scholar"])),
+           "a degraded reference still needs triage")
+    C.true(not triage.needs_triage(ref("verified", ["Semantic Scholar"])),
+           "INVARIANT: degraded does not turn a verified reference into triage work")
+
+    record = {"references": [ref("verified"), ref("not_found", ["Semantic Scholar"]),
+                             ref("mismatch", ["Europe PMC", "Semantic Scholar"])]}
+    counts = audit.paper_status_counts(record)
+    C.eq(counts["degraded"], 2, "paper_status_counts tallies degraded references")
+    C.eq(counts["unverified"], 2, "INVARIANT: the unverified count is unchanged by degradation")
+    C.eq(audit.backend_failures(record), {"Semantic Scholar": 2, "Europe PMC": 1},
+         "backend_failures counts each backend's silent references")
+
+    # A mismatch's evidence must travel with it: which backend matched what, and with which
+    # authors. On the run that prompted this, DBLP matched the right paper but held an incomplete
+    # author list, while CrossRef matched an unrelated thesis -- indistinguishable from the
+    # worklist until both candidates were visible side by side.
+    dv = {"status": "mismatch", "db_results": [
+        {"db": "DBLP", "status": "author_mismatch", "paper_url": "https://dblp.org/rec/x",
+         "found_authors": ["A One", "B Two"]},
+        {"db": "CrossRef", "status": "author_mismatch",
+         "paper_url": "https://doi.org/10.0000/thesis", "found_authors": ["A One"]},
+        {"db": "PubMed", "status": "no_match", "paper_url": None, "found_authors": []},
+        {"db": "Semantic Scholar", "status": "rate_limited", "paper_url": None,
+         "found_authors": []},
+        {"db": "ACL Anthology", "status": "error", "paper_url": None, "found_authors": []},
+    ]}
+    matched = triage._matched_records(dv)
+    C.eq([m["db"] for m in matched], ["DBLP", "CrossRef"],
+         "REGRESSION GUARD: only backends that actually matched something are reported")
+    C.eq(matched[0]["found_authors"], ["A One", "B Two"],
+         "the matched record's own author list travels with it")
+    C.true(all(m["paper_url"] for m in matched),
+           "each matched record carries the URL needed to check it")
+    C.eq(triage._matched_records({"status": "not_found", "db_results": []}), [],
+         "a reference nothing matched reports no matched records")
+
+    # The candidate scorer's normalizer must ignore the cosmetic differences, so a line-break
+    # hyphen or casing cannot depress a real match below the keep threshold.
+    C.eq(audit._norm_title("Experimen-tation in Software Engineering!"),
+         audit._norm_title("Experimentation in software engineering"),
+         "candidate title matching ignores hyphenation, case, and punctuation")
 
 
 def tier3b_triage_concurrency() -> None:
@@ -730,6 +907,9 @@ def main() -> int:
     tier1b_runner()
     tier1c_codex_cli_marketplace()
     tier3_logic()
+    tier3d_duplicate_entries()
+    tier3e_reference_labels()
+    tier3f_degraded_verification()
     tier3b_triage_concurrency()
     tier3c_title_first_gate()
     tier4_end_to_end()
