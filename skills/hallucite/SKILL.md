@@ -11,7 +11,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
-  version: "1.12.0"
+  version: "1.12.1"
 ---
 
 # hallucite
@@ -36,6 +36,11 @@ tool output, not to your own reading of a `.bib`/`.bbl`/PDF.
   yourself. "The tool would not run" is the correct, honest outcome -- not a hand-written report.
 - **Run the preflight (`check-env`) first.** If it does not print `HALLUCITE_OK`, the environment is
   not ready; surface its message and stop.
+- **A paper that yields 0 references was not checked.** The audit still exits 0 and warns, so read
+  the warning: `section_found: false` or 0 references on a paper that visibly has a bibliography is
+  an extraction failure (an unrecognized heading or layout), never "this paper has no references"
+  and never a clean bill of health. Say so plainly, and fix the extraction rather than reading the
+  bibliography yourself -- a hand-read yields no verdict, whatever the tool is doing.
 - If commands start erroring or returning empty output, **halt and say so.** Do not begin
   assembling findings from memory or from the source files while the pipeline is broken.
 

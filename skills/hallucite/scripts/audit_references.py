@@ -660,7 +660,9 @@ def main() -> int:
         ids = ", ".join(p["paper_id"] for p in zero)
         print(f"\nwarning: {len(zero)} of {len(pdfs)} paper(s) yielded 0 references (unsupported "
               f"bibliography layout, or no References section) and were NOT checked: {ids}. "
-              f"Verify these by hand or fix the extraction.", file=sys.stderr)
+              f"This is an extraction failure, not a finding: report it as such and fix the "
+              f"extraction. Reading the bibliography by eye is not a substitute -- it yields no "
+              f"verdict.", file=sys.stderr)
     errored = [p for p in summary_papers if "error" in p]
     if errored:
         ids = ", ".join(p["paper_id"] for p in errored)

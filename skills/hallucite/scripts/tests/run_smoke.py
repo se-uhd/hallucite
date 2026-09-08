@@ -43,6 +43,9 @@ Tiers (any failing check exits non-zero):
                               backend compares only the first FTS candidate), tolerates the DB's
                               truncated author rows, and refuses wrong, padded, or invented
                               citations. Pure dblp_check logic on a fixture DB; no network.
+  4e small-caps headings    -- an IEEE-style heading letter-spaced by pdftotext ("R EFERENCES")
+                              still opens the bibliography, and the entries under it segment.
+                              Pure pdf_references logic; no network, DB, or poppler.
   4c author-year extraction -- a Springer author-year bibliography under LaTeX lineno margins,
                               driven through the real PDF: margin numbers must be detected in both
                               renderings and blanked (not deleted) so the hanging indent still
@@ -1045,6 +1048,50 @@ def tier4b_extraction_lineno() -> None:
          "numeric styles are never merge-suspects (their labels delimit entries)")
 
 
+def tier4e_smallcaps_heading() -> None:
+    """Regression for an IEEE-style journal proof whose section headings are set in small caps with
+    a full-size initial: `pdftotext` renders the size change as a space, so "REFERENCES" arrives as
+    "R EFERENCES". Matching the heading text exactly missed it, `_references_section` returned
+    nothing, and the audit reported 0 references for a paper with a 32-entry bibliography -- exit 0,
+    one warning line, and nothing to triage. Pure pdf_references logic; no network, DB, or poppler.
+
+    Failure shape this guards against: a letter-spaced heading must open the section, and the
+    entries after it must still segment."""
+    print("Tier 4e: letter-spaced small-caps section headings (no network/DB)")
+    import pdf_references as R
+
+    entries = [
+        "[1]  Anna Apple. A first invented entry. Imaginary Press, 2011.",
+        "[2]  Ben Berry and Carla Cherry. A second invented entry. J. Imaginary 4, 2 (2015), 1-9.",
+        "[3]  Dan Date. A third invented entry. Proc. Imaginary Conf. (2020), 44-51.",
+    ]
+    # Every spelling `pdftotext` produces for the same heading, plus a section number in front.
+    for head in ("R EFERENCES", "R E F E R E N C E S", "B IBLIOGRAPHY", "VII. R EFERENCES",
+                 "REFERENCES", "References"):
+        section = R._references_section(["Body text before the bibliography.", head, *entries])
+        C.eq(section, entries, f"section opens at a {head!r} heading")
+
+    C.eq(R._references_section(["Body text.", "A CKNOWLEDGMENT", *entries]), [],
+         "a non-bibliography heading does not open the section")
+    C.eq(R._references_section(
+        ["R eferences to the standard are collected in Table 3 of this paper.", *entries]), [],
+        "space-stripping does not let a sentence starting with 'References' open the section")
+
+    section = R._references_section(["Body text.", "R EFERENCES", *entries])
+    style = R._dominant_style(section)
+    C.eq(style, "bracket-numeric", "entries under a letter-spaced heading classify normally")
+    C.eq([n for n, _, _ in R._segment(section, style)], [1, 2, 3],
+         "REGRESSION GUARD: entries after a letter-spaced heading segment as [1]..[3]")
+
+    # The tail heading carries the same artifact, and must still end the section -- otherwise the
+    # author biographies an IEEE proof prints after the bibliography land inside it.
+    tail = R._segment(R._references_section(
+        ["Body text.", "R EFERENCES", *entries, "A CKNOWLEDGMENT",
+         "Sam Stone received the Ph.D. degree in imaginary computing."]), "bracket-numeric")
+    C.eq([n for n, _, _ in tail], [1, 2, 3],
+         "a letter-spaced Acknowledgment heading still ends the section")
+
+
 def tier4c_extraction_authoryear_lineno() -> None:
     """Regression for a Springer-style journal submission whose bibliography extraction collapsed:
     32 "references" came out of a 15-entry bibliography, 17 of them unparsable fragments, because
@@ -1125,6 +1172,7 @@ def main() -> int:
     tier3g_stale_verdicts()
     tier4_end_to_end()
     tier4b_extraction_lineno()
+    tier4e_smallcaps_heading()
     tier4c_extraction_authoryear_lineno()
     tier4d_dblp_second_opinion()
     print()

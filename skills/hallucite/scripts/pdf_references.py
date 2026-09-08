@@ -36,6 +36,16 @@ _SECTION_HEADERS = ("references", "bibliography", "references and notes",
 _HEADER_NUM = re.compile(r"^(?:\d+|[ivxlc]+)[.)]?\s+", re.I)  # "7 ", "7. ", "VII. " before a header
 _STOP_SECTION = re.compile(r"^(appendix|acknowledg)", re.I)
 
+# IEEE-style papers set their section headings in small caps with a full-size initial, and
+# `pdftotext` emits the size change as a space: "REFERENCES" comes out as "R EFERENCES" (a fully
+# letter-spaced heading, "R E F E R E N C E S", is the same artifact). An exact match on the
+# heading text then misses it, `_references_section` returns nothing, and the audit reports zero
+# references for a paper whose bibliography is right there -- the whole run silently contributes
+# nothing. Comparing on the space-stripped spelling collapses every such variant onto the plain
+# one. Both comparisons run against a whole short heading line, so stripping the spaces cannot
+# pull body text in.
+_SECTION_HEADERS_NOSPACE = frozenset(h.replace(" ", "") for h in _SECTION_HEADERS)
+
 # A `lineno` margin number, in the two shapes `pdftotext -layout` produces. Which one you get
 # depends on whether the number's baseline lands on the text line's grid row, so a single paper
 # switches between them mid-page -- both must count towards the detection ratio below, or a
@@ -187,12 +197,13 @@ def _strip_line_numbers(lines: list[str]) -> tuple[list[str], bool]:
 
 def _references_section(lines: list[str]) -> list[str]:
     """Lines after the FIRST 'References'/'Bibliography'-style header. Tolerates a leading section
-    number ('7 References', 'VII. References') and a trailing colon. Scanning forward (not
-    backward) means a 'References' running page header repeated on later pages no longer chops the
-    section down to its last page; those repeated header lines are dropped later as watermarks."""
+    number ('7 References', 'VII. References'), a trailing colon, and the letter-spacing that small
+    caps leave behind ('R EFERENCES'). Scanning forward (not backward) means a 'References' running
+    page header repeated on later pages no longer chops the section down to its last page; those
+    repeated header lines are dropped later as watermarks."""
     for i, line in enumerate(lines):
         head = _HEADER_NUM.sub("", line.strip().rstrip(" .:").lower())
-        if head in _SECTION_HEADERS:
+        if head in _SECTION_HEADERS or head.replace(" ", "") in _SECTION_HEADERS_NOSPACE:
             return lines[i + 1:]
     return []
 
@@ -419,7 +430,8 @@ def _segment(section: list[str], style: str,
             continue
         # Stop at a trailing Appendix/Acknowledgments *heading* (short, standalone), but not at a
         # reference whose text merely begins with one of those words.
-        if _STOP_SECTION.match(s) and len(s) <= 40 and not _NUM.match(s) and not _BRACKET.match(s):
+        if (_STOP_SECTION.match(s) or _STOP_SECTION.match(s.replace(" ", ""))) \
+                and len(s) <= 40 and not _NUM.match(s) and not _BRACKET.match(s):
             break
 
         new_text: str | None = None

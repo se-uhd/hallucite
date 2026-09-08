@@ -4,6 +4,29 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.12.1] - 2026-09-08
+
+### Fixed
+
+- A section heading letter-spaced by `pdftotext` now opens the bibliography. IEEE-style journal
+  proofs set headings in small caps with a full-size initial, and `pdftotext` renders the size
+  change as a space, so `REFERENCES` arrives as `R EFERENCES`. `_references_section` matched the
+  heading text exactly, found nothing, and the audit reported 0 references for a TSE proof whose
+  bibliography holds 32 entries -- exit 0, one warning line, and a paper that contributed nothing
+  to triage. Headings are now compared on their space-stripped spelling as well, which covers the
+  fully spaced `R E F E R E N C E S` too, and the Appendix/Acknowledgment heading that ends the
+  section is matched the same way so author biographies cannot land inside the bibliography. The
+  comparison still runs against a whole short heading line, so a sentence opening with
+  "References" cannot start the section.
+
+### Changed
+
+- The zero-reference warning names the right next step. It used to end "Verify these by hand or
+  fix the extraction", which reads as license to do the one thing the stop conditions forbid; it
+  now says the run is an extraction failure to report and fix, and that reading the bibliography
+  by eye yields no verdict. `SKILL.md` gains the matching stop condition, because the audit exits
+  0 on this path and nothing else marks it as a failed run.
+
 ## [1.12.0] - 2026-07-20
 
 ### Added
@@ -473,6 +496,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.12.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.12.1
 [1.12.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.12.0
 [1.11.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.11.0
 [1.10.2]: https://github.com/se-uhd/hallucite/releases/tag/v1.10.2
