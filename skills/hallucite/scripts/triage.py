@@ -398,6 +398,9 @@ def cmd_worklist(out_dir: Path, pending: bool = False, paper_id: str | None = No
                 "doi": p.get("doi"),
                 "arxiv_id": p.get("arxiv_id"),
                 "failed_dbs": dv.get("failed_dbs", []),
+                # Cited authors that no author of the matched publication accounts for. The
+                # reference is here *because* of them, so they travel with the entry.
+                "authors_absent": dv.get("authors_absent", []),
                 "raw_citation": ref["raw_citation"],
                 # What a "mismatch" actually matched. Without it the triager re-derives from
                 # scratch what the validator already had -- and cannot see that the candidate is
@@ -584,6 +587,9 @@ def cmd_report(out_dir: Path) -> None:
                 degraded = " **(degraded: " + ", ".join(dv.get("failed_dbs") or []) \
                     + " did not answer -- not a clean negative)**" if is_degraded(r) else ""
                 lines.append(f"- DB status: {dv['status']}{degraded}")
+                if dv.get("authors_absent"):
+                    lines.append(f"- Cited author(s) not on the matched publication: "
+                                 f"{', '.join(dv['authors_absent'])}")
                 for m in _matched_records(dv):
                     lines.append(f"- Matched by {m['db']} ({m['status']}): {m['paper_url'] or '-'}"
                                  + (f" -- authors there: {', '.join(m['found_authors'])}"

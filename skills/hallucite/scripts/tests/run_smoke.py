@@ -25,6 +25,10 @@ Tiers (any failing check exits non-zero):
   3g stale verdicts        -- a verdict recorded against reference text a re-audit then changed
                               is quarantined: report shows it as stale/pending (never the old
                               category against the new reference) and --pending resurfaces it.
+  3h author absence        -- a cited author that no author of the matched publication
+                              accounts for demotes the reference to triage, while name-form
+                              differences, parser artifacts and truncated database author
+                              rows do not. No network/DB.
   3d repeated entries      -- entries sharing authors+title under different citation keys are
                               grouped and classified: identical in every field = duplicate (a
                               fact), differing venue/volume/pages = conflicting (an open question).
@@ -716,6 +720,93 @@ def tier3c_title_first_gate() -> None:
         C.true("title=no" in rollup, "report prints the structured signal summary")
 
 
+def tier3h_author_absence() -> None:
+    """A reference naming an author the matched publication does not have must reach triage.
+
+    A backend confirms on the title, so a real title with an invented author list was cleared as
+    `verified`: a TSE proof cited "Refactoring Test Smells With JUnit 5" -- right venue, volume and
+    pages -- under an author list carrying two people who are not on the paper, CrossRef matched
+    the title, and it never reached the worklist, the report, or a human.
+
+    The counter-cases matter as much as the catch. Demoting on a backend's own `author_mismatch`
+    verdict was measured over 1016 verified references and flagged 22, almost all of them DBLP's
+    truncated author rows against a correctly cited work; that rule is not used. The shapes below
+    are taken from those runs."""
+    print("Tier 3h: an absent cited author demotes a verified reference (no network/DB)")
+    try:
+        import audit_references as audit
+    except SystemExit:
+        C.skip("author absence: hallucinator absent; audit_references import skipped")
+        return
+    import triage
+
+    class Ref:
+        def __init__(self, authors): self.authors = authors
+
+    class Entry:
+        def __init__(self, authors): self.reference = Ref(authors)
+
+    def dv(status, source, found, failed=()):
+        return {"status": status, "source": source, "degraded": False,
+                "failed_dbs": list(failed), "found_authors": list(found), "db_results": []}
+
+    def run(cited, verification):
+        audit._author_absence_pass([Entry(cited)], [verification])
+        return verification
+
+    # The catch: two cited names are on no author of the matched work.
+    bad = run(["Keila L. Lucas", "Elvys S. Soares", "Marcio Ribeiro", "Rohit Gheyi",
+               "Ivan Machado"],
+              dv("verified", "CrossRef", ["Elvys Soares", "Márcio Ribeiro", "Rohit Gheyi",
+                                          "Guilherme Amaral", "André Santos"]))
+    C.eq(bad["status"], "author_mismatch",
+         "REGRESSION GUARD: a cited author absent from the matched work reaches triage")
+    C.eq(bad["authors_absent"], ["Keila L. Lucas", "Ivan Machado"],
+         "REGRESSION GUARD: a middle initial is not mistaken for a sentence and skipped")
+    C.true(triage.needs_triage({"db_verification": bad}), "the demoted reference is triaged")
+
+    # Name forms that differ without naming a different person.
+    same = [
+        (["Dave Binkley"], ["Dave W. Binkley"], "a middle initial in the record"),
+        (["Marcio Ribeiro"], ["Márcio Ribeiro"], "diacritics"),
+        (["Shekoufeh Kolahdouz-Rahimi"], ["Shekoufeh Kolahdouz Rahimi"], "a hyphenated surname"),
+        (["Samuel Binny"], ["Binny M. Samuel"], "swapped given/surname order"),
+        (["Marcelo Amorim"], ["Marcelo d'Amorim"], "a compound surname"),
+        (["Bart Van Rompaey"], ["Bart Van Rompaey"], "a surname particle"),
+    ]
+    for cited, found, why in same:
+        C.eq(run(cited, dv("verified", "CrossRef", found))["status"], "verified",
+             f"{why} does not demote")
+
+    # Parser artifacts must never be held against a citation.
+    artifacts = [
+        (["Hammond Pearce", "Privacy (SP)"], ["Hammond Pearce", "Baleegh Ahmad"],
+         "a venue fragment parsed as an author"),
+        (["Alberto Bacchelli", "Christian Bird. Expectations, outcomes"],
+         ["Alberto Bacchelli", "Christian Bird"], "the sentence after the author list"),
+        (["Annibale Panichella", "An"], ["Annibale Panichella", "Anand Ashok Sawant"],
+         "a single-token fragment of a split name"),
+    ]
+    for cited, found, why in artifacts:
+        C.eq(run(cited, dv("verified", "CrossRef", found))["status"], "verified",
+             f"{why} does not demote")
+
+    # Evidence quality gates.
+    C.eq(run(["Claes Wohlin", "Per Runeson", "Martin Höst"],
+             dv("verified", "DBLP", ["Per Runeson", "Claes Wohlin", "Magnus C. Ohlsson"]))["status"],
+         "verified",
+         "REGRESSION GUARD: DBLP's truncated author rows never demote a reference")
+    C.eq(run(["Patrick Lewis", "Ethan Perez", "Heinrich Küttler"],
+             dv("verified", "CrossRef", ["Patrick Lewis", "Ethan Perez"]))["status"], "verified",
+         "a shorter record than the citation is treated as incomplete, not as absence")
+    C.eq(run(["Anna Apple"], dv("not_found", "CrossRef", ["Ben Berry"]))["status"], "not_found",
+         "the pass never clears -- it only demotes")
+
+    degraded = run(["Anna Apple", "Ivan Machado"],
+                   dv("verified", "CrossRef", ["Anna Apple", "Ben Berry"],
+                      failed=["Semantic Scholar"]))
+    C.true(degraded["degraded"], "a demoted reference with a failed backend is marked degraded")
+
 def tier3g_stale_verdicts() -> None:
     """A verdict is keyed by paper_id:number, but author-year numbers are extraction-order: a
     re-audit can renumber the bibliography and leave a verdict pointing at a different reference.
@@ -1170,6 +1261,7 @@ def main() -> int:
     tier3b_triage_concurrency()
     tier3c_title_first_gate()
     tier3g_stale_verdicts()
+    tier3h_author_absence()
     tier4_end_to_end()
     tier4b_extraction_lineno()
     tier4e_smallcaps_heading()

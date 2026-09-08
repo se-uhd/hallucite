@@ -4,6 +4,31 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.13.0] - 2026-09-08
+
+### Added
+
+- The audit flags a reference that names an author the matched publication does not have. A
+  backend confirms on the title, so a real title carrying an invented author list was cleared as
+  `verified` and never reached triage: a TSE proof cited "Refactoring Test Smells With JUnit 5"
+  with the right venue, volume and pages but two authors who are not on the paper, CrossRef
+  matched the title, and no human ever saw it. After verification the audit compares the cited
+  authors with the ones the clearing backend holds and demotes the reference to `author_mismatch`,
+  carrying the absent names into the worklist (`authors_absent`) and the per-paper report.
+
+  Precision is the design, because every demotion asks a human to judge named authors. Only the
+  clearing backend's own authors count, and only from a backend that returns complete author lists;
+  the two lists must be the same length, so an abbreviated citation is never read as a fabricated
+  one; venue fragments, the sentence the parser bleeds into the last author, and single-token
+  remains of a split name are skipped; and diacritics, hyphenation, middle initials, compound
+  surnames and swapped given/surname order all compare equal. Measured over 1016 database-verified
+  references from a 95-paper corpus it flags one.
+
+  Demoting on a backend's own `author_mismatch` verdict was measured on the same corpus and is
+  deliberately not used: it flags 22, almost all of them DBLP's truncated author rows
+  (`Experimentation in Software Engineering` stores 3 of 6 authors) or a same-title record for a
+  different work, against references that are cited correctly.
+
 ## [1.12.1] - 2026-09-08
 
 ### Fixed
@@ -496,6 +521,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.13.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.13.0
 [1.12.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.12.1
 [1.12.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.12.0
 [1.11.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.11.0

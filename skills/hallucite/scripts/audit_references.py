@@ -38,6 +38,7 @@ import sqlite3
 import sys
 import time
 import traceback
+import unicodedata
 import urllib.parse
 import urllib.request
 from difflib import SequenceMatcher
@@ -88,6 +89,23 @@ DEFAULT_ONLINE_DBS = [
 # or renamed upstream.
 SECOND_OPINION_DB = "DBLP (hallucite)"
 KNOWN_LOCAL_DBS = ["DBLP", "Standards", SECOND_OPINION_DB]
+
+# Backends whose `found_authors` is the publication's full author list, so a cited author missing
+# from it is a real absence rather than a gap in the record. DBLP is deliberately absent: its rows
+# are truncated (the Wohlin book stores 3 of its 6 authors), and on a 95-paper corpus every DBLP
+# "author_mismatch" against an otherwise-confirmed reference was that truncation, not a bad
+# citation. This is an allow-list, so a backend added upstream simply does not feed the check until
+# someone measures it -- see _author_absence_pass.
+COMPLETE_AUTHOR_DBS = {"CrossRef", "DOI", "Open Library", "PubMed", "Europe PMC",
+                       "Semantic Scholar", "arXiv"}
+
+# Words that mark a parsed "author" as venue or title text the reference parser bled into the
+# author list ("Privacy (SP)", "Evolution (ICSME)"). Comparing those against real names is what
+# turns an author check into noise.
+_NOT_A_NAME = re.compile(
+    r"\b(conference|symposium|workshop|proceedings|journal|transactions|international|ieee|acm|"
+    r"springer|press|arxiv|preprint|reengineering|evolution|engineering|analysis|survey|privacy|"
+    r"security|networking|optimization|maintenance|repositories|reliability)\b", re.I)
 
 
 def now_iso() -> str:
@@ -381,6 +399,95 @@ def _second_opinion_pass(dblp_path: str, entries: list, verifications: list[dict
     return fixed
 
 
+def _name_tokens(name: str) -> set[str]:
+    """Comparable tokens of a personal name: accents folded, punctuation and initials dropped, so
+    "Marcio"/"Márcio", "Kolahdouz-Rahimi"/"Kolahdouz Rahimi" and "Dave Binkley"/"Dave W. Binkley"
+    all compare equal."""
+    folded = unicodedata.normalize("NFKD", name)
+    folded = "".join(c for c in folded if not unicodedata.combining(c))
+    folded = folded.lower().replace("-", " ").replace("'", "").replace("\u2019", "")
+    return {t for t in re.sub(r"[^a-z ]", " ", folded).split() if len(t) > 1}
+
+
+def _person_name(raw: str) -> str | None:
+    """The personal name in a parsed author field, or None when the field is not one.
+
+    Author parsing bleeds the sentence that follows the author list into its last entry
+    ("Christian Bird. Expectations, outcomes...") and picks up venue fragments as whole authors.
+    The sentence is cut at a period that follows a lowercase letter, which leaves a middle initial
+    ("Keila L. Lucas") intact -- cutting there instead truncates the name to "Keila L" and the
+    check then silently skips exactly the kind of author it exists to catch."""
+    n = re.split(r"(?<=[a-z])\.\s+(?=[A-Z])", raw.strip())[0]
+    if any(c.isdigit() for c in n) or "(" in n or ")" in n or _NOT_A_NAME.search(n):
+        return None
+    # A single comparable token is an extraction fragment ("An" from "Anand Ashok Sawant"),
+    # not something to hold a citation to.
+    return n if len(_name_tokens(n)) >= 2 else None
+
+
+def _authors_absent(cited: list[str], found: list[str]) -> list[str]:
+    """Cited authors that no author of the matched publication accounts for. A cited name counts as
+    present when some found author shares a real name token with it, which absorbs swapped
+    given/surname order ("Samuel Binny" / "Binny M. Samuel") and compound surnames
+    ("Marcelo Amorim" / "Marcelo d'Amorim")."""
+    found_tokens = [_name_tokens(a) for a in found]
+    absent = []
+    for raw in cited:
+        name = _person_name(raw)
+        if name is None:
+            continue
+        ct = _name_tokens(name)
+        present = any(ct & ft or any(a.endswith(b) or b.endswith(a)
+                                     for a in ct for b in ft if len(a) > 3 and len(b) > 3)
+                      for ft in found_tokens)
+        if not present:
+            absent.append(raw)
+    return absent
+
+
+def _author_absence_pass(entries: list, verifications: list[dict]) -> int:
+    """Send a reference back to triage when it names an author the matched publication does not
+    have.
+
+    A backend confirms on the title, so a reference can be cleared as `verified` while carrying an
+    author who did not write the work -- a real title, a real venue, correct volume and pages, and
+    an invented author constellation, which is signal (A) in SKILL.md and the hardest bad citation
+    to notice by eye. A TSE proof cited "Refactoring Test Smells With JUnit 5" under an author list
+    with two people who are not on the paper; CrossRef matched the title and the reference was
+    cleared without a human ever seeing it.
+
+    Precision is the whole design, because every demotion asks a human to judge named authors:
+
+    - only the clearing backend's own authors count as evidence, and only from a backend that
+      returns complete author lists (`COMPLETE_AUTHOR_DBS`) -- a truncated DBLP row is why a
+      backend's own `author_mismatch` verdict is not used here at all;
+    - the two lists must be the same length, so an abbreviated citation is never read as a
+      fabricated one;
+    - fields that are not personal names, and names that survive extraction as a single token, are
+      skipped rather than compared.
+
+    Measured over 1016 database-verified references from a 95-paper corpus, this flags one; over
+    the TSE proof above it flags the reference that prompted it. Demotion only -- the pass never
+    clears anything."""
+    demoted = 0
+    for e, v in zip(entries, verifications):
+        if v["status"] != "verified" or v.get("source") not in COMPLETE_AUTHOR_DBS:
+            continue
+        cited = list(getattr(e.reference, "authors", None) or [])
+        found = list(v.get("found_authors") or [])
+        if not cited or len(found) != len(cited):
+            continue
+        absent = _authors_absent(cited, found)
+        if not absent:
+            continue
+        v["status"] = "author_mismatch"
+        # Keep verification_dict's rule true: degraded means backends failed to answer on a
+        # reference that is not verified.
+        v["degraded"] = bool(v.get("failed_dbs"))
+        v["authors_absent"] = absent
+        demoted += 1
+    return demoted
+
 def _retry_dehyphenated(validator: Validator, extractor: PdfExtractor,
                         entries: list, verifications: list[dict]) -> int:
     """Re-verify failed references using their dehyphenated variant, and keep a verifying result.
@@ -441,6 +548,12 @@ def audit_pdf(pdf: Path, extractor: PdfExtractor, validator: Validator | None,
         n = _retry_degraded(validator, parsed_refs, verifications, retry_rounds, retry_delay)
         if n:
             print(f"    recovered {n} degraded verification(s) on retry")
+    # Last, so no clearing pass can undo a demotion.
+    if verifications:
+        n = _author_absence_pass(parsed_entries, verifications)
+        if n:
+            print(f"    sent {n} reference(s) to triage: they name an author the matched "
+                  f"publication does not have", flush=True)
     result_iter = iter(verifications)
 
     references = []

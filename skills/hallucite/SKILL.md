@@ -11,7 +11,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
-  version: "1.12.1"
+  version: "1.13.0"
 ---
 
 # hallucite
@@ -299,6 +299,15 @@ title (T) is itself a fabrication signature and grounds to flag the paper for de
 even when the authors and venue are otherwise real (a real author group on an invented title is the
 hardest case to catch); A, V, and D strengthen the case but are not required. Do not push borderline
 cases to `real-*` to make the report look clean.
+
+An `author_mismatch` status with an `authors_absent` list is signal (A) already found for you: the
+audit matched the work, and the names in that list belong to no author of it. Confirm them against
+the publication itself, then say in the finding which cited authors are not on the paper. A wrong
+first name or a missing co-author is the ordinary slip behind a `partial-match`; a cited author who
+did not write the work at all -- next to a real author group, a correct title, and correct volume
+and pages -- is a fabricated author constellation, and the finding has to name it as one rather
+than call it a slipped field. Record `authors_match=no`. The category still follows the title-first
+rule: the work exists, so it is a `partial-match`, however serious the author fabrication is.
 
 Record each verdict (it persists immediately and is resumable) with the structured signals that
 back the category:
