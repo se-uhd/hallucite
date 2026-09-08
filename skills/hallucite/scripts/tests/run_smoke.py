@@ -22,6 +22,9 @@ Tiers (any failing check exits non-zero):
   3c title-first gate      -- record --signals enforcement (including the contradictory
                               unclear+title_match=no and unknown paper:number rejections),
                               is_fabrication's category gate, and the desk-reject report section.
+  3i dblp author encoding  -- an offline DBLP mirror holding no accented author name is
+                              reported: its ingest dropped those authors, so DBLP disagrees
+                              with correctly cited references. No network.
   3g stale verdicts        -- a verdict recorded against reference text a re-audit then changed
                               is quarantined: report shows it as stale/pending (never the old
                               category against the new reference) and --pending resurfaces it.
@@ -807,6 +810,44 @@ def tier3h_author_absence() -> None:
                       failed=["Semantic Scholar"]))
     C.true(degraded["degraded"], "a demoted reference with a failed backend is marked degraded")
 
+def tier3i_dblp_author_encoding() -> None:
+    """An offline DBLP mirror that holds no accented author name has a broken ingest, and the audit
+    has to say so.
+
+    DBLP is carefully curated and full of accented names, so their total absence is a property of
+    the local build, not of DBLP. On a 4.0M-author mirror every such author was missing outright --
+    Márcio Ribeiro, Martin Höst, Björn Regnell, Petr Tuma and Jácome Cunha appeared in no record --
+    which quietly strips them from the author list of every paper they wrote and makes DBLP
+    disagree with correctly cited references. Nothing else surfaces it: counts and titles look
+    right."""
+    print("Tier 3i: offline DBLP mirror that dropped accented authors (no network)")
+    try:
+        import audit_references as audit
+    except SystemExit:
+        C.skip("dblp encoding: hallucinator absent; audit_references import skipped")
+        return
+
+    def build(path, names):
+        con = sqlite3.connect(path)
+        con.execute("CREATE TABLE authors (id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL)")
+        con.executemany("INSERT INTO authors (name) VALUES (?)", [(n,) for n in names])
+        con.commit()
+        con.close()
+        return Path(path)
+
+    with tempfile.TemporaryDirectory() as td:
+        broken = build(f"{td}/broken.db",
+                       ["Claes Wohlin", "Per Runeson", "Magnus C. Ohlsson", "Elvys Soares"])
+        healthy = build(f"{td}/healthy.db",
+                        ["Claes Wohlin", "Martin Höst", "Björn Regnell", "Márcio Ribeiro"])
+        C.true(audit._dblp_drops_non_ascii_authors(broken),
+               "REGRESSION GUARD: a mirror with no accented author name is reported as broken")
+        C.true(not audit._dblp_drops_non_ascii_authors(healthy),
+               "a mirror that kept accented names is not reported")
+        C.true(not audit._dblp_drops_non_ascii_authors(Path(f"{td}/missing.db")),
+               "a missing database is not reported as broken")
+
+
 def tier3g_stale_verdicts() -> None:
     """A verdict is keyed by paper_id:number, but author-year numbers are extraction-order: a
     re-audit can renumber the bibliography and leave a verdict pointing at a different reference.
@@ -1262,6 +1303,7 @@ def main() -> int:
     tier3c_title_first_gate()
     tier3g_stale_verdicts()
     tier3h_author_absence()
+    tier3i_dblp_author_encoding()
     tier4_end_to_end()
     tier4b_extraction_lineno()
     tier4e_smallcaps_heading()

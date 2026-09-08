@@ -91,11 +91,17 @@ SECOND_OPINION_DB = "DBLP (hallucite)"
 KNOWN_LOCAL_DBS = ["DBLP", "Standards", SECOND_OPINION_DB]
 
 # Backends whose `found_authors` is the publication's full author list, so a cited author missing
-# from it is a real absence rather than a gap in the record. DBLP is deliberately absent: its rows
-# are truncated (the Wohlin book stores 3 of its 6 authors), and on a 95-paper corpus every DBLP
-# "author_mismatch" against an otherwise-confirmed reference was that truncation, not a bad
-# citation. This is an allow-list, so a backend added upstream simply does not feed the check until
-# someone measures it -- see _author_absence_pass.
+# from it is a real absence rather than a gap in the record.
+#
+# DBLP is absent from this list because of the *local mirror*, not because of DBLP: the offline
+# database's ingest drops every author whose name carries a diacritic (see
+# _dblp_drops_non_ascii_authors), so records lose real co-authors -- the Wohlin book keeps 3 of its
+# 6, having lost Höst, Regnell and Wesslén. On a 95-paper corpus every DBLP "author_mismatch"
+# against an otherwise-confirmed reference traced to that, not to a bad citation. Once a build
+# preserves those names, measure DBLP against the corpus again and add it here.
+#
+# This is an allow-list, so a backend added upstream does not feed the check until someone measures
+# it -- see _author_absence_pass.
 COMPLETE_AUTHOR_DBS = {"CrossRef", "DOI", "Open Library", "PubMed", "Europe PMC",
                        "Semantic Scholar", "arXiv"}
 
@@ -203,6 +209,31 @@ def dblp_build_info(dblp_path: Path) -> dict:
 DBLP_STALE_DAYS = 30
 
 
+def _dblp_drops_non_ascii_authors(dblp_path: Path) -> bool:
+    """True when the offline DBLP database holds no author name with a non-ASCII character.
+
+    DBLP itself is carefully curated and full of accented names, so a mirror containing none of
+    them was built by an ingest that mangles them. On a 4.0M-author build every such author was
+    simply absent -- Márcio Ribeiro, Martin Höst, Björn Regnell, Petr Tuma and Jácome Cunha were in
+    no record, folded or otherwise -- which silently drops them from the author list of every
+    publication they wrote. Any DBLP author comparison over that data is then unsound in one
+    direction: it reports a mismatch for references that are cited correctly. Worth a loud warning
+    because nothing else makes it visible -- the counts and the titles all look right."""
+    try:
+        con = sqlite3.connect(f"file:{dblp_path}?mode=ro", uri=True)
+        try:
+            # Indexless scan of a 4M-row table is slow, so cap it: a healthy build hits a non-ASCII
+            # name almost immediately, and finding none in this many rows is already conclusive.
+            row = con.execute(
+                "SELECT 1 FROM (SELECT name FROM authors LIMIT 400000) "
+                "WHERE name GLOB '*[^ -~]*' LIMIT 1").fetchone()
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return False
+    return row is None
+
+
 def _dblp_age_days(dblp_path: Path) -> float | None:
     """Days since the offline DBLP database was built (max of file mtime and the `last_updated`
     metadata epoch), or None if the file is absent."""
@@ -232,6 +263,12 @@ def build_config(args) -> ValidatorConfig:
         if age is not None and age > DBLP_STALE_DAYS:
             print(f"warning: offline DBLP database is {age:.0f} days old (> {DBLP_STALE_DAYS} days); "
                   f"recent papers may be missing. Rebuild with: mise run build-dblp", file=sys.stderr)
+        if _dblp_drops_non_ascii_authors(dblp):
+            print(f"warning: the offline DBLP database at {dblp} holds no author name with a "
+                  f"non-ASCII character, so its ingest dropped every author whose name carries a "
+                  f"diacritic. DBLP is missing those authors from the papers they wrote, and its "
+                  f"author checks will disagree with correctly cited references. Rebuild with a "
+                  f"hallucinator-cli that handles the dump's character entities.", file=sys.stderr)
     elif args.offline:
         # Without an offline DB hallucinator's DBLP backend falls back to querying dblp.org, which
         # would break --offline's no-network promise; disable the backend outright instead.
@@ -459,8 +496,8 @@ def _author_absence_pass(entries: list, verifications: list[dict]) -> int:
     Precision is the whole design, because every demotion asks a human to judge named authors:
 
     - only the clearing backend's own authors count as evidence, and only from a backend that
-      returns complete author lists (`COMPLETE_AUTHOR_DBS`) -- a truncated DBLP row is why a
-      backend's own `author_mismatch` verdict is not used here at all;
+      returns complete author lists (`COMPLETE_AUTHOR_DBS`) -- the offline DBLP mirror's dropped
+      authors are why a backend's own `author_mismatch` verdict is not used here at all;
     - the two lists must be the same length, so an abbreviated citation is never read as a
       fabricated one;
     - fields that are not personal names, and names that survive extraction as a single token, are

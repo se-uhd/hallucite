@@ -4,6 +4,27 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.13.1] - 2026-09-08
+
+### Added
+
+- The audit warns when the offline DBLP database holds no author name with a non-ASCII character.
+  DBLP is carefully curated and full of accented names, so a mirror containing none of them was
+  built by an ingest that mangles the dump's character entities. On a 4.0M-author build every such
+  author was absent outright -- Márcio Ribeiro, Martin Höst, Björn Regnell, Petr Tuma and Jácome
+  Cunha appeared in no record, folded or otherwise -- which strips them from the author list of
+  every paper they wrote. DBLP then reports an author mismatch for references that are cited
+  correctly, and its all-candidates second opinion fails to confirm real work. Nothing else made
+  this visible: publication counts, titles and keys all look right.
+
+### Fixed
+
+- Corrected why `COMPLETE_AUTHOR_DBS` omits DBLP. 1.13.0 attributed the missing co-authors to
+  truncated DBLP rows. They are not DBLP's: the local mirror's ingest drops them, and the Wohlin
+  book keeps 3 of its 6 authors because Höst, Regnell and Wesslén are absent from the whole
+  database. The exclusion stands while a build behaves this way; once one preserves those names,
+  DBLP should be measured against the corpus again and added.
+
 ## [1.13.0] - 2026-09-08
 
 ### Added
@@ -521,6 +542,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.13.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.13.1
 [1.13.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.13.0
 [1.12.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.12.1
 [1.12.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.12.0
