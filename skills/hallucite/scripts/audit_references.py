@@ -208,6 +208,10 @@ def dblp_build_info(dblp_path: Path) -> dict:
 
 DBLP_STALE_DAYS = 30
 
+# Below this an offline mirror is a failed build, not a bibliography: the real one holds
+# millions of authors.
+_DBLP_MIN_AUTHORS = 1000
+
 
 def _dblp_drops_non_ascii_authors(dblp_path: Path) -> bool:
     """True when the offline DBLP database holds no author name with a non-ASCII character.
@@ -222,6 +226,13 @@ def _dblp_drops_non_ascii_authors(dblp_path: Path) -> bool:
     try:
         con = sqlite3.connect(f"file:{dblp_path}?mode=ro", uri=True)
         try:
+            # A database too small to be a real mirror says nothing about entity handling -- and an
+            # empty one would otherwise report as "dropped every accented author", which sends the
+            # reader after the wrong bug. _dblp_is_empty covers that case separately.
+            n = con.execute("SELECT COUNT(*) FROM (SELECT 1 FROM authors LIMIT ?)",
+                            (_DBLP_MIN_AUTHORS,)).fetchone()[0]
+            if n < _DBLP_MIN_AUTHORS:
+                return False
             # Indexless scan of a 4M-row table is slow, so cap it: a healthy build hits a non-ASCII
             # name almost immediately, and finding none in this many rows is already conclusive.
             row = con.execute(
@@ -232,6 +243,23 @@ def _dblp_drops_non_ascii_authors(dblp_path: Path) -> bool:
     except sqlite3.Error:
         return False
     return row is None
+
+
+def _dblp_publication_count(dblp_path: Path) -> int | None:
+    """Publications in the offline mirror, or None if it cannot be read.
+
+    `update-dblp` writes a database and exits 0 even when the download brought back a bot-check
+    HTML page instead of the dump, leaving a valid, empty, useless mirror in place of a good one.
+    Nothing downstream distinguishes that from a paper whose references DBLP simply does not
+    hold."""
+    try:
+        con = sqlite3.connect(f"file:{dblp_path}?mode=ro", uri=True)
+        try:
+            return con.execute("SELECT COUNT(*) FROM publications").fetchone()[0]
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return None
 
 
 def _dblp_age_days(dblp_path: Path) -> float | None:
@@ -263,6 +291,13 @@ def build_config(args) -> ValidatorConfig:
         if age is not None and age > DBLP_STALE_DAYS:
             print(f"warning: offline DBLP database is {age:.0f} days old (> {DBLP_STALE_DAYS} days); "
                   f"recent papers may be missing. Rebuild with: mise run build-dblp", file=sys.stderr)
+        n_pubs = _dblp_publication_count(dblp)
+        if n_pubs is not None and n_pubs < _DBLP_MIN_AUTHORS:
+            print(f"warning: the offline DBLP database at {dblp} holds only {n_pubs} publication(s), "
+                  f"so it is a failed build, not a mirror -- `update-dblp` writes an empty database "
+                  f"and exits 0 when the download returns a bot-check page instead of the dump. "
+                  f"Every DBLP lookup in this run will miss. Rebuild it to a scratch path first and "
+                  f"keep the old file until the new one is verified.", file=sys.stderr)
         if _dblp_drops_non_ascii_authors(dblp):
             print(f"warning: the offline DBLP database at {dblp} holds no author name with a "
                   f"non-ASCII character, so its ingest dropped every author whose name carries a "

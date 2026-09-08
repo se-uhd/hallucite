@@ -4,6 +4,38 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.14.0] - 2026-09-08
+
+### Added
+
+- A patch for the upstream ingest bug, `dblp-entity-fix.patch`, against hallucinator 0.2.3. DBLP
+  writes Latin-1 letters as the named entities its DTD declares (`&aacute;`, `&ouml;`), and
+  `hallucinator-dblp`'s XML parser calls quick-xml's `unescape()`, which without the crate's
+  `escape-html` feature knows only the five predefined XML entities. On failure the parser dropped
+  the whole text chunk, so the author name came out empty and the author was never recorded. The
+  patch enables `escape-html` and falls back to the raw text instead of discarding the field.
+  Verified against the real records: `journals/tse/SoaresRGAS23` and `books/sp/WohlinRHOR00`
+  recover Márcio Ribeiro, André Santos, Martin Höst, Björn Regnell and Anders Wesslén, and the
+  crate's 50 tests still pass. Apply it, rebuild `hallucinator-cli`, then rebuild the mirror.
+
+- The audit warns when the offline DBLP database holds almost no publications. `update-dblp`
+  writes a database and exits 0 even when the download returned a bot-check HTML page instead of
+  the dump, which is exactly what dblp.org serves at the moment. Nothing downstream separates that
+  empty mirror from a paper whose references DBLP genuinely does not hold.
+
+### Changed
+
+- `mise run build-dblp` builds to a scratch file and swaps it in only after checking that the
+  result holds over a million publications and that accented author names survived. Writing
+  straight to the destination replaced a working 2.6 GB mirror with an empty one, silently, on a
+  download that returned a bot-check page.
+
+### Fixed
+
+- An empty offline mirror is no longer reported as one that dropped its accented authors. Zero
+  authors trivially means zero accented authors, so the entity check now requires a
+  mirror-sized author table before making that claim.
+
 ## [1.13.1] - 2026-09-08
 
 ### Added
@@ -542,6 +574,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.14.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.14.0
 [1.13.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.13.1
 [1.13.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.13.0
 [1.12.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.12.1

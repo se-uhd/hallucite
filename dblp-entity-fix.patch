@@ -1,0 +1,83 @@
+--- a/Cargo.toml	2026-08-28 14:23:19
++++ b/Cargo.toml	2026-09-08 23:18:25
+@@ -88,7 +88,7 @@
+ 
+ # HTML/XML parsing
+ scraper = "0.22"
+-quick-xml = { version = "0.37", features = ["encoding"] }
++quick-xml = { version = "0.37", features = ["encoding", "escape-html"] }
+ 
+ # Archive handling
+ zip = "2"
+--- a/crates/hallucinator-dblp/src/xml_parser.rs	2026-08-28 14:23:19
++++ b/crates/hallucinator-dblp/src/xml_parser.rs	2026-09-08 23:17:47
+@@ -129,10 +129,15 @@
+             }
+ 
+             Ok(Event::Text(ref e)) => {
+-                if reading.is_some()
+-                    && let Ok(text) = e.unescape()
+-                {
+-                    text_buf.push_str(&text);
++                if reading.is_some() {
++                    // DBLP's dump writes Latin-1 letters as the named entities its DTD declares
++                    // (`&aacute;`, `&ouml;`). Dropping the chunk when one of those fails to resolve
++                    // silently deletes the whole author name, so the author vanishes from every
++                    // paper they wrote. Fall back to the raw bytes instead of losing the field.
++                    match e.unescape() {
++                        Ok(text) => text_buf.push_str(&text),
++                        Err(_) => text_buf.push_str(&String::from_utf8_lossy(e.as_ref())),
++                    }
+                 }
+             }
+ 
+@@ -347,3 +352,49 @@
+         assert_eq!(pubs.len(), 4);
+     }
+ }
++
++#[cfg(test)]
++mod entity_tests {
++    use super::*;
++
++    /// DBLP writes Latin-1 letters as the named entities its DTD declares. Every author whose
++    /// name used one was dropped from the record entirely, so `journals/tse/SoaresRGAS23` kept
++    /// 3 of its 5 authors and the Wohlin book 3 of its 5.
++    #[test]
++    fn named_entities_in_author_names_survive() {
++        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
++<dblp>
++<article key="journals/tse/SoaresRGAS23" mdate="2023-03-01">
++  <author>Elvys Soares</author>
++  <author>M&aacute;rcio Ribeiro</author>
++  <author>Rohit Gheyi</author>
++  <author>Guilherme Amaral</author>
++  <author>Andr&eacute; Santos</author>
++  <title>Refactoring Test Smells With JUnit 5.</title>
++</article>
++<book key="books/sp/WohlinRHOR00" mdate="2012-01-01">
++  <author>Claes Wohlin</author>
++  <author>Per Runeson</author>
++  <author>Martin H&ouml;st</author>
++  <author>Magnus C. Ohlsson</author>
++  <author>Bj&ouml;rn Regnell</author>
++  <author>Anders Wessl&eacute;n</author>
++  <title>Experimentation in Software Engineering.</title>
++</book>
++</dblp>"#;
++        let mut pubs = Vec::new();
++        parse_xml(xml.as_bytes(), |p| pubs.push(p));
++
++        assert_eq!(pubs.len(), 2);
++        assert_eq!(
++            pubs[0].authors,
++            vec!["Elvys Soares", "Márcio Ribeiro", "Rohit Gheyi",
++                 "Guilherme Amaral", "André Santos"]
++        );
++        assert_eq!(
++            pubs[1].authors,
++            vec!["Claes Wohlin", "Per Runeson", "Martin Höst",
++                 "Magnus C. Ohlsson", "Björn Regnell", "Anders Wesslén"]
++        );
++    }
++}

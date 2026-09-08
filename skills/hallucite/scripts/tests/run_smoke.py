@@ -827,25 +827,49 @@ def tier3i_dblp_author_encoding() -> None:
         C.skip("dblp encoding: hallucinator absent; audit_references import skipped")
         return
 
-    def build(path, names):
+    def build(path, names, n_pubs=0):
+        """A mirror holding `names` plus enough filler to pass for a real build."""
         con = sqlite3.connect(path)
-        con.execute("CREATE TABLE authors (id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL)")
-        con.executemany("INSERT INTO authors (name) VALUES (?)", [(n,) for n in names])
+        con.executescript(
+            "CREATE TABLE authors (id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL);"
+            "CREATE TABLE publications (id INTEGER PRIMARY KEY, key TEXT UNIQUE NOT NULL,"
+            " title TEXT NOT NULL);")
+        filler = [(f"Filler Author {i}",) for i in range(audit._DBLP_MIN_AUTHORS)]
+        con.executemany("INSERT INTO authors (name) VALUES (?)",
+                        [(n,) for n in names] + filler)
+        con.executemany("INSERT INTO publications (key, title) VALUES (?, ?)",
+                        [(f"conf/x/P{i}", f"Paper {i}") for i in range(n_pubs)])
         con.commit()
         con.close()
         return Path(path)
 
     with tempfile.TemporaryDirectory() as td:
         broken = build(f"{td}/broken.db",
-                       ["Claes Wohlin", "Per Runeson", "Magnus C. Ohlsson", "Elvys Soares"])
+                       ["Claes Wohlin", "Per Runeson", "Magnus C. Ohlsson", "Elvys Soares"],
+                       n_pubs=5)
         healthy = build(f"{td}/healthy.db",
-                        ["Claes Wohlin", "Martin Höst", "Björn Regnell", "Márcio Ribeiro"])
+                        ["Claes Wohlin", "Martin Höst", "Björn Regnell", "Márcio Ribeiro"],
+                        n_pubs=5)
         C.true(audit._dblp_drops_non_ascii_authors(broken),
                "REGRESSION GUARD: a mirror with no accented author name is reported as broken")
         C.true(not audit._dblp_drops_non_ascii_authors(healthy),
                "a mirror that kept accented names is not reported")
         C.true(not audit._dblp_drops_non_ascii_authors(Path(f"{td}/missing.db")),
                "a missing database is not reported as broken")
+
+        # A failed download leaves a valid, empty database behind and `update-dblp` exits 0. That
+        # is a different fault from a mangled ingest and must not be reported as one -- sending
+        # the reader after character entities when the dump never arrived.
+        empty = build(f"{td}/empty.db", [], n_pubs=0)
+        con = sqlite3.connect(f"{td}/empty.db")
+        con.execute("DELETE FROM authors")
+        con.commit()
+        con.close()
+        C.eq(audit._dblp_publication_count(empty), 0, "an empty mirror reports 0 publications")
+        C.true(not audit._dblp_drops_non_ascii_authors(empty),
+               "REGRESSION GUARD: an empty mirror is not misreported as having dropped authors")
+        C.eq(audit._dblp_publication_count(Path(f"{td}/missing.db")), None,
+             "a missing database has no publication count")
 
 
 def tier3g_stale_verdicts() -> None:

@@ -60,7 +60,31 @@ echo "installed .bin/hallucinator-cli $(./.bin/hallucinator-cli --version)"
 
 [tasks.build-dblp]
 description = "Build the offline DBLP database at ~/hallucite/dblp.db (one-time; ~4.6 GB, ~20-30 min)"
-run = '.bin/hallucinator-cli update-dblp "${HALLUCITE_DBLP:-$HOME/hallucite/dblp.db}"'
+# Builds to a scratch file and swaps only after the result is checked. `update-dblp` writes a
+# database and exits 0 even when the download returned a bot-check HTML page instead of the dump,
+# so writing straight to the real path replaces a working 2.6 GB mirror with an empty one and says
+# nothing. Every DBLP lookup then silently misses.
+run = """
+set -euo pipefail
+DEST="${HALLUCITE_DBLP:-$HOME/hallucite/dblp.db}"
+TMP="$DEST.building"
+rm -f "$TMP"
+.bin/hallucinator-cli update-dblp "$TMP"
+pubs=$(sqlite3 "$TMP" 'SELECT COUNT(*) FROM publications;')
+if [ "$pubs" -lt 1000000 ]; then
+  echo "build-dblp: only $pubs publication(s) -- the download did not return the dump." >&2
+  echo "build-dblp: keeping the existing database; the failed build is at $TMP" >&2
+  exit 1
+fi
+accented=$(sqlite3 "$TMP" "SELECT COUNT(*) FROM (SELECT name FROM authors LIMIT 400000) WHERE name GLOB '*[^ -~]*';")
+if [ "$accented" -eq 0 ]; then
+  echo "build-dblp: no author name carries a diacritic -- this hallucinator-cli mangles the" >&2
+  echo "build-dblp: dump's character entities. Keeping the existing database; build at $TMP" >&2
+  exit 1
+fi
+mv "$TMP" "$DEST"
+echo "build-dblp: $pubs publications, accented author names present -> $DEST"
+"""
 
 [tasks.audit]
 # The script's own defaults already cover --dblp ($HALLUCITE_DBLP, else ~/hallucite/dblp.db) and
