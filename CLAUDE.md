@@ -6,7 +6,13 @@
 (extract, then verify against DBLP, CrossRef, arXiv, and others) use no LLM; verification queries
 the online databases unless `--offline` restricts it to the local ones.
 Stage 3 (triage the database-unverified residue) is the LLM step, done interactively by you. See
-`PLAN.md` for the design and architecture, `README.md` for commands.
+`PLAN.md` for the design and architecture, `README.md` for commands, `TODO.md` for what is in
+flight.
+
+Verification currently runs on the external `hallucinator` package, which hallucite is in the middle
+of replacing: `VERIFICATION-SPEC.md` is the contract a replacement has to meet and `TODO.md` has the
+steps. That package is AGPL-3.0-or-later and this repo is MIT, which is why it stays an arm's-length
+pip dependency and why no code is copied across. Nothing goes upstream to it.
 
 One repo, two roles: it is the runnable project (mise tasks) and an installable plugin for Claude
 Code and Codex CLI. Claude Code uses `.claude-plugin/plugin.json` plus
@@ -29,12 +35,21 @@ No separate plugin repo, no submodule.
   skips provisioning, and `$HALLUCITE_VENV` relocates the managed venv. `run.sh check-env` is the
   preflight.
 - In a repo clone you can equivalently use mise tasks: `mise run install | install-cli |
-  build-dblp | audit | lint-md`. Python is pinned to 3.12 (hallucinator's wheels). Both paths run
-  the same scripts in `skills/hallucite/scripts/`.
+  install-cli-patched | fetch-dblp-dump | build-dblp | audit | lint-md`. Python is pinned to 3.12
+  (hallucinator's wheels). Both paths run the same scripts in `skills/hallucite/scripts/`.
 - The offline DBLP database defaults to `~/hallucite/dblp.db`, outside this repo (large, not
   committed); override the location with `$HALLUCITE_DBLP`. The audit warns at run time when it is
   over 30 days old. Do not put it under the repo: an installed plugin is cloned to a managed dir
   the user never sees, so an in-repo (even gitignored) path would not work for marketplace installs.
+- The mirror has two ways of being quietly wrong, and the audit warns about both because nothing
+  else makes them visible -- publication counts, titles and record keys all look right either way.
+  The stock `hallucinator-cli` mangles the dump's character entities and drops every author whose
+  name carries a diacritic, so build with `install-cli-patched` (which applies
+  `dblp-entity-fix.patch`); `install-cli` refuses to overwrite a patched binary without `FORCE=1`.
+  And `update-dblp` writes a database and exits 0 when the download returns dblp.org's bot-check
+  page instead of the dump, so `build-dblp` builds to a scratch file and swaps only after checking
+  the publication count and that accented names survived. `fetch-dblp-dump` gets the dump with a
+  real browser when the bot check is up.
 - Stage 1/2 driver: `skills/hallucite/scripts/audit_references.py` (parses each reference via
   `pdf_references.py` plus hallucinator's `parse_reference`, then runs `Validator`). The target
   is 0 unparsed references.
@@ -112,7 +127,20 @@ No separate plugin repo, no submodule.
   audit validates backend names at run time -- online runs warn about configured names that never
   appear (`DEFAULT_ONLINE_DBS`); `--offline` runs warn about live backends that are not known-local
   (`KNOWN_LOCAL_DBS`). A silent name mismatch is what caused both the `mismatch` and the
-  `DOI Resolver` bugs.
+  `DOI Resolver` bugs. `VERIFICATION-SPEC.md` states the vocabulary a verifier has to emit;
+  `characterize.py` records the current behaviour on real references and holds a replacement to it.
+- Measure a detection rule against a corpus before shipping it, and read the flags rather than the
+  count. A rule that looks right on the case that motivated it can be almost entirely false
+  positives at scale: demoting a verified reference on a backend's own `author_mismatch` flagged 22
+  of 1016 corpus references, essentially all of them a mirror's own dropped authors rather than bad
+  citations. Comparing the cited authors against the *clearing* backend's list instead flagged one,
+  and still caught the real case. Every false demotion asks a human to judge named authors, so
+  precision is the constraint. Expect the noise to come from data quality -- truncated author rows,
+  venue text parsed as an author, name-form differences -- not from bad citations. Record the
+  measurement in the CHANGELOG entry, including the rules that were measured and rejected.
+- Decide from the data in hand, not from a name. Hard-coding DBLP out of the complete-author set
+  because the mirror was broken survived the mirror being repaired, and a reference with two
+  invented authors verified again. `_complete_author_dbs` now decides per run.
 - Plans and READMEs describe only the current approach. Do not narrate dropped or superseded
   ideas, or "out of scope" history. After a scope change, rewrite the doc as if the final
   approach were always the plan.
