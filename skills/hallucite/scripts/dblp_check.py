@@ -72,7 +72,8 @@ def _extra_columns(con) -> list[str]:
         have = {r[1] for r in con.execute("PRAGMA table_info(publications)")}
     except sqlite3.Error:
         return []
-    return [c for c in ("year", "venue", "ee", "kind") if c in have]
+    return [c for c in ("year", "venue", "ee", "kind", "volume", "number", "pages")
+            if c in have]
 
 
 def _norm_title(t: str) -> str:
@@ -187,3 +188,76 @@ def second_opinion(db_path: str, title: str, authors: list[str]) -> SecondOpinio
     finally:
         con.close()
     return None
+
+
+def _and_query(title: str) -> list[str]:
+    """An FTS5 AND query over the title's hyphen-free words, or [] if too few remain to be
+    selective. Words containing a hyphen are dropped rather than guessed at."""
+    words = [w for w in _fold(title).split() if "-" not in w]
+    tokens = [t for w in words for t in re.findall(r"[a-z0-9]+", w) if len(t) >= 4]
+    if len(tokens) < _MIN_TOKENS:
+        return []
+    return [" AND ".join(f'"{t}"' for t in tokens[:10])]
+
+
+def _norm_loose(s: str) -> str:
+    """A title reduced to its letters and digits, so hyphenation and punctuation cannot separate
+    two spellings of the same title."""
+    return re.sub(r"[^a-z0-9]", "", _fold(s))
+
+
+def record_context(db_path: str, title: str) -> dict | None:
+    """DBLP's own metadata for a uniquely title-matching record, as evidence for a human.
+
+    Deliberately not a check. Measured over the corpus, comparing these fields automatically is far
+    too noisy to demote a reference on: DBLP's venue strings are abbreviations that legitimately do
+    not appear in a citation ("CoRR", "ESEC/SIGSOFT FSE" -- 27% disagreed), a work often has two
+    valid DOIs (preprint and published, ACM Queue and CACM, IEEE's own duplicates -- 6.7% still
+    disagreed after excluding truncations and arXiv), and hallucinator parses no year, so a year
+    check mostly measures whichever four-digit number a regex found in the raw citation. Shown to
+    the triager, who can tell a wrong year from an online-first one, the same fields are useful.
+
+    No author check here: this is context for a reference already going to review, not a
+    confirmation. Returns None unless exactly one record carries the title."""
+    if not (title or "").strip():
+        return None
+    # `_phrase_queries` asks both hyphen readings of the whole title, which fails when one title
+    # needs both at once: "Refactoring ... de-velopers keep up-to-date" matches neither the joined
+    # spelling ("uptodate" is no token) nor the split one ("de velopers" is not the word). Falling
+    # back to an AND over the words that carry no hyphen at all sidesteps the question -- the
+    # remaining words are more than selective enough, and the loose title comparison below is what
+    # actually decides.
+    queries = _phrase_queries(title) + _and_query(title)
+    if not queries:
+        return None
+    # Compare with every non-alphanumeric removed on both sides. A title broken across a line keeps
+    # its hyphen ("de-velopers"), and a real one may carry its own ("Up-to-Date"); dropping them
+    # everywhere makes both agree without having to know which is which. Looser than the
+    # confirmation path deliberately -- this decides what a human is shown, not what is cleared.
+    want = _norm_loose(title)
+    try:
+        con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    except sqlite3.Error:
+        return None
+    try:
+        extra = _extra_columns(con)
+        if not extra:
+            return None
+        cols = "".join(f", p.{c}" for c in extra)
+        hits: dict[int, dict] = {}
+        for q in queries:
+            try:
+                rows = con.execute(
+                    f"SELECT p.id, p.key, p.title{cols} FROM publications_fts f "
+                    "JOIN publications p ON p.id = f.rowid "
+                    "WHERE publications_fts MATCH ? LIMIT ?", (q, _MAX_CANDIDATES)).fetchall()
+            except sqlite3.Error:
+                continue
+            for row in rows:
+                if _norm_loose(row[2]) == want:
+                    hits[row[0]] = {"key": row[1], **dict(zip(extra, row[3:]))}
+        if len(hits) != 1:
+            return None
+        return next(iter(hits.values()))
+    finally:
+        con.close()

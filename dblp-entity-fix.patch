@@ -10,8 +10,8 @@
  # Archive handling
  zip = "2"
 --- a/crates/hallucinator-dblp/src/xml_parser.rs	2026-08-28 14:23:19
-+++ b/crates/hallucinator-dblp/src/xml_parser.rs	2026-09-09 09:47:14
-@@ -19,6 +19,12 @@
++++ b/crates/hallucinator-dblp/src/xml_parser.rs	2026-09-09 10:11:33
+@@ -19,6 +19,16 @@
      pub authors: Vec<String>,
      /// First electronic edition URL (from `<ee>` element)
      pub url: Option<String>,
@@ -21,34 +21,47 @@
 +    pub venue: Option<String>,
 +    /// The DBLP record element: "article", "inproceedings", "book", ...
 +    pub kind: String,
++    /// Volume, issue number and page range (from `<volume>`, `<number>`, `<pages>`)
++    pub volume: Option<String>,
++    pub number: Option<String>,
++    pub pages: Option<String>,
  }
  
  /// DBLP XML element types that represent publications.
-@@ -41,6 +47,8 @@
+@@ -41,6 +51,11 @@
      Title,
      Author,
      Url,
 +    Year,
 +    Venue,
++    Volume,
++    Number,
++    Pages,
  }
  
  impl Field {
-@@ -49,6 +57,9 @@
+@@ -49,6 +64,12 @@
              Field::Title => b"title",
              Field::Author => b"author",
              Field::Url => b"ee",
 +            Field::Year => b"year",
 +            // `<booktitle>` closes a Venue started there; see `reading_booktitle`.
 +            Field::Venue => b"journal",
++            Field::Volume => b"volume",
++            Field::Number => b"number",
++            Field::Pages => b"pages",
          }
      }
  }
-@@ -77,10 +88,15 @@
+@@ -77,10 +98,18 @@
      let mut current_title = String::new();
      let mut current_authors: Vec<String> = Vec::new();
      let mut current_url: Option<String> = None;
 +    let mut current_year: Option<i32> = None;
 +    let mut current_venue: Option<String> = None;
++    let mut current_volume: Option<String> = None;
++    let mut current_number: Option<String> = None;
++    let mut current_pages: Option<String> = None;
 +    let mut current_kind = String::new();
      let mut reading: Option<Field> = None;
      let mut text_buf = String::new();
@@ -59,12 +72,15 @@
  
      loop {
          match xml.read_event_into(&mut buf) {
-@@ -94,8 +110,12 @@
+@@ -94,8 +123,15 @@
                      current_title.clear();
                      current_authors.clear();
                      current_url = None;
 +                    current_year = None;
 +                    current_venue = None;
++                    current_volume = None;
++                    current_number = None;
++                    current_pages = None;
 +                    current_kind = String::from_utf8_lossy(name_ref).into_owned();
                      reading = None;
                      reading_editor = false;
@@ -72,12 +88,24 @@
  
                      for attr in e.attributes().flatten() {
                          if attr.key.as_ref() == b"key" {
-@@ -122,6 +142,15 @@
+@@ -122,6 +158,27 @@
                              reading = Some(Field::Url);
                              text_buf.clear();
                          }
 +                        b"year" if current_year.is_none() => {
 +                            reading = Some(Field::Year);
++                            text_buf.clear();
++                        }
++                        b"volume" if current_volume.is_none() => {
++                            reading = Some(Field::Volume);
++                            text_buf.clear();
++                        }
++                        b"number" if current_number.is_none() => {
++                            reading = Some(Field::Number);
++                            text_buf.clear();
++                        }
++                        b"pages" if current_pages.is_none() => {
++                            reading = Some(Field::Pages);
 +                            text_buf.clear();
 +                        }
 +                        b"journal" | b"booktitle" if current_venue.is_none() => {
@@ -88,7 +116,7 @@
                          _ => {}
                      }
                  }
-@@ -129,10 +158,15 @@
+@@ -129,10 +186,15 @@
              }
  
              Ok(Event::Text(ref e)) => {
@@ -108,7 +136,7 @@
                  }
              }
  
-@@ -151,6 +185,8 @@
+@@ -151,6 +213,8 @@
                  if let Some(ref field) = reading {
                      let target = if reading_editor {
                          b"editor" as &[u8]
@@ -117,7 +145,7 @@
                      } else {
                          field.element_name()
                      };
-@@ -171,9 +207,18 @@
+@@ -171,9 +235,33 @@
                                      current_url = Some(text);
                                  }
                              }
@@ -129,6 +157,21 @@
 +                                    current_venue = Some(text);
 +                                }
 +                            }
++                            Some(Field::Volume) => {
++                                if !text.is_empty() {
++                                    current_volume = Some(text);
++                                }
++                            }
++                            Some(Field::Number) => {
++                                if !text.is_empty() {
++                                    current_number = Some(text);
++                                }
++                            }
++                            Some(Field::Pages) => {
++                                if !text.is_empty() {
++                                    current_pages = Some(text);
++                                }
++                            }
                              None => {}
                          }
                          reading_editor = false;
@@ -136,17 +179,20 @@
                      }
                  } else if in_pub && is_pub_element(name_ref) {
                      // End of publication element — emit if we got a title
-@@ -183,6 +228,9 @@
+@@ -183,6 +271,12 @@
                              title: std::mem::take(&mut current_title),
                              authors: std::mem::take(&mut current_authors),
                              url: current_url.take(),
 +                            year: current_year.take(),
 +                            venue: current_venue.take(),
 +                            kind: std::mem::take(&mut current_kind),
++                            volume: current_volume.take(),
++                            number: current_number.take(),
++                            pages: current_pages.take(),
                          });
                      }
                      in_pub = false;
-@@ -345,5 +393,109 @@
+@@ -345,5 +439,109 @@
          parse_xml(xml.as_bytes(), |p| pubs.push(p));
  
          assert_eq!(pubs.len(), 4);
@@ -257,8 +303,8 @@
 +    }
 +}
 --- a/crates/hallucinator-dblp/src/db.rs	2026-08-28 14:23:19
-+++ b/crates/hallucinator-dblp/src/db.rs	2026-09-09 09:47:59
-@@ -23,7 +23,15 @@
++++ b/crates/hallucinator-dblp/src/db.rs	2026-09-09 10:12:11
+@@ -23,7 +23,18 @@
          CREATE TABLE IF NOT EXISTS publications (
              id INTEGER PRIMARY KEY,
              key TEXT UNIQUE NOT NULL,
@@ -271,20 +317,17 @@
 +            year INTEGER,
 +            venue TEXT,
 +            ee TEXT,
-+            kind TEXT
++            kind TEXT,
++            volume TEXT,
++            number TEXT,
++            pages TEXT
          );
  
          CREATE TABLE IF NOT EXISTS publication_authors (
-@@ -128,11 +136,32 @@
-     key: &str,
-     title: &str,
- ) -> Result<i64, DblpError> {
--    let mut stmt = conn.prepare_cached(
--        "INSERT INTO publications (key, title) VALUES (?1, ?2) \
--         ON CONFLICT(key) DO UPDATE SET title = excluded.title RETURNING id",
-+    insert_or_get_publication_full(conn, key, title, None, None, None, "")
-+}
-+
+@@ -123,16 +134,36 @@
+ 
+ /// Insert or update a publication by key, returning the integer ID.
+ /// Uses RETURNING clause for a single round-trip instead of INSERT + SELECT.
 +/// Insert or update a publication with the record metadata the dump carries alongside the title.
 +///
 +/// `year`, `venue` and `ee` are what a citation is checked against beyond its title and authors:
@@ -292,34 +335,92 @@
 +/// at all. `kind` (the DBLP element: "article", "inproceedings", "book", ...) separates a book from
 +/// an article of the same name, which authors alone cannot always do.
 +#[allow(clippy::too_many_arguments)]
-+pub fn insert_or_get_publication_full(
-+    conn: &Connection,
-+    key: &str,
-+    title: &str,
+ pub fn insert_or_get_publication(
+     conn: &Connection,
+     key: &str,
+     title: &str,
 +    year: Option<i32>,
 +    venue: Option<&str>,
 +    ee: Option<&str>,
 +    kind: &str,
-+) -> Result<i64, DblpError> {
-+    let mut stmt = conn.prepare_cached(
-+        "INSERT INTO publications (key, title, year, venue, ee, kind) \
-+         VALUES (?1, ?2, ?3, ?4, ?5, ?6) \
++    volume: Option<&str>,
++    number: Option<&str>,
++    pages: Option<&str>,
+ ) -> Result<i64, DblpError> {
+     let mut stmt = conn.prepare_cached(
+-        "INSERT INTO publications (key, title) VALUES (?1, ?2) \
+-         ON CONFLICT(key) DO UPDATE SET title = excluded.title RETURNING id",
++        "INSERT INTO publications (key, title, year, venue, ee, kind, volume, number, pages) \
++         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9) \
 +         ON CONFLICT(key) DO UPDATE SET title = excluded.title, year = excluded.year, \
-+         venue = excluded.venue, ee = excluded.ee, kind = excluded.kind RETURNING id",
++         venue = excluded.venue, ee = excluded.ee, kind = excluded.kind, \
++         volume = excluded.volume, number = excluded.number, pages = excluded.pages RETURNING id",
      )?;
 -    let id: i64 = stmt.query_row(params![key, title], |row| row.get(0))?;
-+    let id: i64 = stmt.query_row(params![key, title, year, venue, ee, kind], |row| row.get(0))?;
++    let id: i64 = stmt.query_row(
++        params![key, title, year, venue, ee, kind, volume, number, pages],
++        |row| row.get(0),
++    )?;
      Ok(id)
  }
  
+@@ -237,7 +268,7 @@
+     fn test_insert_and_query_batch() {
+         let conn = setup_db();
+         let author_id = insert_or_get_author(&conn, "Alice Smith").unwrap();
+-        let pub_id = insert_or_get_publication(&conn, "rec/1", "Test Paper Title").unwrap();
++        let pub_id = insert_or_get_publication(&conn, "rec/1", "Test Paper Title", None, None, None, "", None, None, None).unwrap();
+ 
+         let mut batch = InsertBatch::new();
+         batch.publication_authors.push((pub_id, author_id));
+@@ -253,8 +284,8 @@
+     fn test_upsert_updates_existing() {
+         let conn = setup_db();
+ 
+-        insert_or_get_publication(&conn, "rec/1", "Old Title").unwrap();
+-        insert_or_get_publication(&conn, "rec/1", "New Title").unwrap();
++        insert_or_get_publication(&conn, "rec/1", "Old Title", None, None, None, "", None, None, None).unwrap();
++        insert_or_get_publication(&conn, "rec/1", "New Title", None, None, None, "", None, None, None).unwrap();
+ 
+         let title: String = conn
+             .query_row(
+@@ -286,7 +317,7 @@
+         let conn = setup_db();
+         let alice_id = insert_or_get_author(&conn, "Alice").unwrap();
+         let bob_id = insert_or_get_author(&conn, "Bob").unwrap();
+-        let pub_id = insert_or_get_publication(&conn, "rec/1", "Paper").unwrap();
++        let pub_id = insert_or_get_publication(&conn, "rec/1", "Paper", None, None, None, "", None, None, None).unwrap();
+ 
+         let mut batch = InsertBatch::new();
+         batch.publication_authors.push((pub_id, alice_id));
+@@ -306,7 +337,7 @@
+         let conn = setup_db();
+         let a = insert_or_get_author(&conn, "Wenbo Guo 0001").unwrap();
+         let b = insert_or_get_author(&conn, "Alice Smith").unwrap();
+-        let pub_id = insert_or_get_publication(&conn, "rec/x", "Paper").unwrap();
++        let pub_id = insert_or_get_publication(&conn, "rec/x", "Paper", None, None, None, "", None, None, None).unwrap();
+         let mut batch = InsertBatch::new();
+         batch.publication_authors.push((pub_id, a));
+         batch.publication_authors.push((pub_id, b));
+@@ -342,8 +373,8 @@
+     #[test]
+     fn test_fts_rebuild_and_query() {
+         let conn = setup_db();
+-        insert_or_get_publication(&conn, "rec/1", "Attention is All you Need").unwrap();
+-        insert_or_get_publication(&conn, "rec/2", "BERT Pre-training").unwrap();
++        insert_or_get_publication(&conn, "rec/1", "Attention is All you Need", None, None, None, "", None, None, None).unwrap();
++        insert_or_get_publication(&conn, "rec/2", "BERT Pre-training", None, None, None, "", None, None, None).unwrap();
+         rebuild_fts_index(&conn).unwrap();
+ 
+         // FTS query
 --- a/crates/hallucinator-dblp/src/builder.rs	2026-08-28 14:23:19
-+++ b/crates/hallucinator-dblp/src/builder.rs	2026-09-09 09:47:59
-@@ -290,7 +290,15 @@
++++ b/crates/hallucinator-dblp/src/builder.rs	2026-09-09 10:11:33
+@@ -290,7 +290,18 @@
          }
  
          // Resolve publication ID (always hits SQLite — pubs rarely repeat)
 -        let pub_id = match db::insert_or_get_publication(conn, &pub_record.key, &pub_record.title) {
-+        let pub_id = match db::insert_or_get_publication_full(
++        let pub_id = match db::insert_or_get_publication(
 +            conn,
 +            &pub_record.key,
 +            &pub_record.title,
@@ -327,10 +428,128 @@
 +            pub_record.venue.as_deref(),
 +            pub_record.url.as_deref(),
 +            &pub_record.kind,
++            pub_record.volume.as_deref(),
++            pub_record.number.as_deref(),
++            pub_record.pages.as_deref(),
 +        ) {
              Ok(id) => id,
              Err(e) => {
                  insert_error = Some(e);
+--- a/crates/hallucinator-dblp/src/query.rs	2026-08-28 14:23:19
++++ b/crates/hallucinator-dblp/src/query.rs	2026-09-09 10:12:11
+@@ -604,13 +604,13 @@
+         let attention_id = insert_or_get_publication(
+             &conn,
+             "conf/nips/VaswaniSPUJGKP17",
+-            "Attention is All you Need",
++            "Attention is All you Need", None, None, None, "", None, None, None
+         )
+         .unwrap();
+         insert_or_get_publication(
+             &conn,
+             "conf/naacl/DevlinCLT19",
+-            "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
++            "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding", None, None, None, "", None, None, None
+         )
+         .unwrap();
+ 
+@@ -814,12 +814,12 @@
+             insert_or_get_publication(
+                 &conn,
+                 &format!("noise/n{}", i),
+-                &format!("We Need Something Different Number {}", i),
++                &format!("We Need Something Different Number {}", i), None, None, None, "", None, None, None
+             )
+             .unwrap();
+         }
+         let target =
+-            insert_or_get_publication(&conn, "conf/podc/KeidarKNS21", "All You Need is DAG.")
++            insert_or_get_publication(&conn, "conf/podc/KeidarKNS21", "All You Need is DAG.", None, None, None, "", None, None, None)
+                 .unwrap();
+ 
+         let mut batch = InsertBatch::new();
+@@ -853,7 +853,7 @@
+         let target = insert_or_get_publication(
+             &conn,
+             "journals/iacr/MalkhiN23",
+-            "Extended Abstract: HotStuff-2: Optimal Two-Phase Responsive BFT.",
++            "Extended Abstract: HotStuff-2: Optimal Two-Phase Responsive BFT.", None, None, None, "", None, None, None
+         )
+         .unwrap();
+         let mut batch = InsertBatch::new();
+@@ -884,7 +884,7 @@
+         insert_or_get_publication(
+             &conn,
+             "books/sp/voecking2011/Blomer11",
+-            "How to Share a Secret.",
++            "How to Share a Secret.", None, None, None, "", None, None, None
+         )
+         .unwrap();
+         rebuild_fts_index(&conn).unwrap();
+@@ -908,7 +908,7 @@
+         let target = insert_or_get_publication(
+             &conn,
+             "journals/wc/GhoshRMMT10",
+-            "LTE-advanced: next-generation wireless broadband technology [Invited Paper].",
++            "LTE-advanced: next-generation wireless broadband technology [Invited Paper].", None, None, None, "", None, None, None
+         )
+         .unwrap();
+         let mut batch = InsertBatch::new();
+@@ -985,7 +985,7 @@
+         let a_id = insert_or_get_publication(
+             &conn,
+             "conf/ccs/LuuCOSH16",
+-            "Making Smart Contracts Smarter.",
++            "Making Smart Contracts Smarter.", None, None, None, "", None, None, None
+         )
+         .unwrap();
+         let luu = insert_or_get_author(&conn, "Loi Luu").unwrap();
+@@ -1000,7 +1000,7 @@
+         let b_id = insert_or_get_publication(
+             &conn,
+             "conf/icbc2/BadruddojaDHUT21",
+-            "Making Smart Contracts Smarter.",
++            "Making Smart Contracts Smarter.", None, None, None, "", None, None, None
+         )
+         .unwrap();
+         let badruddoja = insert_or_get_author(&conn, "Syed Badruddoja").unwrap();
+@@ -1110,14 +1110,14 @@
+ 
+         // Target: perfect title match, no author overlap with citation.
+         let target =
+-            insert_or_get_publication(&conn, "conf/correct/X99", "The Exact Target Title").unwrap();
++            insert_or_get_publication(&conn, "conf/correct/X99", "The Exact Target Title", None, None, None, "", None, None, None).unwrap();
+         let stranger = insert_or_get_author(&conn, "Stranger Author").unwrap();
+ 
+         // Decoy: partial title match with the citation's author.
+         let decoy = insert_or_get_publication(
+             &conn,
+             "conf/decoy/Y99",
+-            "The Target Title Mostly But Not Really",
++            "The Target Title Mostly But Not Really", None, None, None, "", None, None, None
+         )
+         .unwrap();
+         let friend = insert_or_get_author(&conn, "Jane Friend").unwrap();
+@@ -1170,7 +1170,7 @@
+         let pid = insert_or_get_publication(
+             &conn,
+             "books/cu/Goldreich2004",
+-            "Foundations of Cryptography Volume Two",
++            "Foundations of Cryptography Volume Two", None, None, None, "", None, None, None
+         )
+         .unwrap();
+         let aid = insert_or_get_author(&conn, "Oded Goldreich").unwrap();
+--- a/crates/hallucinator-dblp/tests/problematic_papers.rs	2026-08-28 14:23:19
++++ b/crates/hallucinator-dblp/tests/problematic_papers.rs	2026-09-09 10:12:11
+@@ -82,7 +82,7 @@
+ 
+     for (i, title) in titles.iter().enumerate() {
+         let key = format!("test/{}", i);
+-        db::insert_or_get_publication(&conn, &key, title).unwrap();
++        db::insert_or_get_publication(&conn, &key, title, None, None, None, "", None, None, None).unwrap();
+     }
+ 
+     db::rebuild_fts_index(&conn).unwrap();
 --- a/crates/hallucinator-cli/src/main.rs	2026-08-28 14:23:19
 +++ b/crates/hallucinator-cli/src/main.rs	2026-09-08 23:43:57
 @@ -155,6 +155,13 @@

@@ -4,6 +4,46 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.19.0] - 2026-09-09
+
+### Added
+
+- The mirror also stores `volume`, `number` and `pages` (4,478,005 / 2,666,380 / 7,144,917 records
+  on the rebuilt file), so a citation's "49(3):1152-1170" can be checked against the record it
+  claims to be.
+
+- A reference that reaches triage now carries DBLP's own metadata for its title -- key, year,
+  venue, volume/number/pages, DOI and record type -- in the worklist and the per-paper report.
+  Evidence for the person reviewing it, beside the citation.
+
+### Changed
+
+- The three field checks (year, venue, DOI) were measured against the corpus and **not** built as
+  automatic demotions; the fields are surfaced as evidence instead. Over the 579 verified
+  references a repaired mirror can be compared against:
+
+  | Candidate check | Disagreement rate | Why it is not a check |
+  |---|---|---|
+  | Venue | 157/561 (28%) | DBLP stores abbreviations (`CoRR`, `ESEC/SIGSOFT FSE`, `ICCSA (5)`) that a citation has no reason to contain |
+  | Year | 60/575 (10%) | hallucinator parses no year, so this mostly measures which four-digit number a regex found in the raw citation; off-by-one is usually preprint vs issue year |
+  | DOI | 12/179 (6.7%) after excluding truncated citations, arXiv DOIs and IEEE duplicates | a work legitimately carries several DOIs (preprint and published, ACM Queue and CACM), and DBLP's `ee` is sometimes a publisher URL or points at a review |
+
+  For comparison the author-absence check that does demote flags 0.22%. Shipping any of these at
+  6.7% or worse would bury the signal that works.
+
+- `insert_or_get_publication` takes the full record in one signature; the three-argument wrapper is
+  gone. It existed only to keep the upstream diff off the crate's twenty test call sites, and its
+  `ON CONFLICT` cleared `year`/`venue`/`ee`/`kind` back to NULL -- a metadata-stripping footgun for
+  any later caller. The call sites are updated instead.
+
+### Fixed
+
+- `record_context` finds a record whose title was broken across a line. `_phrase_queries` asks both
+  hyphen readings of the whole title, which fails when one title needs both at once ("Refactoring
+  ... de-velopers keep up-to-date" matches neither `uptodate` nor `de velopers`); it now falls back
+  to an AND over the words carrying no hyphen, and compares titles with punctuation removed. The
+  reference this was built for is exactly the kind that hits it.
+
 ## [1.18.0] - 2026-09-09
 
 ### Added
@@ -674,6 +714,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.19.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.19.0
 [1.18.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.18.0
 [1.17.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.17.0
 [1.16.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.16.0

@@ -401,6 +401,9 @@ def cmd_worklist(out_dir: Path, pending: bool = False, paper_id: str | None = No
                 # Cited authors that no author of the matched publication accounts for. The
                 # reference is here *because* of them, so they travel with the entry.
                 "authors_absent": dv.get("authors_absent", []),
+                # DBLP's own record metadata for this title: year, venue, volume/pages, DOI.
+                # Evidence to weigh, not a verdict -- see dblp_check.record_context.
+                "dblp_record": dv.get("dblp_record"),
                 "raw_citation": ref["raw_citation"],
                 # What a "mismatch" actually matched. Without it the triager re-derives from
                 # scratch what the validator already had -- and cannot see that the candidate is
@@ -587,6 +590,12 @@ def cmd_report(out_dir: Path) -> None:
                 degraded = " **(degraded: " + ", ".join(dv.get("failed_dbs") or []) \
                     + " did not answer -- not a clean negative)**" if is_degraded(r) else ""
                 lines.append(f"- DB status: {dv['status']}{degraded}")
+                rec = dv.get("dblp_record")
+                if rec:
+                    bits = [f"{k}={rec[k]}" for k in
+                            ("year", "venue", "volume", "number", "pages", "ee", "kind")
+                            if rec.get(k)]
+                    lines.append(f"- DBLP record `{rec.get('key')}`: " + ", ".join(bits))
                 if dv.get("authors_absent"):
                     lines.append(f"- Cited author(s) not on the matched publication: "
                                  f"{', '.join(dv['authors_absent'])}")

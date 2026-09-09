@@ -52,7 +52,7 @@ except ImportError:
         "Run setup first:  mise run install   (see README.md / PLAN.md)"
     )
 
-from dblp_check import second_opinion
+from dblp_check import record_context, second_opinion
 from pdf_references import _parse, extract_references
 
 SCHEMA_VERSION = "1.0"
@@ -654,6 +654,19 @@ def audit_pdf(pdf: Path, extractor: PdfExtractor, validator: Validator | None,
         if n:
             print(f"    sent {n} reference(s) to triage: they name an author the matched "
                   f"publication does not have", flush=True)
+
+    # Evidence for whoever reviews the residue: DBLP's own year, venue, volume/pages and DOI beside
+    # the citation. Not a check -- comparing these automatically was measured against the corpus and
+    # is far too noisy to demote on (see dblp_check.record_context). This runs after every pass, so
+    # it covers the final residue; attaching it earlier skipped exactly the references the last pass
+    # demotes, which are the ones a reviewer most needs the evidence for.
+    if dblp_path and verifications:
+        for e, v in zip(parsed_entries, verifications):
+            if v["status"] == "verified":
+                continue
+            found = record_context(dblp_path, getattr(e.reference, "title", "") or "")
+            if found:
+                v["dblp_record"] = found
     result_iter = iter(verifications)
 
     references = []
