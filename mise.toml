@@ -44,8 +44,21 @@ skills/hallucite/scripts/run.sh upgrade
 
 [tasks.install-cli]
 description = "Download the hallucinator CLI prebuilt binary into .bin/ (checksum-verified, no curl|sh)"
+# Refuses to clobber a build carrying dblp-entity-fix.patch. The stock binary drops every author
+# whose name has a diacritic, and the loss is invisible downstream -- publication counts, titles
+# and record keys all look right -- so overwriting a patched binary here would silently reintroduce
+# it. `mise run install-cli-patched` is the one to use; FORCE=1 overrides.
 run = """
 set -euo pipefail
+if [ -x .bin/hallucinator-cli ] && ./.bin/hallucinator-cli update-dblp --help 2>/dev/null | grep -q -- --from-file; then
+  if [ "${FORCE:-0}" != "1" ]; then
+    echo "install-cli: .bin/hallucinator-cli carries dblp-entity-fix.patch; the stock binary would" >&2
+    echo "install-cli: drop every author whose name has a diacritic. Use 'mise run install-cli-patched'," >&2
+    echo "install-cli: or FORCE=1 to overwrite anyway." >&2
+    exit 1
+  fi
+  echo "install-cli: FORCE=1 -- replacing the patched binary with the stock one" >&2
+fi
 os=$(uname -s); [ "$os" = "Darwin" ] || { echo "install-cli fetches macOS (Darwin) binaries only; on $os install with 'cargo install hallucinator-cli' or download from the releases page" >&2; exit 1; }
 arch=$(uname -m); case "$arch" in arm64|aarch64) tgt=aarch64-apple-darwin ;; x86_64) tgt=x86_64-apple-darwin ;; *) echo "unsupported arch $arch" >&2; exit 1 ;; esac
 url="https://github.com/gianlucasb/hallucinator/releases/latest/download/hallucinator-cli-$tgt.tar.xz"
@@ -56,6 +69,37 @@ curl -fsSL "$url.sha256" -o /tmp/hcli.tar.xz.sha256
 tar -xf /tmp/hcli.tar.xz -C /tmp
 cp "/tmp/hallucinator-cli-$tgt/hallucinator-cli" .bin/ && chmod +x .bin/hallucinator-cli
 echo "installed .bin/hallucinator-cli $(./.bin/hallucinator-cli --version)"
+"""
+
+[tasks.fetch-dblp-dump]
+description = "Download dblp.xml.gz with a real browser (dblp.org fronts it with a bot challenge)"
+# Needs Playwright and a display: Anubis refuses the headless browser outright, while a headed one
+# completes the proof-of-work normally. Writes beside $HALLUCITE_DBLP by default.
+run = "python skills/hallucite/scripts/fetch_dblp_dump.py"
+
+[tasks.install-cli-patched]
+description = "Build hallucinator-cli from source with dblp-entity-fix.patch applied, into .bin/"
+# The released binary mangles DBLP's character entities: quick-xml's unescape() is built without
+# the `escape-html` feature, so a name like `M&aacute;rcio Ribeiro` fails to resolve, the parser
+# drops the whole text chunk, and the author is never recorded. dblp-entity-fix.patch fixes that
+# and adds `update-dblp --from-file`, needed because dblp.org fronts the dump with a bot check.
+run = """
+set -euo pipefail
+ver="${HALLUCINATOR_VERSION:-0.2.3}"
+command -v cargo >/dev/null || { echo "install-cli-patched needs a Rust toolchain (https://rustup.rs)" >&2; exit 1; }
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+curl -fsSL "https://github.com/gianlucasb/hallucinator/releases/download/v$ver/source.tar.gz" -o "$work/src.tar.gz"
+tar xzf "$work/src.tar.gz" -C "$work"
+src="$(find "$work" -maxdepth 1 -type d -name 'hallucinator-*' | head -1)"
+patch -p1 -d "$src" < dblp-entity-fix.patch
+( cd "$src" && cargo build --release -p hallucinator-cli )
+mkdir -p .bin
+cp "$src/target/release/hallucinator-cli" .bin/hallucinator-cli
+chmod +x .bin/hallucinator-cli
+./.bin/hallucinator-cli update-dblp --help | grep -q -- --from-file \
+  || { echo "install-cli-patched: built binary lacks --from-file; patch did not apply" >&2; exit 1; }
+echo "installed patched .bin/hallucinator-cli $(./.bin/hallucinator-cli --version)"
 """
 
 [tasks.build-dblp]

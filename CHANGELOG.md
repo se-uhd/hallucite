@@ -4,6 +4,35 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.16.0] - 2026-09-09
+
+### Added
+
+- `mise run fetch-dblp-dump` downloads `dblp.xml.gz` with a real browser, for the `--from-file`
+  build. dblp.org and both its mirrors front the dump with an Anubis proof-of-work challenge, so
+  every plain HTTP client gets the challenge page instead of the file. A browser answers it with
+  its own JS engine, the way it does for a person clicking the link; nothing forges or replays a
+  token, and Playwright's `--enable-automation` marker is left in place. It has to run headed --
+  Anubis refuses the headless browser outright ("Access Denied") while the headed one completes
+  the proof-of-work normally -- so it needs a display, and the script says so when refused. The
+  dump lands beside `$HALLUCITE_DBLP`, so relocating the database relocates the dump.
+
+- A dependency table in the README. "A web browser" was doing too much work as a dependency
+  specification: Playwright with its own Chromium is the concrete, installable form of it, and
+  the Rust toolchain is likewise needed only for `install-cli-patched`.
+
+- `mise run install-cli-patched` builds `hallucinator-cli` from the pinned upstream source with
+  `dblp-entity-fix.patch` applied, and fails if the built binary does not carry the fix. The
+  patched binary was previously something you had to produce by hand, which is no basis for a
+  dependency the audit's correctness rests on.
+
+### Changed
+
+- `mise run install-cli` refuses to overwrite a binary carrying the patch. It fetches the stock
+  upstream build, which drops every author whose name has a diacritic, and the loss is invisible
+  downstream -- publication counts, titles and record keys all look right -- so a routine
+  reinstall would silently reintroduce it. `FORCE=1` overrides.
+
 ## [1.15.0] - 2026-09-09
 
 ### Added
@@ -593,6 +622,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.16.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.16.0
 [1.15.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.15.0
 [1.14.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.14.0
 [1.13.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.13.1

@@ -20,15 +20,28 @@ lives under `.codex-plugin/` and `.agents/plugins/marketplace.json`. The bundled
 
 ## Setup (once)
 
-Run from this directory. Requires [mise](https://mise.jdx.dev) and `pdftotext` from poppler,
-which the extractor shells out to (e.g. `brew install poppler`).
+Run from this directory.
+
+| Dependency | Needed for | Install |
+|---|---|---|
+| [mise](https://mise.jdx.dev) | provisions Python 3.12 and uv | see mise docs |
+| `pdftotext` (poppler) | reference extraction shells out to it | `brew install poppler` |
+| `sqlite3` | `build-dblp` checks the database it just built | ships with macOS |
+| `hallucinator` | extraction and database verification | `mise run install` |
+| Rust toolchain | `install-cli-patched` only | [rustup](https://rustup.rs) |
+| Playwright + Chromium | `fetch-dblp-dump` only; needs a display | `pip install playwright && playwright install chromium` |
 
 ```sh
-mise install          # provision Python 3.12 + uv (auto-venv)
-mise run install      # uv pip install -r requirements.txt  (hallucinator)
-mise run install-cli  # download the hallucinator CLI binary into .bin/ (checksum-verified)
-mise run build-dblp   # build the offline DBLP database at ~/hallucite/dblp.db (~4.6 GB, ~20-30 min)
+mise install               # provision Python 3.12 + uv (auto-venv)
+mise run install           # uv pip install -r requirements.txt  (hallucinator)
+mise run install-cli-patched  # build the CLI from source with dblp-entity-fix.patch applied
+mise run fetch-dblp-dump   # download dblp.xml.gz with a real browser (~1 GB)
+DBLP_XML_GZ=~/hallucite/dblp.xml.gz mise run build-dblp   # build ~/hallucite/dblp.db (~20-30 min)
 ```
+
+`mise run install-cli` fetches the stock upstream binary instead of building it. That binary drops
+every author whose name carries a diacritic (see below), so the task refuses to overwrite a patched
+build unless you pass `FORCE=1`.
 
 The offline DBLP database lives at `~/hallucite/dblp.db`, outside this repo, which keeps the
 2.5 GB file out of git. Set `$HALLUCITE_DBLP` to store it somewhere else.
@@ -101,18 +114,35 @@ is more than 30 days old. Rebuild it with `mise run build-dblp`, which builds to
 and swaps it in only after checking that the result is mirror-sized and that accented author names
 survived the ingest.
 
-dblp.org and its mirrors currently front `dblp.xml.gz` with an Anubis proof-of-work bot check. A
-plain HTTP client -- `curl`, or the downloader inside `update-dblp` -- receives the challenge page
-instead of the dump and ingests it as zero publications. Download the dump in a browser, which
-answers the challenge as intended, then point the build at the file:
+dblp.org and both its mirrors front `dblp.xml.gz` with an Anubis proof-of-work bot check. A plain
+HTTP client -- `curl`, or the downloader inside `update-dblp` -- receives the challenge page instead
+of the dump and ingests it as zero publications, so `build-dblp` verifies what it built before
+installing it.
+
+`mise run fetch-dblp-dump` drives a real browser, which answers the challenge with its own JS
+engine the way it does for a person clicking the link. It has to run headed: Anubis refuses a
+headless browser outright ("Access Denied"), while the headed one completes the proof-of-work
+normally. On a machine without a display, download the dump on a desktop and copy it over. Either
+way, point the build at the file:
 
 ```sh
-DBLP_XML_GZ=~/Downloads/dblp.xml.gz mise run build-dblp
+mise run fetch-dblp-dump                                   # -> ~/hallucite/dblp.xml.gz
+DBLP_XML_GZ=~/hallucite/dblp.xml.gz mise run build-dblp
 ```
 
-That path needs a `hallucinator-cli` carrying `dblp-entity-fix.patch` (`update-dblp --from-file`,
-plus the entity fix without which every author whose name has a diacritic is dropped from the
-database).
+### The stock CLI drops accented authors
+
+DBLP writes Latin-1 letters as the named entities its DTD declares (`M&aacute;rcio Ribeiro`).
+`hallucinator-dblp`'s XML parser calls quick-xml's `unescape()`, built without the crate's
+`escape-html` feature, so those fail to resolve -- and the parser discarded the whole text chunk,
+leaving the name empty and the author unrecorded. Every paper they wrote lost them:
+`journals/tse/SoaresRGAS23` kept 3 of its 5 authors, `books/sp/WohlinRHOR00` 3 of its 6. DBLP's own
+records are complete; the loss happened on ingest.
+
+`dblp-entity-fix.patch` fixes it and adds `update-dblp --from-file`. `mise run install-cli-patched`
+applies it to the pinned upstream source and builds the binary. Without it, DBLP reports an author
+mismatch for references that are cited correctly, and the audit warns at startup when it is handed
+a mirror built this way.
 
 ## Install as a plugin
 
