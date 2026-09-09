@@ -10,8 +10,85 @@
  # Archive handling
  zip = "2"
 --- a/crates/hallucinator-dblp/src/xml_parser.rs	2026-08-28 14:23:19
-+++ b/crates/hallucinator-dblp/src/xml_parser.rs	2026-09-08 23:17:47
-@@ -129,10 +129,15 @@
++++ b/crates/hallucinator-dblp/src/xml_parser.rs	2026-09-09 09:47:14
+@@ -19,6 +19,12 @@
+     pub authors: Vec<String>,
+     /// First electronic edition URL (from `<ee>` element)
+     pub url: Option<String>,
++    /// Publication year (from `<year>`)
++    pub year: Option<i32>,
++    /// Journal or proceedings name (from `<journal>` or `<booktitle>`)
++    pub venue: Option<String>,
++    /// The DBLP record element: "article", "inproceedings", "book", ...
++    pub kind: String,
+ }
+ 
+ /// DBLP XML element types that represent publications.
+@@ -41,6 +47,8 @@
+     Title,
+     Author,
+     Url,
++    Year,
++    Venue,
+ }
+ 
+ impl Field {
+@@ -49,6 +57,9 @@
+             Field::Title => b"title",
+             Field::Author => b"author",
+             Field::Url => b"ee",
++            Field::Year => b"year",
++            // `<booktitle>` closes a Venue started there; see `reading_booktitle`.
++            Field::Venue => b"journal",
+         }
+     }
+ }
+@@ -77,10 +88,15 @@
+     let mut current_title = String::new();
+     let mut current_authors: Vec<String> = Vec::new();
+     let mut current_url: Option<String> = None;
++    let mut current_year: Option<i32> = None;
++    let mut current_venue: Option<String> = None;
++    let mut current_kind = String::new();
+     let mut reading: Option<Field> = None;
+     let mut text_buf = String::new();
+     // Track if we're reading an <editor> (treat same as author)
+     let mut reading_editor = false;
++    // A venue read from <booktitle> closes on that element, not on <journal>.
++    let mut reading_booktitle = false;
+ 
+     loop {
+         match xml.read_event_into(&mut buf) {
+@@ -94,8 +110,12 @@
+                     current_title.clear();
+                     current_authors.clear();
+                     current_url = None;
++                    current_year = None;
++                    current_venue = None;
++                    current_kind = String::from_utf8_lossy(name_ref).into_owned();
+                     reading = None;
+                     reading_editor = false;
++                    reading_booktitle = false;
+ 
+                     for attr in e.attributes().flatten() {
+                         if attr.key.as_ref() == b"key" {
+@@ -122,6 +142,15 @@
+                             reading = Some(Field::Url);
+                             text_buf.clear();
+                         }
++                        b"year" if current_year.is_none() => {
++                            reading = Some(Field::Year);
++                            text_buf.clear();
++                        }
++                        b"journal" | b"booktitle" if current_venue.is_none() => {
++                            reading = Some(Field::Venue);
++                            reading_booktitle = name_ref == b"booktitle";
++                            text_buf.clear();
++                        }
+                         _ => {}
+                     }
+                 }
+@@ -129,10 +158,15 @@
              }
  
              Ok(Event::Text(ref e)) => {
@@ -31,10 +108,50 @@
                  }
              }
  
-@@ -347,3 +352,49 @@
+@@ -151,6 +185,8 @@
+                 if let Some(ref field) = reading {
+                     let target = if reading_editor {
+                         b"editor" as &[u8]
++                    } else if reading_booktitle {
++                        b"booktitle" as &[u8]
+                     } else {
+                         field.element_name()
+                     };
+@@ -171,9 +207,18 @@
+                                     current_url = Some(text);
+                                 }
+                             }
++                            Some(Field::Year) => {
++                                current_year = text.trim().parse::<i32>().ok();
++                            }
++                            Some(Field::Venue) => {
++                                if !text.is_empty() {
++                                    current_venue = Some(text);
++                                }
++                            }
+                             None => {}
+                         }
+                         reading_editor = false;
++                        reading_booktitle = false;
+                     }
+                 } else if in_pub && is_pub_element(name_ref) {
+                     // End of publication element — emit if we got a title
+@@ -183,6 +228,9 @@
+                             title: std::mem::take(&mut current_title),
+                             authors: std::mem::take(&mut current_authors),
+                             url: current_url.take(),
++                            year: current_year.take(),
++                            venue: current_venue.take(),
++                            kind: std::mem::take(&mut current_kind),
+                         });
+                     }
+                     in_pub = false;
+@@ -345,5 +393,109 @@
+         parse_xml(xml.as_bytes(), |p| pubs.push(p));
+ 
          assert_eq!(pubs.len(), 4);
-     }
- }
++    }
++}
 +
 +#[cfg(test)]
 +mod entity_tests {
@@ -79,8 +196,141 @@
 +            vec!["Claes Wohlin", "Per Runeson", "Martin Höst",
 +                 "Magnus C. Ohlsson", "Björn Regnell", "Anders Wesslén"]
 +        );
+     }
+ }
++
++#[cfg(test)]
++mod field_tests {
++    use super::*;
++
++    /// The dump carries year, venue and the electronic edition on every record. Storing only the
++    /// title and authors left two of the four fabrication signals -- a wrong venue/year, and a DOI
++    /// belonging to another work -- uncheckable offline, with `<ee>` parsed and then discarded.
++    #[test]
++    fn year_venue_ee_and_kind_are_extracted() {
++        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
++<dblp>
++<article key="journals/tse/SoaresRGAS23">
++  <author>Elvys Soares</author><author>M&aacute;rcio Ribeiro</author>
++  <title>Refactoring Test Smells With JUnit 5.</title>
++  <journal>IEEE Trans. Software Eng.</journal>
++  <volume>49</volume><number>3</number><pages>1152-1170</pages>
++  <year>2023</year>
++  <ee>https://doi.org/10.1109/TSE.2022.3172654</ee>
++</article>
++<inproceedings key="conf/icse/Example24">
++  <author>Anna Apple</author>
++  <title>An invented conference paper.</title>
++  <booktitle>ICSE</booktitle>
++  <year>2024</year>
++</inproceedings>
++<book key="books/sp/WohlinRHOR00">
++  <author>Claes Wohlin</author><author>Martin H&ouml;st</author>
++  <title>Experimentation in Software Engineering.</title>
++  <year>2000</year>
++</book>
++</dblp>"#;
++        let mut pubs = Vec::new();
++        parse_xml(xml.as_bytes(), |p| pubs.push(p));
++        assert_eq!(pubs.len(), 3);
++
++        assert_eq!(pubs[0].kind, "article");
++        assert_eq!(pubs[0].year, Some(2023));
++        assert_eq!(pubs[0].venue.as_deref(), Some("IEEE Trans. Software Eng."));
++        assert_eq!(
++            pubs[0].url.as_deref(),
++            Some("https://doi.org/10.1109/TSE.2022.3172654")
++        );
++        assert_eq!(pubs[0].authors, vec!["Elvys Soares", "Márcio Ribeiro"]);
++
++        // A conference record takes its venue from <booktitle>, which must close the field too.
++        assert_eq!(pubs[1].kind, "inproceedings");
++        assert_eq!(pubs[1].venue.as_deref(), Some("ICSE"));
++        assert_eq!(pubs[1].year, Some(2024));
++        assert_eq!(pubs[1].title, "An invented conference paper.");
++
++        // `kind` is what separates this from the same-titled TSE article and journal note.
++        assert_eq!(pubs[2].kind, "book");
++        assert_eq!(pubs[2].year, Some(2000));
++        assert_eq!(pubs[2].venue, None);
++        assert_eq!(pubs[2].authors, vec!["Claes Wohlin", "Martin Höst"]);
 +    }
 +}
+--- a/crates/hallucinator-dblp/src/db.rs	2026-08-28 14:23:19
++++ b/crates/hallucinator-dblp/src/db.rs	2026-09-09 09:47:59
+@@ -23,7 +23,15 @@
+         CREATE TABLE IF NOT EXISTS publications (
+             id INTEGER PRIMARY KEY,
+             key TEXT UNIQUE NOT NULL,
+-            title TEXT NOT NULL
++            title TEXT NOT NULL,
++            -- The dump carries these on every record and they are what a citation is checked
++            -- against beyond its title and authors: a wrong year or venue, or a DOI that belongs
++            -- to another work, is invisible offline without them. `kind` separates a book from an
++            -- article of the same name, which authors alone cannot always do.
++            year INTEGER,
++            venue TEXT,
++            ee TEXT,
++            kind TEXT
+         );
+ 
+         CREATE TABLE IF NOT EXISTS publication_authors (
+@@ -128,11 +136,32 @@
+     key: &str,
+     title: &str,
+ ) -> Result<i64, DblpError> {
+-    let mut stmt = conn.prepare_cached(
+-        "INSERT INTO publications (key, title) VALUES (?1, ?2) \
+-         ON CONFLICT(key) DO UPDATE SET title = excluded.title RETURNING id",
++    insert_or_get_publication_full(conn, key, title, None, None, None, "")
++}
++
++/// Insert or update a publication with the record metadata the dump carries alongside the title.
++///
++/// `year`, `venue` and `ee` are what a citation is checked against beyond its title and authors:
++/// without them a wrong year or venue, or a DOI belonging to another work, cannot be seen offline
++/// at all. `kind` (the DBLP element: "article", "inproceedings", "book", ...) separates a book from
++/// an article of the same name, which authors alone cannot always do.
++#[allow(clippy::too_many_arguments)]
++pub fn insert_or_get_publication_full(
++    conn: &Connection,
++    key: &str,
++    title: &str,
++    year: Option<i32>,
++    venue: Option<&str>,
++    ee: Option<&str>,
++    kind: &str,
++) -> Result<i64, DblpError> {
++    let mut stmt = conn.prepare_cached(
++        "INSERT INTO publications (key, title, year, venue, ee, kind) \
++         VALUES (?1, ?2, ?3, ?4, ?5, ?6) \
++         ON CONFLICT(key) DO UPDATE SET title = excluded.title, year = excluded.year, \
++         venue = excluded.venue, ee = excluded.ee, kind = excluded.kind RETURNING id",
+     )?;
+-    let id: i64 = stmt.query_row(params![key, title], |row| row.get(0))?;
++    let id: i64 = stmt.query_row(params![key, title, year, venue, ee, kind], |row| row.get(0))?;
+     Ok(id)
+ }
+ 
+--- a/crates/hallucinator-dblp/src/builder.rs	2026-08-28 14:23:19
++++ b/crates/hallucinator-dblp/src/builder.rs	2026-09-09 09:47:59
+@@ -290,7 +290,15 @@
+         }
+ 
+         // Resolve publication ID (always hits SQLite — pubs rarely repeat)
+-        let pub_id = match db::insert_or_get_publication(conn, &pub_record.key, &pub_record.title) {
++        let pub_id = match db::insert_or_get_publication_full(
++            conn,
++            &pub_record.key,
++            &pub_record.title,
++            pub_record.year,
++            pub_record.venue.as_deref(),
++            pub_record.url.as_deref(),
++            &pub_record.kind,
++        ) {
+             Ok(id) => id,
+             Err(e) => {
+                 insert_error = Some(e);
 --- a/crates/hallucinator-cli/src/main.rs	2026-08-28 14:23:19
 +++ b/crates/hallucinator-cli/src/main.rs	2026-09-08 23:43:57
 @@ -155,6 +155,13 @@

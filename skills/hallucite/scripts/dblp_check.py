@@ -41,12 +41,38 @@ class SecondOpinion:
     key: str                 # DBLP record key, e.g. "books/daglib/0029933"
     title: str               # the candidate's title as stored
     authors: list[str]       # the candidate's full author list
+    # Record metadata, when the mirror was built by an ingest that stores it. A mirror holding only
+    # key/title/authors leaves these None, and everything here keeps working.
+    year: int | None = None
+    venue: str | None = None
+    ee: str | None = None    # electronic edition, usually the DOI
+    kind: str | None = None  # "article", "inproceedings", "book", ...
+
+
+# Letters with a stroke or bar carry no combining mark, so NFKD leaves them; without this map
+# 'Przybyłek' and 'Przybylek' are different people. Now that the mirror actually holds accented
+# names, this is the difference between confirming a reference and sending it to triage.
+_LETTER_FOLD = str.maketrans({
+    "ł": "l", "Ł": "L", "ø": "o", "Ø": "O", "đ": "d", "Đ": "D", "ð": "d", "Ð": "D",
+    "ħ": "h", "Ħ": "H", "ı": "i", "İ": "I", "ŀ": "l", "Ŀ": "L", "ŧ": "t", "Ŧ": "T",
+    "æ": "ae", "Æ": "AE", "œ": "oe", "Œ": "OE", "ß": "ss", "ẞ": "SS", "þ": "th", "Þ": "TH",
+})
 
 
 def _fold(s: str) -> str:
-    """Lowercase and strip diacritics, so 'Höst'/'Wesslén' compare against their ASCII forms."""
-    nfkd = unicodedata.normalize("NFKD", s)
+    """Lowercase and strip diacritics, so 'Höst'/'Wesslén'/'Przybyłek' compare against ASCII."""
+    nfkd = unicodedata.normalize("NFKD", s.translate(_LETTER_FOLD))
     return "".join(c for c in nfkd if not unicodedata.combining(c)).lower()
+
+
+def _extra_columns(con) -> list[str]:
+    """Which of the record-metadata columns this mirror has. A database built before the ingest
+    stored them has none, and the second opinion still works on title and authors alone."""
+    try:
+        have = {r[1] for r in con.execute("PRAGMA table_info(publications)")}
+    except sqlite3.Error:
+        return []
+    return [c for c in ("year", "venue", "ee", "kind") if c in have]
 
 
 def _norm_title(t: str) -> str:
@@ -135,15 +161,18 @@ def second_opinion(db_path: str, title: str, authors: list[str]) -> SecondOpinio
         return None
     try:
         seen: set[int] = set()
+        extra = _extra_columns(con)
+        cols = "".join(f", p.{c}" for c in extra)
         for q in queries:
             try:
                 rows = con.execute(
-                    "SELECT p.id, p.key, p.title FROM publications_fts f "
+                    f"SELECT p.id, p.key, p.title{cols} FROM publications_fts f "
                     "JOIN publications p ON p.id = f.rowid "
                     "WHERE publications_fts MATCH ? LIMIT ?", (q, _MAX_CANDIDATES)).fetchall()
             except sqlite3.Error:
                 continue
-            for pid, key, cand_title in rows:
+            for row in rows:
+                pid, key, cand_title = row[0], row[1], row[2]
                 if pid in seen or _norm_title(cand_title) != want:
                     continue
                 seen.add(pid)
@@ -151,7 +180,10 @@ def second_opinion(db_path: str, title: str, authors: list[str]) -> SecondOpinio
                     "SELECT a.name FROM publication_authors pa "
                     "JOIN authors a ON a.id = pa.author_id WHERE pa.pub_id = ?", (pid,))]
                 if _authors_match(authors, cand_authors):
-                    return SecondOpinion(key=key, title=cand_title, authors=cand_authors)
+                    meta = dict(zip(extra, row[3:]))
+                    return SecondOpinion(key=key, title=cand_title, authors=cand_authors,
+                                         year=meta.get("year"), venue=meta.get("venue"),
+                                         ee=meta.get("ee"), kind=meta.get("kind"))
     finally:
         con.close()
     return None

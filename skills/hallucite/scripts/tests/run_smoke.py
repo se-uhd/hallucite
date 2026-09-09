@@ -1291,6 +1291,68 @@ def tier4e_smallcaps_heading() -> None:
          "a letter-spaced Acknowledgment heading still ends the section")
 
 
+def tier4f_dblp_record_metadata() -> None:
+    """The dump carries year, venue and the electronic edition on every record, and the ingest
+    stored none of them -- `<ee>` was parsed and thrown away. Without them a wrong year or venue,
+    or a DOI belonging to another work, cannot be seen offline at all, leaving two of the four
+    fabrication signals uncheckable in `--offline` runs. The second opinion now carries them when
+    the mirror has them, and must keep working against one that does not."""
+    print("Tier 4f: DBLP record metadata reaches the second opinion (no network)")
+    import dblp_check as D
+
+    def build(path, with_meta):
+        con = sqlite3.connect(str(path))
+        c = con.cursor()
+        extra = ", year INTEGER, venue TEXT, ee TEXT, kind TEXT" if with_meta else ""
+        c.executescript(
+            "CREATE TABLE authors (id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL);"
+            "CREATE TABLE publication_authors (pub_id INTEGER NOT NULL, author_id INTEGER NOT NULL,"
+            " PRIMARY KEY (pub_id, author_id));"
+            "CREATE TABLE publications (id INTEGER PRIMARY KEY, key TEXT UNIQUE NOT NULL,"
+            f" title TEXT NOT NULL{extra});"
+            "CREATE VIRTUAL TABLE publications_fts USING fts5(title, content='publications',"
+            " content_rowid='id');")
+        title = "A placeholder study of imaginary refactoring"
+        if with_meta:
+            c.execute("INSERT INTO publications(id,key,title,year,venue,ee,kind) "
+                      "VALUES(1,?,?,?,?,?,?)",
+                      ("journals/x/Ex23", title, 2023, "IEEE Trans. Imaginary Eng.",
+                       "https://doi.org/10.0000/fake.2023.1", "article"))
+        else:
+            c.execute("INSERT INTO publications(id,key,title) VALUES(1,?,?)",
+                      ("journals/x/Ex23", title))
+        # An accented author and one carrying a stroke, which NFKD alone does not fold.
+        for name in ("Marcio Ribeiro", "Adam Przybylek"):
+            c.execute("INSERT INTO authors(name) VALUES(?)", (name,))
+            c.execute("INSERT INTO publication_authors(pub_id,author_id) VALUES(1,?)",
+                      (c.lastrowid,))
+        c.execute("INSERT INTO publications_fts(publications_fts) VALUES('rebuild')")
+        con.commit()
+        con.close()
+        return title
+
+    with tempfile.TemporaryDirectory() as td:
+        rich, plain = Path(td) / "rich.db", Path(td) / "plain.db"
+        title = build(rich, True)
+        build(plain, False)
+        cited = ["Marcio Ribeiro", "Adam Przybylek"]
+
+        m = D.second_opinion(str(rich), title, cited)
+        C.true(m is not None, "the reference is confirmed against a mirror carrying metadata")
+        if m is not None:
+            C.eq(m.year, 2023, "year travels with the confirmation")
+            C.eq(m.venue, "IEEE Trans. Imaginary Eng.", "venue travels with the confirmation")
+            C.eq(m.ee, "https://doi.org/10.0000/fake.2023.1", "the electronic edition travels too")
+            C.eq(m.kind, "article", "the record type travels too")
+
+        m2 = D.second_opinion(str(plain), title, cited)
+        C.true(m2 is not None,
+               "REGRESSION GUARD: a mirror without the metadata columns still confirms")
+        if m2 is not None:
+            C.eq((m2.year, m2.venue, m2.ee, m2.kind), (None, None, None, None),
+                 "a mirror without the columns reports metadata as absent, not as an error")
+
+
 def tier4c_extraction_authoryear_lineno() -> None:
     """Regression for a Springer-style journal submission whose bibliography extraction collapsed:
     32 "references" came out of a 15-entry bibliography, 17 of them unparsable fragments, because
@@ -1376,6 +1438,7 @@ def main() -> int:
     tier4e_smallcaps_heading()
     tier4c_extraction_authoryear_lineno()
     tier4d_dblp_second_opinion()
+    tier4f_dblp_record_metadata()
     print()
     if C.failed:
         print(f"SMOKE FAILED: {C.failed} check(s) failed, {C.skipped} skipped")

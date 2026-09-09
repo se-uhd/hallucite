@@ -4,6 +4,35 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.18.0] - 2026-09-09
+
+### Added
+
+- The offline DBLP mirror now stores the record metadata the dump carries: `year`, `venue`, `ee`
+  (the electronic edition, usually the DOI) and `kind` (the DBLP element -- article,
+  inproceedings, book). Added to `dblp-entity-fix.patch`. The ingest parsed `<ee>` and discarded
+  it, and never looked at `<year>` or the venue at all, so the mirror could answer only "does a
+  work with this title by these authors exist". Two of the four fabrication signals were therefore
+  uncheckable in `--offline` runs: a wrong or impossible venue and year (V), and a DOI belonging
+  to another work (D). On the rebuilt mirror 8,720,203 of 8,720,206 records carry a year, 8,542,357
+  a venue and 8,541,662 an electronic edition.
+
+  `kind` and `year` also separate same-title records that authors alone could not. The six
+  "Experimentation in Software Engineering" entries now resolve as Wohlin's books (2000, 2012,
+  2024), Basili's 1986 TSE article, Pfleeger's 1997 Adv. Comput. note and a 2008 FECS paper --
+  the ambiguity `dblp_check.py`'s all-candidates pass exists to work around.
+
+- `second_opinion()` carries that metadata on a confirmation (`year`, `venue`, `ee`, `kind`),
+  reading whichever columns the mirror actually has. A database built before the ingest stored
+  them reports them as absent and everything else keeps working.
+
+### Fixed
+
+- `dblp_check`'s author folding handles letters carrying a stroke or bar. It shared the NFKD gap
+  fixed in the audit: `ł`, `ø`, `đ` and `ß` carry no combining mark to strip, so `Przybyłek` and
+  `Przybylek` compared as different people. Now that the mirror actually holds accented names,
+  this decides whether a real reference is confirmed or sent to triage.
+
 ## [1.17.0] - 2026-09-09
 
 ### Fixed
@@ -645,6 +674,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.18.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.18.0
 [1.17.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.17.0
 [1.16.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.16.0
 [1.15.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.15.0
