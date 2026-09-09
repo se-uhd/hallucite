@@ -97,7 +97,22 @@ whole corpus.
 
 Recent papers cite recent work, so an out-of-date database produces false "not found" results.
 The audit checks the database's age at run time and prints a warning when `~/hallucite/dblp.db`
-is more than 30 days old. Rebuild it with `mise run build-dblp`.
+is more than 30 days old. Rebuild it with `mise run build-dblp`, which builds to a scratch file
+and swaps it in only after checking that the result is mirror-sized and that accented author names
+survived the ingest.
+
+dblp.org and its mirrors currently front `dblp.xml.gz` with an Anubis proof-of-work bot check. A
+plain HTTP client -- `curl`, or the downloader inside `update-dblp` -- receives the challenge page
+instead of the dump and ingests it as zero publications. Download the dump in a browser, which
+answers the challenge as intended, then point the build at the file:
+
+```sh
+DBLP_XML_GZ=~/Downloads/dblp.xml.gz mise run build-dblp
+```
+
+That path needs a `hallucinator-cli` carrying `dblp-entity-fix.patch` (`update-dblp --from-file`,
+plus the entity fix without which every author whose name has a diacritic is dropped from the
+database).
 
 ## Install as a plugin
 

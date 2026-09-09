@@ -69,7 +69,13 @@ set -euo pipefail
 DEST="${HALLUCITE_DBLP:-$HOME/hallucite/dblp.db}"
 TMP="$DEST.building"
 rm -f "$TMP"
-.bin/hallucinator-cli update-dblp "$TMP"
+# DBLP_XML_GZ points at a dump already on disk, for when dblp.org answers with its
+# proof-of-work bot check instead of the file (see README).
+if [ -n "${DBLP_XML_GZ:-}" ]; then
+  .bin/hallucinator-cli update-dblp "$TMP" --from-file "$DBLP_XML_GZ"
+else
+  .bin/hallucinator-cli update-dblp "$TMP"
+fi
 pubs=$(sqlite3 "$TMP" 'SELECT COUNT(*) FROM publications;')
 if [ "$pubs" -lt 1000000 ]; then
   echo "build-dblp: only $pubs publication(s) -- the download did not return the dump." >&2

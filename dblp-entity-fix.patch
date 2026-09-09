@@ -81,3 +81,83 @@
 +        );
 +    }
 +}
+--- a/crates/hallucinator-cli/src/main.rs	2026-08-28 14:23:19
++++ b/crates/hallucinator-cli/src/main.rs	2026-09-08 23:43:57
+@@ -155,6 +155,13 @@
+     UpdateDblp {
+         /// Path to store the DBLP SQLite database
+         path: PathBuf,
++
++        /// Build from a local dblp.xml.gz instead of downloading it. dblp.org fronts the dump with
++        /// an interactive proof-of-work bot check; a plain HTTP client receives that as an HTML
++        /// page and ingests it as zero records, leaving an empty database behind. Fetch the dump
++        /// in a browser and pass it here.
++        #[arg(long, value_name = "XML_GZ")]
++        from_file: Option<PathBuf>,
+     },
+ 
+     /// Download and build the offline ACL Anthology database
+@@ -943,7 +950,12 @@
+     };
+ 
+     match cli.command {
+-        Command::UpdateDblp { path } => update_dblp(&path).await,
++        Command::UpdateDblp { path, from_file } => {
++            match from_file {
++                Some(xml_gz) => build_dblp_from_file(&path, &xml_gz),
++                None => update_dblp(&path).await,
++            }
++        }
+         Command::UpdateAcl { path } => update_acl(&path).await,
+         Command::UpdateArxiv {
+             path,
+@@ -2407,7 +2419,49 @@
+         stats.short_title,
+         stats.no_title
+     )?;
++
++    Ok(())
++}
++
++/// Build the offline DBLP database from a dump already on disk.
++///
++/// dblp.org and its mirrors front `dblp.xml.gz` with an interactive proof-of-work bot check. A
++/// plain HTTP client gets the challenge page instead of the dump, parses zero publications out of
++/// it, and `update-dblp` still exits 0 -- so a working mirror is silently replaced by an empty
++/// one. Downloading the dump in a browser and ingesting it here is the way through that.
++fn build_dblp_from_file(db_path: &PathBuf, xml_gz: &std::path::Path) -> anyhow::Result<()> {
++    use indicatif::{HumanCount, ProgressBar, ProgressStyle};
++    use std::time::Duration;
++
++    let bar = ProgressBar::new_spinner();
++    bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] {msg}")?);
++    bar.enable_steady_tick(Duration::from_millis(120));
++    bar.set_message(format!("Reading {}", xml_gz.display()));
+ 
++    hallucinator_dblp::build_database_from_file(db_path, xml_gz, |event| match event {
++        hallucinator_dblp::BuildProgress::Parsing {
++            records_inserted, ..
++        } => bar.set_message(format!("{} publications", HumanCount(records_inserted))),
++        hallucinator_dblp::BuildProgress::RebuildingIndex => {
++            bar.set_message("Rebuilding FTS search index...")
++        }
++        hallucinator_dblp::BuildProgress::Compacting => {
++            bar.set_message("Compacting database (VACUUM)...")
++        }
++        hallucinator_dblp::BuildProgress::Complete {
++            publications,
++            authors,
++            ..
++        } => bar.finish_with_message(format!(
++            "Indexed {} publications, {} authors",
++            HumanCount(publications),
++            HumanCount(authors)
++        )),
++        hallucinator_dblp::BuildProgress::Downloading { .. } => {}
++    })?;
++
++    let canonical = std::fs::canonicalize(db_path).unwrap_or_else(|_| db_path.clone());
++    println!("DBLP database saved to: {}", canonical.display());
+     Ok(())
+ }
+ 

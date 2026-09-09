@@ -4,6 +4,25 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.15.0] - 2026-09-09
+
+### Added
+
+- `update-dblp --from-file <XML_GZ>` builds the mirror from a dump already on disk, added to
+  `dblp-entity-fix.patch`. dblp.org and both its mirrors front `dblp.xml.gz` with an Anubis
+  proof-of-work bot check, so every plain HTTP client -- `curl`, and the downloader inside
+  `update-dblp` -- receives the challenge page instead of the dump and ingests it as zero
+  publications. `hallucinator-dblp` could already build from a local file; the CLI exposed no way
+  to ask for it. Verified end to end on a dump whose author names are entity-encoded: all five
+  authors of `journals/tse/SoaresRGAS23` and all six of `books/sp/WohlinRHOR00` land with their
+  accents intact.
+
+### Changed
+
+- `mise run build-dblp` forwards `$DBLP_XML_GZ` to `--from-file` when it is set, so a dump
+  downloaded in a browser can be ingested without touching the download path. README documents
+  the route.
+
 ## [1.14.0] - 2026-09-08
 
 ### Added
@@ -574,6 +593,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.15.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.15.0
 [1.14.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.14.0
 [1.13.1]: https://github.com/se-uhd/hallucite/releases/tag/v1.13.1
 [1.13.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.13.0
