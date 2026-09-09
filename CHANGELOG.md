@@ -4,6 +4,29 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.17.0] - 2026-09-09
+
+### Fixed
+
+- A reference naming authors the matched work does not have is caught again when DBLP is what
+  cleared it. `COMPLETE_AUTHOR_DBS` excluded DBLP because the local mirror dropped its accented
+  authors; repairing the mirror made that exclusion wrong, and the TSE reference carrying two
+  invented authors verified again -- DBLP now holds all five real authors, hallucinator sees three
+  of them in the citation and reports a match, and the absence check skipped it. Which backends
+  count is now decided per run from the mirror in hand (`_complete_author_dbs`): DBLP counts when
+  its accented authors survived the ingest, and does not when they did not. Measured over the 459
+  corpus references a repaired mirror can be compared against, including DBLP flags one (0.22%),
+  a genuine discrepancy.
+
+- Letters carrying a stroke or bar now fold to their ASCII form. NFKD leaves `ł`, `ø`, `đ` and `ß`
+  alone -- they carry no combining mark to strip -- so `Przybyłek` and `Przybylek` compared as
+  different people and the citation read as inventing an author. Two of the three flags in the
+  corpus measurement were this, not a citation error. DBLP's homonym suffix (`Márcio Ribeiro
+  0001`) needs no special case: digits already fall to the letters-only filter.
+
+- `mise run build-dblp` removes the `-wal`/`-shm` files on both sides of the swap. Moving only the
+  database left the scratch pair orphaned and the destination's stale pair in place.
+
 ## [1.16.0] - 2026-09-09
 
 ### Added
@@ -622,6 +645,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.17.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.17.0
 [1.16.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.16.0
 [1.15.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.15.0
 [1.14.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.14.0

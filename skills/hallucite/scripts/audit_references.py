@@ -93,17 +93,28 @@ KNOWN_LOCAL_DBS = ["DBLP", "Standards", SECOND_OPINION_DB]
 # Backends whose `found_authors` is the publication's full author list, so a cited author missing
 # from it is a real absence rather than a gap in the record.
 #
-# DBLP is absent from this list because of the *local mirror*, not because of DBLP: the offline
-# database's ingest drops every author whose name carries a diacritic (see
-# _dblp_drops_non_ascii_authors), so records lose real co-authors -- the Wohlin book keeps 3 of its
-# 6, having lost Höst, Regnell and Wesslén. On a 95-paper corpus every DBLP "author_mismatch"
-# against an otherwise-confirmed reference traced to that, not to a bad citation. Once a build
-# preserves those names, measure DBLP against the corpus again and add it here.
+# DBLP counts only when the local mirror actually kept its accented authors. A mirror built by an
+# ingest that mangles the dump's character entities loses real co-authors -- the Wohlin book keeps
+# 3 of its 6 -- and on a 95-paper corpus every DBLP author complaint against an otherwise-confirmed
+# reference traced to that rather than to a bad citation. So the decision is made per run from the
+# mirror in hand (`_complete_author_dbs`), not fixed here: hard-coding DBLP out survived the mirror
+# being repaired and let a reference with two invented authors verify again.
 #
 # This is an allow-list, so a backend added upstream does not feed the check until someone measures
 # it -- see _author_absence_pass.
 COMPLETE_AUTHOR_DBS = {"CrossRef", "DOI", "Open Library", "PubMed", "Europe PMC",
                        "Semantic Scholar", "arXiv"}
+
+
+def _complete_author_dbs(dblp_path: Path | None) -> set[str]:
+    """Backends whose author list is complete enough to support an absence claim on this run.
+
+    Measured over the 459 corpus references a repaired mirror can be compared against, adding DBLP
+    flags one (0.22%), a genuine discrepancy; against a mangled mirror it flagged 22, essentially
+    all of them the mirror's own dropped authors."""
+    if dblp_path and dblp_path.exists() and not _dblp_drops_non_ascii_authors(dblp_path):
+        return COMPLETE_AUTHOR_DBS | {"DBLP"}
+    return COMPLETE_AUTHOR_DBS
 
 # Words that mark a parsed "author" as venue or title text the reference parser bled into the
 # author list ("Privacy (SP)", "Evolution (ICSME)"). Comparing those against real names is what
@@ -471,11 +482,25 @@ def _second_opinion_pass(dblp_path: str, entries: list, verifications: list[dict
     return fixed
 
 
+# Letters that carry no combining mark to strip, so NFKD leaves them alone: a stroke or bar
+# through the glyph, a ligature, or a letter of its own. Without these, "Przybylek" and
+# "Przybyłek" are different people -- the l-with-stroke survives folding, then falls to the
+# non-ASCII filter and splits the surname into fragments that match nothing.
+_LETTER_FOLD = str.maketrans({
+    "ł": "l", "Ł": "L", "ø": "o", "Ø": "O", "đ": "d", "Đ": "D", "ð": "d", "Ð": "D",
+    "ħ": "h", "Ħ": "H", "ı": "i", "İ": "I", "ŀ": "l", "Ŀ": "L", "ŧ": "t", "Ŧ": "T",
+    "æ": "ae", "Æ": "AE", "œ": "oe", "Œ": "OE", "ß": "ss", "ẞ": "SS", "þ": "th", "Þ": "TH",
+})
+
+
 def _name_tokens(name: str) -> set[str]:
     """Comparable tokens of a personal name: accents folded, punctuation and initials dropped, so
-    "Marcio"/"Márcio", "Kolahdouz-Rahimi"/"Kolahdouz Rahimi" and "Dave Binkley"/"Dave W. Binkley"
-    all compare equal."""
-    folded = unicodedata.normalize("NFKD", name)
+    "Marcio"/"Márcio", "Przybylek"/"Przybyłek", "Kolahdouz-Rahimi"/"Kolahdouz Rahimi" and
+    "Dave Binkley"/"Dave W. Binkley" all compare equal.
+
+    DBLP disambiguates homonyms with a trailing number ("Márcio Ribeiro 0001"); digits fall to the
+    letters-only filter, so the suffix never has to be special-cased."""
+    folded = unicodedata.normalize("NFKD", name.translate(_LETTER_FOLD))
     folded = "".join(c for c in folded if not unicodedata.combining(c))
     folded = folded.lower().replace("-", " ").replace("'", "").replace("\u2019", "")
     return {t for t in re.sub(r"[^a-z ]", " ", folded).split() if len(t) > 1}
@@ -517,7 +542,8 @@ def _authors_absent(cited: list[str], found: list[str]) -> list[str]:
     return absent
 
 
-def _author_absence_pass(entries: list, verifications: list[dict]) -> int:
+def _author_absence_pass(entries: list, verifications: list[dict],
+                         complete_dbs: set[str] | None = None) -> int:
     """Send a reference back to triage when it names an author the matched publication does not
     have.
 
@@ -531,8 +557,8 @@ def _author_absence_pass(entries: list, verifications: list[dict]) -> int:
     Precision is the whole design, because every demotion asks a human to judge named authors:
 
     - only the clearing backend's own authors count as evidence, and only from a backend that
-      returns complete author lists (`COMPLETE_AUTHOR_DBS`) -- the offline DBLP mirror's dropped
-      authors are why a backend's own `author_mismatch` verdict is not used here at all;
+      returns complete author lists for this run (`_complete_author_dbs`) -- a mirror that dropped
+      its accented authors is why a backend's own `author_mismatch` verdict is not used here;
     - the two lists must be the same length, so an abbreviated citation is never read as a
       fabricated one;
     - fields that are not personal names, and names that survive extraction as a single token, are
@@ -541,9 +567,10 @@ def _author_absence_pass(entries: list, verifications: list[dict]) -> int:
     Measured over 1016 database-verified references from a 95-paper corpus, this flags one; over
     the TSE proof above it flags the reference that prompted it. Demotion only -- the pass never
     clears anything."""
+    allowed = COMPLETE_AUTHOR_DBS if complete_dbs is None else complete_dbs
     demoted = 0
     for e, v in zip(entries, verifications):
-        if v["status"] != "verified" or v.get("source") not in COMPLETE_AUTHOR_DBS:
+        if v["status"] != "verified" or v.get("source") not in allowed:
             continue
         cited = list(getattr(e.reference, "authors", None) or [])
         found = list(v.get("found_authors") or [])
@@ -622,7 +649,8 @@ def audit_pdf(pdf: Path, extractor: PdfExtractor, validator: Validator | None,
             print(f"    recovered {n} degraded verification(s) on retry")
     # Last, so no clearing pass can undo a demotion.
     if verifications:
-        n = _author_absence_pass(parsed_entries, verifications)
+        n = _author_absence_pass(parsed_entries, verifications,
+                                 _complete_author_dbs(Path(dblp_path) if dblp_path else None))
         if n:
             print(f"    sent {n} reference(s) to triage: they name an author the matched "
                   f"publication does not have", flush=True)

@@ -132,7 +132,11 @@ if [ "$accented" -eq 0 ]; then
   echo "build-dblp: dump's character entities. Keeping the existing database; build at $TMP" >&2
   exit 1
 fi
+# SQLite leaves -wal/-shm beside the file it built; moving only the database orphans them next to
+# the scratch name and leaves the destination's stale pair in place.
+rm -f "$DEST-wal" "$DEST-shm"
 mv "$TMP" "$DEST"
+rm -f "$TMP-wal" "$TMP-shm"
 echo "build-dblp: $pubs publications, accented author names present -> $DEST"
 """
 

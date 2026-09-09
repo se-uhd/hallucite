@@ -810,6 +810,49 @@ def tier3h_author_absence() -> None:
                       failed=["Semantic Scholar"]))
     C.true(degraded["degraded"], "a demoted reference with a failed backend is marked degraded")
 
+    # Letters carrying a stroke or bar survive NFKD, so folding them needs an explicit map. Without
+    # it "Przybylek" and "Przybyłek" are different people and the citation is flagged as inventing
+    # an author -- two of the three flags in the corpus measurement were exactly this.
+    for cited, found, why in [
+        (["A. Przybyłek"], ["Adam Przybylek"], "l with stroke"),
+        (["Kåre Synnes"], ["Kare Synnes"], "a ring above"),
+        (["Lars Bjørnvig"], ["Lars Bjornvig"], "o with stroke"),
+        (["Hans Weiß"], ["Hans Weiss"], "sharp s"),
+    ]:
+        C.eq(run(cited, dv("verified", "CrossRef", found))["status"], "verified",
+             f"REGRESSION GUARD: {why} folds to its ASCII form")
+
+    # DBLP's homonym suffix is not a name fragment.
+    C.eq(run(["Marcio Ribeiro"], dv("verified", "CrossRef", ["Márcio Ribeiro 0001"]))["status"],
+         "verified", "a DBLP homonym suffix does not read as an absent author")
+
+    # Which backends count is decided per run from the mirror in hand. Hard-coding DBLP out
+    # survived the mirror being repaired, and the reference with two invented authors verified
+    # again because the check skipped its DBLP clearance.
+    with tempfile.TemporaryDirectory() as td:
+        good = f"{td}/good.db"
+        con = sqlite3.connect(good)
+        con.execute("CREATE TABLE authors (id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL)")
+        con.executemany("INSERT INTO authors (name) VALUES (?)",
+                        [("Márcio Ribeiro",)] + [(f"Filler {i}",)
+                                                 for i in range(audit._DBLP_MIN_AUTHORS)])
+        con.commit()
+        con.close()
+        C.true("DBLP" in audit._complete_author_dbs(Path(good)),
+               "REGRESSION GUARD: a mirror that kept its accented authors lets DBLP count")
+        C.true("DBLP" not in audit._complete_author_dbs(Path(f"{td}/absent.db")),
+               "a missing mirror does not let DBLP count")
+
+    dblp_cleared = dv("verified", "DBLP",
+                      ["Márcio Ribeiro 0001", "Rohit Gheyi", "André L. M. Santos",
+                       "Elvys Soares", "Guilherme Amaral"])
+    audit._author_absence_pass(
+        [Entry(["Keila L. Lucas", "Elvys S. Soares", "Marcio Ribeiro", "Rohit Gheyi",
+                "Ivan Machado"])],
+        [dblp_cleared], audit.COMPLETE_AUTHOR_DBS | {"DBLP"})
+    C.eq(dblp_cleared["authors_absent"], ["Keila L. Lucas", "Ivan Machado"],
+         "REGRESSION GUARD: a DBLP-cleared reference with invented authors is demoted")
+
 def tier3i_dblp_author_encoding() -> None:
     """An offline DBLP mirror that holds no accented author name has a broken ingest, and the audit
     has to say so.
