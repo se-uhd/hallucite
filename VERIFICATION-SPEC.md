@@ -4,9 +4,8 @@ What hallucite needs from a reference verifier, written as a contract rather tha
 of any particular implementation. It exists so the verifier can be replaced without changing the
 audit, the triage rules, or the reports.
 
-The behaviour below was characterised against the implementation hallucite currently runs on;
-`skills/hallucite/scripts/characterize.py` records that behaviour on real references and holds a
-candidate replacement to the recording, so this document and the differential test stay in step.
+`skills/hallucite/scripts/characterize.py` records these operations on real references and holds a
+candidate implementation to the recording, so this document and the differential test stay in step.
 
 ## Surface
 
