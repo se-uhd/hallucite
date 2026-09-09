@@ -1353,6 +1353,47 @@ def tier4f_dblp_record_metadata() -> None:
                  "a mirror without the columns reports metadata as absent, not as an error")
 
 
+def tier4g_two_column_gutter() -> None:
+    """An ACM two-column bibliography sets its columns three characters apart, and requiring four
+    blank columns found no gutter on exactly those pages. The page was then read as one column, the
+    right column's text was appended to the left column's lines, and about half of each
+    bibliography silently vanished -- 8 of 16 references, 21 of 52, 24 of 62. Measured over 37
+    arXiv papers (ICSE, FSE, ASE, ESEM old and new, TSE, TOSEM): 94.0% recall at four, 99.1% at
+    three, nothing further at two."""
+    print("Tier 4g: a three-column gutter is a gutter (no network/DB)")
+    import pdf_references as R
+
+    LEFT = [f"[{i}] Author {i} Surname. An invented entry number {i}. Imaginary Press, 20{10 + i}."
+            for i in range(1, 7)]
+    RIGHT = [f"[{i}] Author {i} Surname. An invented entry number {i}. J. Imaginary {i}, 1-9."
+             for i in range(7, 13)]
+
+    def page(gap):
+        w = max(len(l) for l in LEFT)
+        return [l.ljust(w) + " " * gap + r for l, r in zip(LEFT, RIGHT)]
+
+    C.eq(R._MIN_GUTTER, 3, "a three-character gutter counts")
+    g3 = R._gutter(page(3))
+    C.true(g3 is not None, "REGRESSION GUARD: a three-character gutter is detected")
+    C.true(R._gutter(page(8)) is not None, "a wider gutter is still detected")
+
+    if g3 is not None:
+        lines = [x[:g3].rstrip() for x in page(3)] + [x[g3:].rstrip() for x in page(3)]
+        section = R._references_section(["Body text.", "References", *lines])
+        nums = [n for n, _, _ in R._segment(section, R._dominant_style(section))]
+        C.eq(nums, list(range(1, 13)),
+             "REGRESSION GUARD: both columns segment, in reading order")
+
+    # Justified single-column text must not be split by a coincidental run of spaces.
+    single = ["Anna Apple and Ben Berry. 2019. A single column entry that simply runs on",
+              "and continues here with ordinary spacing throughout the paragraph body,",
+              "no column break existing anywhere within this block of justified text.",
+              "A fourth line of the same paragraph, still without any column break at",
+              "all, and a fifth to clear the minimum line count the detector requires.",
+              "A sixth line, so the sample is not unusually short for the threshold."]
+    C.true(R._gutter(single) is None, "single-column text is not split")
+
+
 def tier4c_extraction_authoryear_lineno() -> None:
     """Regression for a Springer-style journal submission whose bibliography extraction collapsed:
     32 "references" came out of a 15-entry bibliography, 17 of them unparsable fragments, because
@@ -1439,6 +1480,7 @@ def main() -> int:
     tier4c_extraction_authoryear_lineno()
     tier4d_dblp_second_opinion()
     tier4f_dblp_record_metadata()
+    tier4g_two_column_gutter()
     print()
     if C.failed:
         print(f"SMOKE FAILED: {C.failed} check(s) failed, {C.skipped} skipped")

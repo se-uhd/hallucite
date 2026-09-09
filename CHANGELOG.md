@@ -4,6 +4,31 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.21.0] - 2026-09-09
+
+### Fixed
+
+- A two-column bibliography no longer loses half its references. `_gutter` required four wholly
+  blank character columns, and an ACM two-column reference page sets its columns three apart in
+  `pdftotext -layout` output -- tighter than the body text above it. No gutter was found on exactly
+  the pages that matter, the page was read as one column, the right column's text was appended to
+  the left column's lines, and roughly half of each bibliography silently disappeared: 8 references
+  of 16, 21 of 52, 24 of 62, 10 of 26. Four of the first seventeen papers tested extracted nothing
+  at all.
+
+  Measured over 37 arXiv papers spanning ICSE, FSE, ASE, ESEM in both templates, TSE and TOSEM: a
+  four-column minimum recovers 1752 of 1864 references (94.0%) and leaves four papers below 80%
+  recall; three recovers 1848 (99.1%) with none below 80%. Two gains nothing over three, so the
+  looser setting buys no recall and only risks reading a coincidental gap as a column break.
+
+### Added
+
+- `characterize.py`, which records what the current implementation returns for `parse_reference`
+  and `Validator.check` on real references and holds a replacement to that recording. hallucite
+  reaches into `hallucinator` at those two points only; replacing the dependency needs an oracle,
+  and observing the current behaviour from the outside is both the specification and the
+  differential test.
+
 ## [1.20.0] - 2026-09-09
 
 ### Added
@@ -726,6 +751,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.21.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.21.0
 [1.20.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.20.0
 [1.19.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.19.0
 [1.18.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.18.0

@@ -123,8 +123,18 @@ def _pages(pdf_path: str) -> list[str]:
     return out.split("\x0c")
 
 
+# How many wholly blank character columns make a gutter. An ACM two-column bibliography sets its
+# columns three characters apart in `pdftotext -layout` output -- tighter than the body text -- so
+# requiring four found no gutter on exactly the pages that matter, read the page as one column, and
+# silently returned about half of each bibliography. Measured over 37 arXiv papers (ICSE, FSE, ASE,
+# ESEM in both templates, TSE, TOSEM): at four, 1752 of 1864 references (94.0%) and four papers
+# below 80% recall; at three, 1848 (99.1%) and none. Two gains nothing over three, so the looser
+# setting buys no recall and only risks reading a coincidental gap as a column break.
+_MIN_GUTTER = 3
+
+
 def _gutter(page_lines: list[str]) -> int | None:
-    """Column position of a two-column gutter: a band of >=4 columns, in the
+    """Column position of a two-column gutter: a band of >=_MIN_GUTTER columns, in the
     middle 30-72% of the page width, that is whitespace on >97% of non-blank
     lines. Returns None for single-column pages."""
     nb = [l for l in page_lines if l.strip()]
@@ -142,11 +152,11 @@ def _gutter(page_lines: list[str]) -> int | None:
     for c in space_cols[1:]:
         if c == band[-1] + 1:
             band.append(c)
-        elif len(band) >= 4:
+        elif len(band) >= _MIN_GUTTER:
             break
         else:
             band = [c]
-    return band[len(band) // 2] if len(band) >= 4 else None
+    return band[len(band) // 2] if len(band) >= _MIN_GUTTER else None
 
 
 def _linearize(pdf_path: str) -> list[str]:
