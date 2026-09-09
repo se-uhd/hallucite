@@ -51,3 +51,17 @@ runs.
 - The DOI, year and venue checks were measured and rejected as automatic demotions (28%, 10% and
   6.7% disagreement against 0.22% for the author-absence check). The fields are surfaced to triage
   instead. Do not revisit without a fresh measurement on a corpus with trustworthy verdicts.
+
+## Last, once the verifier is replaced
+
+Prose pass, in this order:
+
+1. `/ai-slop:review-repo` over the whole repo -- the Markdown, the comments in the scripts and the
+   config, and the commit messages. `/ai-slop:revise` applies the report.
+2. Then reread `README.md` and `CLAUDE.md` end to end and revise them against what the repo actually
+   is by then. Both still describe `hallucinator`, the Rust toolchain, `install-cli-patched`,
+   `fetch-dblp-dump` and `dblp-entity-fix.patch`; step 4 above deletes all of it, and the dependency
+   table, the setup commands and the whole DBLP-mirror section go with it.
+
+Leave this until last on purpose. Running it earlier reviews prose that the cutover is about to
+rewrite.
