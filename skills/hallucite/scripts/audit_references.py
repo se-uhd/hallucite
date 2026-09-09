@@ -19,6 +19,8 @@ Options:
                         (default: $HALLUCITE_DBLP, else ~/hallucite/dblp.db)
     --out DIR           Output directory (default: out)
     --mailto EMAIL      CrossRef polite-pool contact (optional; recommended for CrossRef)
+    --s2-api-key KEY    Semantic Scholar key ($S2_API_KEY). Without one S2 rate-limits,
+                        leaving references degraded and the worklist varying between runs
     --offline           No network: disable the online database backends.
                         Offline DBLP and hallucinator's built-in Standards
                         matcher stay live; a missing DBLP file disables DBLP
@@ -327,6 +329,21 @@ def build_config(args) -> ValidatorConfig:
               f"online if available. Build it with: mise run build-dblp", file=sys.stderr)
     if args.mailto:
         cfg.crossref_mailto = args.mailto
+    # Semantic Scholar rate-limits an unauthenticated caller hard: over twelve audit runs it
+    # answered on one, returning `rate_limited` in about 2.4s for three to five references each
+    # time. Those references then carry a degraded verification -- not a clean negative -- and the
+    # boundary between "verified" and "needs triage" moves by one reference from run to run, which
+    # is the whole of the churn observed between otherwise identical audits. A free key removes it.
+    s2_key = args.s2_api_key or os.environ.get("S2_API_KEY", "")
+    if s2_key:
+        cfg.s2_api_key = s2_key
+    elif not args.offline:
+        print("note: no Semantic Scholar API key (--s2-api-key or $S2_API_KEY). Unauthenticated "
+              "callers are rate-limited, which leaves references degraded and makes the worklist "
+              "vary between runs. Free key: https://www.semanticscholar.org/product/api",
+              file=sys.stderr)
+    if args.rate_limit_retries is not None:
+        cfg.max_rate_limit_retries = args.rate_limit_retries
     if args.disable_dbs:
         disabled += [d.strip() for d in args.disable_dbs.split(",") if d.strip()]
     if disabled:
@@ -754,6 +771,11 @@ def main() -> int:
                    help="Offline DBLP SQLite DB ($HALLUCITE_DBLP, else ~/hallucite/dblp.db)")
     p.add_argument("--out", default="out", help="Output directory")
     p.add_argument("--mailto", default="", help="CrossRef polite-pool contact (recommended)")
+    p.add_argument("--s2-api-key", default="",
+                   help="Semantic Scholar API key ($S2_API_KEY). Without one S2 rate-limits and "
+                        "its references stay degraded")
+    p.add_argument("--rate-limit-retries", type=int, default=None,
+                   help="How often a rate-limited backend is retried (hallucinator default)")
     p.add_argument("--offline", action="store_true",
                    help="no network (disable online DBs; offline DBLP + the local Standards "
                         "matcher stay live)")

@@ -4,6 +4,18 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [1.20.0] - 2026-09-09
+
+### Added
+
+- `--s2-api-key` (or `$S2_API_KEY`) and `--rate-limit-retries`, and a note when no key is set.
+  Semantic Scholar answered on one of twelve audit runs; on the other eleven it returned
+  `rate_limited` in about 2.4 s for three to five references each. Those references carry a
+  degraded verification -- not a clean negative -- and the boundary between "verified" and "needs
+  triage" moved by one reference between otherwise identical runs. That was the entire source of
+  churn observed across the session; a free key removes it. `ValidatorConfig` had `s2_api_key` and
+  `max_rate_limit_retries` all along and the audit set neither.
+
 ## [1.19.0] - 2026-09-09
 
 ### Added
@@ -714,6 +726,7 @@ All notable changes to hallucite are documented here. The format follows
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[1.20.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.20.0
 [1.19.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.19.0
 [1.18.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.18.0
 [1.17.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.17.0
