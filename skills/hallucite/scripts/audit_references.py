@@ -47,8 +47,8 @@ from difflib import SequenceMatcher
 from pathlib import Path
 
 import reference_parser
-from dblp_check import record_context
-from verifier import Verifier
+from dblp_check import nearest_title, record_context
+from verifier import DBLP, NO_MATCH, Verifier
 from pdf_references import _parse, extract_references
 
 SCHEMA_VERSION = "1.0"
@@ -464,6 +464,33 @@ def _retry_dehyphenated(validator: Verifier, extractor,
     return fixed
 
 
+def attach_mirror_evidence(dblp_path: str, entries: list, verifications: list[dict]) -> None:
+    """What the offline mirror can tell whoever reviews the residue, attached to each unverified
+    reference's verification. Not a check: nothing here changes a status.
+
+    `dblp_record` is DBLP's own year, venue, volume/pages and DOI where exactly one record carries
+    the cited title (`dblp_check.record_context`). `dblp_nearest` is the mirror's nearest title
+    where no record carries it, offered only when every cited person is on that record
+    (`dblp_check.nearest_title`). It is asked for only where the DBLP backend answered `no_match`
+    -- the status string `verifier` emits for "asked, and found no record with this title" -- so
+    a reference the mirror was never asked about (`skipped`) or found under its title with other
+    authors (`author_mismatch`) gets no near miss it does not need."""
+    for e, v in zip(entries, verifications):
+        if v["status"] == "verified":
+            continue
+        ref = e.reference
+        title = getattr(ref, "title", "") or ""
+        found = record_context(dblp_path, title)
+        if found:
+            v["dblp_record"] = found
+            continue
+        if any(r.get("db") == DBLP and r.get("status") == NO_MATCH
+               for r in v.get("db_results") or []):
+            near = nearest_title(dblp_path, title, list(getattr(ref, "authors", None) or []))
+            if near:
+                v["dblp_nearest"] = near
+
+
 def audit_pdf(pdf: Path, extractor, validator: Verifier | None,
               retry_rounds: int = 1, retry_delay: float = 5.0,
               candidates: bool = False, mailto: str = "",
@@ -484,17 +511,13 @@ def audit_pdf(pdf: Path, extractor, validator: Verifier | None,
         if n:
             print(f"    recovered {n} degraded verification(s) on retry")
     # Evidence for whoever reviews the residue: DBLP's own year, venue, volume/pages and DOI beside
-    # the citation. Not a check -- comparing these automatically was measured against the corpus and
-    # is far too noisy to demote on (see dblp_check.record_context). This runs after every pass, so
-    # it covers the final residue; attaching it earlier skipped exactly the references the last pass
-    # demotes, which are the ones a reviewer most needs the evidence for.
+    # the citation, or its nearest title where it holds no record of the cited one. Not a check --
+    # comparing these fields automatically was measured against the corpus and is far too noisy to
+    # demote on (see dblp_check.record_context). This runs after every pass, so it covers the final
+    # residue; attaching it earlier skipped exactly the references the last pass demotes, which
+    # are the ones a reviewer most needs the evidence for.
     if dblp_path and verifications:
-        for e, v in zip(parsed_entries, verifications):
-            if v["status"] == "verified":
-                continue
-            found = record_context(dblp_path, getattr(e.reference, "title", "") or "")
-            if found:
-                v["dblp_record"] = found
+        attach_mirror_evidence(dblp_path, parsed_entries, verifications)
     result_iter = iter(verifications)
 
     references = []

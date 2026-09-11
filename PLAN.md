@@ -10,8 +10,7 @@ Papers are identified by their id, the PDF file name (a file `paper1.pdf` has id
 
 1. Extract (`pdf_references.py`): pull every reference from a paper's PDF file.
 2. Verify (`audit_references.py`): check each against DBLP (local offline database), CrossRef,
-   arXiv, Semantic Scholar, and other open bibliographic databases. Anything a database
-   confirms is cleared. No LLM.
+   DOI resolution, arXiv and Semantic Scholar. Anything a database confirms is cleared. No LLM.
 3. Triage (`triage.py` with an interactive LLM agent): investigate only the database-unverified
    residue (DOI and publisher pages, Google Scholar, web search) and classify each **title-first** --
    first ask whether a publication bearing the cited title exists at all, then whether its metadata
@@ -83,7 +82,7 @@ days old; rebuild with `mise run build-dblp`.
     "original_number": 5,
     "raw_citation": "...",
     "parsed": {"title": "...", "authors": ["..."], "doi": "...", "arxiv_id": null},
-    "db_verification": {"status": "verified", "source": "DBLP Offline", "paper_url": "...", "db_results": [...]}
+    "db_verification": {"status": "verified", "source": "DBLP", "paper_url": "...", "db_results": [...]}
   }]
 }
 ```
@@ -108,7 +107,13 @@ for a non-publication resource) and a `likely-hallucinated` must assert the titl
 candidates** section -- references whose cited title matches no real publication), and
 `verify-<paper>.md` (a manual-check sheet for each flagged paper, with the matched title, the
 signal summary, and one-click search links). The rollup shows each flag's cited-vs-matched title,
-so a reviewer sees the discriminating fact without re-investigating.
+so a reviewer sees the discriminating fact without re-investigating. The per-paper report and the
+sheet print what the audit knew about each unverified reference under its DB status: the backends
+that were never asked (`skipped`, so a `not_found` with the mirror among them was never put to
+it), DBLP's record where one carries the cited title or its nearest title where none does (within
+two word edits, and only with every cited author on it), what each cited DOI or arXiv id resolves
+to and whether that is the cited title, and what each backend matched. The worklist entry carries
+the same fields (`skipped_dbs`, `dblp_record`, `dblp_nearest`, `identifiers`, `matched`).
 
 ## Tests
 

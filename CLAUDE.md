@@ -57,11 +57,15 @@ No separate plugin repo, no submodule.
   every corpus paper extracts and what moved against a baseline; `corruptions.py` builds the
   corruption harness once and scores an implementation against it; `head_to_head.py` scores the
   old and new parser and DBLP check over the recorded cases or the corpus, offline by
-  construction; `mutations.py` reverts one fix at a time and requires the suite to fail. The
+  construction; `mutations.py` reverts one fix at a time and requires the suite to fail, and does
+  so in the working tree, so run nothing else against the tree until it finishes. The
   built harness sets live with the other anchors in `~/hallucite/` (`corruptions.json`,
   `corruptions-truncated.json`) and are scored, never rebuilt, because a rebuild on a newer dump
   samples different records. `--scripts DIR` on the scorers imports a snapshot of the modules, so
-  a before-and-after needs no stash.
+  a before-and-after needs no stash. `residue_evidence.py` reads an `--offline` audit's output and
+  prints, per residue reference, the backends never asked, the mirror's nearest title ungated and
+  gated, and (its one network step, DOI and arXiv only, a few hundred requests) what each cited
+  identifier resolves to.
 - Stage 1/2 driver: `skills/hallucite/scripts/audit_references.py` (segments each reference via
   `pdf_references.py`, parses it with `reference_parser.py`, then runs `verifier.check`). The
   target is 0 unparsed references.
@@ -76,7 +80,11 @@ No separate plugin repo, no submodule.
   `matched_title` or `na`; `likely-hallucinated` needs `title_match=no`). `report` writes the
   per-paper checks, the `potential-hallucinations.md` rollup (severity table + a **Desk-reject
   candidates** section keyed on `is_fabrication`), and `verify-<paper>.md` sheets, and auto-lints
-  every file it writes.
+  every file it writes. A worklist entry, the per-paper check and the sheet all carry what the
+  audit knew about the reference: `skipped_dbs` (backends never asked -- a `not_found` with the
+  mirror in that list was never put to it), `matched`, `dblp_record`, `dblp_nearest` (the mirror's
+  nearest title, offered only with every cited author on it) and `identifiers` (what each cited
+  DOI or arXiv id resolves to, and whether that is the cited title).
 
 ## Triage conventions (Stage 3)
 

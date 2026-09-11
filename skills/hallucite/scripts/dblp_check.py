@@ -175,6 +175,9 @@ _APOSTROPHE = re.compile(r"[\u2018\u2019\u02bc`\u00b4]")
 # The particle a surname elides onto its front, which a citation is as likely to drop as to keep.
 _ELIDED = re.compile(r"(?<![^\W\d_])[a-zA-Z]{1,2}['\u2018\u2019](?=[A-Za-z])")
 _ESZETT_AS_B = re.compile(r"(?<=[a-z])B(?=[a-z])")
+_UMLAUT = re.compile(r"[äöüÄÖÜ]")
+_UMLAUT_TRANSLIT = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue",
+                                  "Ä": "Ae", "Ö": "Oe", "Ü": "Ue"})
 
 
 def _name_readings(name: str):
@@ -197,6 +200,14 @@ def _name_readings(name: str):
     # widens the surname and not the person.
     if _ELIDED.search(name):
         yield _name_parts(_ELIDED.sub("", name))
+    # The German transliteration of an umlaut, which a citation carries where its style or its
+    # author's keyboard could not write the letter: "Buettcher" for "Büttcher", "Juergens" for
+    # "Jürgens". Read off the side that carries the umlaut, so only a name that really has one
+    # gains the second spelling; contracting "ue" in every name instead would rewrite "Miguel"
+    # and "Rodriguez" into spellings an invented author could hide behind.
+    composed = unicodedata.normalize("NFC", name)
+    if _UMLAUT.search(composed):
+        yield _name_parts(composed.translate(_UMLAUT_TRANSLIT))
 
 
 def _author_matches(cited: str, candidate: str) -> bool:
@@ -762,3 +773,134 @@ def record_context(db_path: str, title: str) -> dict | None:
         return next(iter(hits.values()))
     finally:
         con.close()
+
+
+# How far a title may be from the cited one, in word-level edits, and still be offered as the
+# mirror's nearest: a dropped "and", one content word changed, a subtitle word added -- the shapes
+# the corpus residue takes ("An in-depth study" for "An In-depth Empirical Study", "state-aware"
+# for "Context-Aware"). At three a title is a different title.
+_NEAREST_EDITS = 2
+# The leave-out queries are asked over at most this many of the title's selective words, so a long
+# title costs at most 45 queries.
+_NEAREST_WORDS = 10
+# How many near titles are read for the author gate. Past this a title is generic enough that a
+# near miss says little, and each candidate costs an author lookup.
+_NEAREST_CANDIDATES = 100
+
+
+def _title_words(title: str) -> list[str]:
+    """A title as the word sequence the edit distance runs over: folded, hyphens closed,
+    punctuation gone -- the reduction `_letters` makes, kept as words."""
+    return re.findall(r"[a-z0-9]+", _fold((title or "").replace("-", "")))
+
+
+def _word_edits(a: list[str], b: list[str]) -> int:
+    """Levenshtein distance over two word sequences. A title is a dozen words, so the plain table
+    is cheaper than anything cleverer."""
+    prev = list(range(len(b) + 1))
+    for i, wa in enumerate(a, 1):
+        cur = [i]
+        for j, wb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (wa != wb)))
+        prev = cur
+    return prev[-1]
+
+
+def _nearest_queries(title: str) -> list[str]:
+    """AND queries over the title's selective words with two of them left out, or one where the
+    title is too short for two, or [].
+
+    A record within two word edits of the cited title still carries all but two of its words, so
+    leaving every pair out retrieves it whichever two moved. Where leaving two out would leave
+    fewer than three, one is left out and the offer reaches one edit; a title with fewer than
+    four selective words is not asked about at all, which is also where `queryable` stops."""
+    groups = _and_groups(title)[:_NEAREST_WORDS]
+    n = len(groups)
+    out: list[str] = []
+    if n - 2 >= 3:
+        for i in range(n):
+            for j in range(i + 1, n):
+                out.append(" AND ".join(g for k, g in enumerate(groups) if k not in (i, j)))
+    elif n - 1 >= 3:
+        for i in range(n):
+            out.append(" AND ".join(g for k, g in enumerate(groups) if k != i))
+    return out
+
+
+def _nearest_candidates(db_path: str, title: str) -> list[dict]:
+    """Every record within `_NEAREST_EDITS` word edits of the cited title, nearest first, each with
+    its authors and metadata. Ungated: `nearest_title` is what applies the author gate, and this
+    is separate so the gate's effect can be measured."""
+    want = _title_words(title)
+    queries = _nearest_queries(title)
+    if not want or not queries:
+        return []
+    try:
+        con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    except sqlite3.Error:
+        return []
+    try:
+        extra = _extra_columns(con)
+        cols = "".join(f", p.{c}" for c in extra)
+        near: dict[int, tuple[int, str, str]] = {}
+        wanted = set(want)
+        for q in queries:
+            try:
+                rows = con.execute(
+                    f"SELECT p.id, p.key, p.title FROM publications_fts f "
+                    "JOIN publications p ON p.id = f.rowid "
+                    "WHERE publications_fts MATCH ? LIMIT ?", (q, _MAX_CANDIDATES)).fetchall()
+            except sqlite3.Error:
+                continue
+            for pid, key, cand_title in rows:
+                if pid in near:
+                    continue
+                words = _title_words(cand_title)
+                # Two cheap necessary conditions before the table: an edit moves one word, so
+                # the lengths and the shared words are both within the bound.
+                if (abs(len(words) - len(want)) > _NEAREST_EDITS
+                        or len(wanted & set(words)) < len(wanted) - _NEAREST_EDITS):
+                    continue
+                edits = _word_edits(want, words)
+                if edits <= _NEAREST_EDITS:
+                    near[pid] = (edits, key, cand_title)
+        out: list[dict] = []
+        for pid, (edits, key, cand_title) in sorted(near.items(), key=lambda kv: kv[1][0])[
+                :_NEAREST_CANDIDATES]:
+            authors = [r[0] for r in con.execute(
+                "SELECT a.name FROM publication_authors pa "
+                "JOIN authors a ON a.id = pa.author_id WHERE pa.pub_id = ?", (pid,))]
+            meta = {}
+            if extra:
+                row = con.execute(f"SELECT p.id{cols} FROM publications p WHERE p.id = ?",
+                                  (pid,)).fetchone()
+                meta = dict(zip(extra, row[1:])) if row else {}
+            out.append({"key": key, "title": cand_title, "authors": authors, "edits": edits,
+                        **{k: v for k, v in meta.items() if v not in (None, "")}})
+    finally:
+        con.close()
+    # Nearest first; of two records at the same distance the published one before its preprint,
+    # as `title_candidates` orders them.
+    out.sort(key=lambda c: (c["edits"], (c.get("venue") or "").strip().lower() == "corr"))
+    return out
+
+
+def nearest_title(db_path: str, title: str, authors: list[str]) -> dict | None:
+    """The mirror's nearest title, offered only when every cited person is on that record.
+
+    A sibling of `record_context` for the residue where no record carries the cited title. It
+    runs on a citation the DBLP backend answered `no_match` for, offers a record whose title is
+    within `_NEAREST_EDITS` word-level edits of the cited one, and requires every cited person to
+    be an author of it. The gate is what makes it evidence rather than noise: the same authors on a
+    title one word off is how a slipped content word ("in-depth study" for "In-depth Empirical
+    Study") looks, while a near title under other people is a different work, and offering it
+    would argue a correct citation of an uncovered work into a "citation error".
+
+    Evidence for a human, never a confirmation: the triage rules say a person confirms a title
+    that differs in a content word, and nothing here changes a status."""
+    if not (title or "").strip() or not authors:
+        return None
+    for candidate in _nearest_candidates(db_path, title):
+        if authors_match(list(authors), candidate["authors"], record_complete=True):
+            return candidate
+    return None

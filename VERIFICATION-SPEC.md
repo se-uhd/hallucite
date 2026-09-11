@@ -83,6 +83,10 @@ The part that decides most verdicts, and the part most easily got wrong in both 
 - Fold diacritics, and fold the letters that carry a stroke or bar rather than a combining mark —
   `ł`, `ø`, `đ`, `ß` survive Unicode decomposition and must be mapped explicitly, or `Przybyłek` and
   `Przybylek` read as different people.
+- Read the German transliteration off a name that carries an umlaut (`Büttcher` answers to
+  `Buettcher`, `Jürgens` to `Juergens`), never by contracting `ue`/`oe`/`ae` in a name that has
+  none -- that would rewrite `Miguel` and `Rodriguez` into spellings an invented author could hide
+  behind.
 - Tolerate a middle initial present on one side only, a hyphenated surname written with a space, and
   given/surname order swapped.
 - A citation may legitimately list fewer authors than the record (`et al.`).

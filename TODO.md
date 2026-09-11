@@ -3,20 +3,19 @@
 ## What the DBLP path still refuses that the verifier it replaced confirmed
 
 Measured head to head over the same 2065 citations of `~/hallucite/cases.json`, the same mirror,
-DBLP only and nothing else asked, the new path now confirms 1508 against the old path's 1519; over
-the whole 55-paper corpus it confirms 2068 against 2009. The CHANGELOG entry carries the numbers,
+DBLP only and nothing else asked, the new path now confirms 1509 against the old path's 1519; over
+the whole 55-paper corpus it confirms 2070 against 2009. The CHANGELOG entry carries the numbers,
 the rules that were measured and rejected, and the reading of every reference that moved. What is
 left on the losing side is deliberate, and each item is a judgment call rather than a defect:
 
-- **Nine name forms.** A real person written two ways: a nickname ("Rick Schlichting" for "Richard
-  D. Schlichting", "Tom Zimmermann", "Mike Van Emmerik"), a transliteration ("Buettcher" for
-  "Büttcher", "Juergens" for "Jürgens"), an eszett a PDF rendered as a lowercase b ("Weibgerber"),
-  a spelling ("Mohammad" for "Mohammed", "Hosseinpour" for "Hoseinpour"), a diacritic pdftotext
-  dropped ("Mara" for "María", "Beroni" for "Beronić"). Each reaches triage as `mismatch` carrying
-  the record, where the difference is the first thing a reader sees. The one rule that looks safe
-  is the German transliteration reading (`ue`, `oe`, `ae` for the umlaut) and it is worth two
-  references; measure it on the corruption harness before adding it, because every widening of
-  name pairing is a name an invented author could hide behind.
+- **Seven name forms.** A real person written two ways: a nickname ("Rick Schlichting" for "Richard
+  D. Schlichting", "Tom Zimmermann", "Mike Van Emmerik"), an eszett a PDF rendered as a lowercase b
+  ("Weibgerber"), a spelling ("Mohammad" for "Mohammed", "Hosseinpour" for "Hoseinpour"), a
+  diacritic pdftotext dropped ("Mara" for "María", "Beroni" for "Beronić"). Each reaches triage as
+  `mismatch` carrying the record, where the difference is the first thing a reader sees. The German
+  transliteration of an umlaut ("Buettcher" for "Büttcher") is read now, off the side that carries
+  the umlaut; every other widening of name pairing is a name an invented author could hide behind,
+  so measure any candidate on both corruption harness sets first.
 - **Nine real discrepancies**, which the rule exists to flag: five citations naming people who
   did not write the paper (RepoHyper, RepoFuse, BashExplainer, AgentCoder, RepoFormer), and four
   where the citation and the record disagree on one person (a version difference, a typo, a
@@ -25,9 +24,11 @@ left on the losing side is deliberate, and each item is a judgment call rather t
   22-author preprint lists 19 people; the completeness tier cannot see the gap because the record
   does not mark it, so the three missing names refute. Correct by the contract, and a cost a
   triager pays. There is no data-side signal for it short of counting the authors on arXiv.
-- **Fifteen cited titles that differ from the record's in a content word** ("in-depth study" for
+- **Cited titles that differ from the record's in a content word** ("in-depth study" for
   "In-depth Empirical Study", "state-aware" for "Context-Aware", a dropped "and"). Refused on
-  purpose: the triage rules say a human confirms those, not a matcher.
+  purpose: the triage rules say a human confirms those, not a matcher. The record now travels with
+  the reference as `dblp_nearest`, offered only when every cited author is on it, so the human
+  sees what to confirm.
 
 Two limits of the lenient tier are recorded rather than open. A record credited to a group rather
 than to people (`OpenAI`, `Qwen Team`) has no person to pair against, so a citation of "GPT-4
@@ -43,10 +44,10 @@ paper of the same title), and moves six references from `not_found` to `mismatch
 of different works that share a generic two-word title ("Github copilot", "Continuous integration",
 "Virtual threads"). A false confirmation is the one outcome the tool must not produce, and the
 three real two-word titles it would have recovered ("Reproducible containers", "Random Forests",
-"Sampling Techniques") reach triage as `skipped`, which says truthfully that the mirror was not
-asked.
+"Sampling Techniques") reach triage as `skipped`, which the worklist and the report now say in so
+many words: 123 of the corpus residue's 788 references were never put to the mirror.
 
-## Record an online anchor when the quota is fresh
+## Finish the online anchor
 
 `~/hallucite/cases-hallucite.json` is the regression anchor: 2081 references recorded from the
 shipped modules, verified against the offline mirror alone. It replays in 30 seconds with no
@@ -59,34 +60,50 @@ whoever's rate limit was in force that afternoon, which is not a property of thi
 which is the specification the modules were written against. `compare` reads which recording it has
 been handed and says so, and replays an offline one offline.
 
-What is missing is an anchor for the four online backends, which decide about 8% of confirmations
-between them. Record one with `--s2-api-key` on a day the Semantic Scholar quota has not been spent
--- three full corpus replays in one afternoon exhausted it, and the recording that came out of that
-says more about the throttle than about the code:
+The anchor for the four online backends, which decide about 8% of confirmations between them, was
+started on 2026-09-11, the first day the Semantic Scholar quota was fresh:
 
-    characterize.py record ~/hallucite/corpus --out ~/hallucite/cases-online.json --mailto <you>
+    characterize.py record ~/hallucite/corpus --out ~/hallucite/cases-online.json
 
-## Put the evidence hallucite already has in front of the triager
+with its log at `~/hallucite/cases-online.log`. It is one corpus replay -- about 1500 CrossRef and
+700 Semantic Scholar requests, sequential, an hour or more -- and three of those in one afternoon
+are what exhausted the quota last time, so do not start a second while one is running. What is
+left: if the log does not end in `recorded 2857 cases`, start it once more, with `--mailto <you>`
+for CrossRef's polite pool; when it does, replay it and read the movement report before treating it
+as an anchor, because a reference whose only backend failure is Semantic Scholar's says something
+about that afternoon's throttle and nothing about the code:
 
-Three things the audit knows and throws away. **The numbers below came from the 95-paper residue
-that the next section declares unusable, and the PDFs behind it are gone, so re-measure each on
-`~/hallucite/corpus` before building against it.** They are kept only to say what shape the
-evidence took.
+    characterize.py compare ~/hallucite/cases-online.json --impl verifier
 
-- **What the cited identifier resolves to.** A dead identifier and one that resolves to a
-  *different* title point at opposite verdicts, and triage cannot tell them apart today.
-  `verifier` already fills `doi_info` and `arxiv_info` with the resolved title; `triage.py` reads
-  neither. On the old residue, most of the identifiers that resolved resolved to another work.
-- **The mirror's nearest title, gated on authorship.** A sibling of `record_context` that runs only
-  where `title_candidates` found nothing, offers a record within two word-level edits, and requires
-  every cited person to be on it. On the old residue the gate was what made it precise: ungated, a
-  third of the extra hits were different works, several of which would have argued a correct
-  citation into a "citation error" verdict.
-- **That the mirror was asked at all.** A `not_found` reads the same whether the mirror came back
-  empty or was never asked -- `queryable()` returns false for a short title, and `_dblp` reports
-  `skipped`, which no report surfaces. That is the distinction `SKILL.md`'s first question turns
-  on, and what separates `likely-hallucinated` from `unclear`. Seven corpus references sit at
-  `skipped` for a two-word title, and no report says so.
+## Parser gaps the residue evidence surfaced
+
+Reading the corpus residue's `skipped` list and what its identifiers resolve to
+(`measure/residue_evidence.py`) turned up entries the parser reads wrongly. None of them is a
+verification defect -- each reaches triage as an honest `not_found` -- but every one costs a
+human a lookup the tool could have made:
+
+- A Springer entry of the shape `Podman. URL https://podman.io/` parses to the title `URL`
+  (eleven references in `emse-2605.21238v1` and `emse-2608.11513v1`). The word before `URL` is
+  the title, or the author is.
+- A title is cut at an exclamation mark inside it (`Hey! are you committing tangled changes?`
+  becomes `Hey!`) and at a closing quote (`"safety automata" - A new specification language ...`
+  becomes `safety automata`).
+- One JSS paper (`jss-2605.26146v1`) joins the venue to the title with a comma and no `in:`
+  (`..., arXiv preprint`, `..., SSRN`, `..., Springer, Berlin, Heidelberg`); about twenty of its
+  references carry the venue in the title, and `_TRAILING_IN_VENUE` covers only `, in:`. The
+  nearest-title lead and the arXiv resolution both recover the real title, which is how it was
+  noticed.
+- `VII. Note on regression and inheritance ...` parses to the title `VII`, and
+  `M. P. Robillard, ..., and T. Zimmermann, editors. Recommendation Systems ...` to `editors`.
+- A DOI the layout broke after a period keeps only its first half (`doi:10.1109/ICET.2017.
+  8281704` yields `10.1109/ICET.2017`, which resolves as dead). The rejoin that covers an
+  underscore break does not cover a period, and three of the corpus residue's five dead DOIs are
+  this shape. Check the far side continues the DOI, as the underscore rejoin does; a four-digit
+  year is the entry's own date running on.
+- `titles_match` treats a colon or a dash as the subtitle mark but not a question mark, so
+  `Does the whole exceed its parts?` reads as a different title from `Does the Whole Exceed its
+  Parts? The Effect of AI Explanations ...`. Measure on both corruption harness sets before
+  widening it.
 
 ## The corpus is 55 papers and still thin
 
@@ -124,8 +141,9 @@ than the part that was convenient.
 `out/` holds 95 papers of verdicts produced against a mirror that was missing 285,000 authors, and
 the PDFs it was built from are gone. It is not a usable baseline for judging a detection rule.
 
-`~/hallucite/corpus` (41 papers: ICSE, FSE, ASE, ESEM, TSE, TOSEM, both ACM and IEEE templates, with
-`MANIFEST.tsv`) replaces the extraction sample. A verdict baseline still needs an audit run over it:
+`~/hallucite/corpus` (55 papers: ICSE, FSE, ASE, ESEM, TSE, TOSEM, EMSE and JSS, ACM, IEEE,
+Springer and Elsevier templates, with `MANIFEST.tsv`) replaces the extraction sample. A verdict
+baseline still needs an audit run over it:
 
     S2_API_KEY=... mise run audit -- ~/hallucite/corpus --out out-corpus --mailto <you>
 
@@ -140,6 +158,10 @@ runs.
 - The DOI, year and venue checks were measured and rejected as automatic demotions; the table is
   in CHANGELOG under 1.19.0. Do not revisit without a fresh measurement on a corpus with
   trustworthy verdicts.
+- `authors_absent` is read by `triage.py` and written by nothing since the cutover: the
+  `_author_absence_pass` that filled it is gone, and a `mismatch` now carries the matched record's
+  authors under `matched` instead. Either derive the absent names from `matched` or drop the field
+  and the `SKILL.md` sentence that describes it.
 
 ## Last, once the verifier is replaced
 

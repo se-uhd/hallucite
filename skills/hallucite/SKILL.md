@@ -202,6 +202,17 @@ For each entry (references whose `db_verification.status` is anything other than
   than a blank-page search. For a `mismatch`, open the matched record first and diff it field by
   field -- and confirm it is even the same work, since a backend can match a thesis, preprint, or
   extended abstract that shares its paper's title.
+- **Read what the audit knew before you search.** `skipped_dbs` lists the backends that were
+  never asked: a `not_found` with `DBLP` in that list is a title too short to query the mirror
+  with, not a mirror negative, and question 1 below is still wide open. `dblp_record` is the
+  mirror's own year, venue, pages and DOI where exactly one record carries the cited title.
+  `dblp_nearest` is offered where no record carries it: the mirror's nearest title, within two
+  word edits and with every cited author on it -- the shape of a slipped or added content word
+  ("in-depth study" for "In-depth Empirical Study"), which you confirm rather than the matcher.
+  `identifiers` says what each cited DOI or arXiv id resolves to and whether that is the cited
+  title: a dead identifier is signal (D); one that resolves to a different work is a slipped digit
+  or a real record stapled to the wrong citation, and the resolved title tells you which; one that
+  resolves to the cited title says the work exists, whatever the databases made of its authors.
 - **`degraded: true` means the check was incomplete** -- a backend errored or rate-limited, so the
   databases that would have matched this reference may never have been asked. Its `not_found` is
   not evidence of anything. A fabrication verdict on a degraded entry must rest entirely on your

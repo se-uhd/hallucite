@@ -11,6 +11,11 @@ happens. Add an entry with every fix that gets a guard, and re-run:
 
 Every entry must end in `suite FAILS`; an entry the runner cannot find in the file is reported as
 SKIPPED, which means the fix has been rewritten and the entry needs updating.
+
+The run mutates the working tree in place, one file at a time, for the twenty seconds each suite
+run takes. Nothing else may be measured against the tree while it runs: a scorer started beside it
+imports whichever revert happens to be in place, and an edit made to a file under test is lost when
+the backup is restored over it.
 """
 
 from __future__ import annotations
@@ -25,6 +30,8 @@ SMOKE = SCRIPTS / "tests" / "run_smoke.py"
 P = SCRIPTS / "pdf_references.py"
 R = SCRIPTS / "reference_parser.py"
 D = SCRIPTS / "dblp_check.py"
+A = SCRIPTS / "audit_references.py"
+T = SCRIPTS / "triage.py"
 
 # (label, file, the text as fixed, the text reverted)
 MUTATIONS = [
@@ -66,6 +73,22 @@ MUTATIONS = [
      "            for q in _glued_query(title):"),
     ("dblp: the lenient tier is a wildcard", D,
      "    return matched >= 1 or not _lists_people(candidate)", "    return True"),
+    ("dblp: an umlaut does not read as its transliteration", D,
+     "    if _UMLAUT.search(composed):", "    if False:"),
+    ("dblp: the nearest title needs no cited person on it", D,
+     '        if authors_match(list(authors), candidate["authors"], record_complete=True):',
+     "        if True:"),
+    ("dblp: the nearest title may be three word edits away", D,
+     "_NEAREST_EDITS = 2", "_NEAREST_EDITS = 3"),
+    ("audit: the nearest title is asked for whatever the mirror said", A,
+     '        if any(r.get("db") == DBLP and r.get("status") == NO_MATCH\n'
+     '               for r in v.get("db_results") or []):',
+     "        if True:"),
+    ("triage: a skipped backend is not reported as never asked", T,
+     '            if r.get("status") == "skipped"]', "            if False]"),
+    ("triage: every resolved title reads as the cited one", T,
+     '                    "cited_title": titles_match(cited, title) if title else None})',
+     '                    "cited_title": True if title else None})'),
 ]
 
 

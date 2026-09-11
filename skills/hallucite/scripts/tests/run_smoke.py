@@ -29,6 +29,11 @@ Tiers (any failing check exits non-zero):
   3g stale verdicts        -- a verdict recorded against reference text a re-audit then changed
                               is quarantined: report shows it as stale/pending (never the old
                               category against the new reference) and --pending resurfaces it.
+  3j residue evidence      -- what the audit knows about an unverified reference reaches the
+                              worklist, the report and the verification sheet: the backends never
+                              asked (`skipped`), what a cited DOI or arXiv id resolved to, and the
+                              mirror's nearest title, offered only with every cited author on it.
+                              Fixture DB; no network.
   3h author absence        -- a cited author that no author of the matched publication
                               accounts for demotes the reference to triage, while name-form
                               differences, parser artifacts and truncated database author
@@ -894,6 +899,158 @@ def tier3i_dblp_author_encoding() -> None:
                "REGRESSION GUARD: an empty mirror is not misreported as having dropped authors")
         C.eq(audit._dblp_publication_count(Path(f"{td}/missing.db")), None,
              "a missing database has no publication count")
+
+
+def tier3j_residue_evidence() -> None:
+    """Three things the audit knew about an unverified reference and threw away before they reached
+    a human: which backends were never asked (123 of the 788 corpus residue references had never
+    been put to the mirror, and read as a clean `not_found`), what a cited identifier resolved to
+    (5 dead DOIs and 57 identifiers naming another title in the same residue), and the mirror's
+    nearest title where it holds no record of the cited one (32 leads over the corpus, every one
+    the cited work, once the record had to carry every cited author)."""
+    print("Tier 3j: the evidence the audit already has reaches the triager (no network)")
+    import types
+    import triage
+    import audit_references as audit
+    from verifier import Reference
+
+    def ref(n, status, rows, parsed=None, extra=None):
+        dv = {"status": status, "failed_dbs": [],
+              "db_results": [{"db": db, "status": st} for db, st in rows]}
+        dv.update(extra or {})
+        return {"original_number": n, "raw_citation": f"Author A. Title {n}. Venue, 2020.",
+                "db_verification": dv,
+                "parsed": parsed or {"title": f"Title {n}", "authors": ["Author A"]}}
+
+    # Not asked. `skipped` is the verifier's word for it, and the one string that means it.
+    short = ref(1, "not_found", [("DBLP", "skipped"), ("CrossRef", "no_match"), ("DOI", "skipped"),
+                                 ("arXiv", "skipped"), ("Semantic Scholar", "skipped")],
+                parsed={"title": "Random Forests", "authors": ["Leo Breiman"]})
+    asked = ref(2, "not_found", [("DBLP", "no_match"), ("CrossRef", "no_match"), ("DOI", "error")])
+    C.eq(triage.skipped_dbs(short), ["DBLP", "DOI", "arXiv", "Semantic Scholar"],
+         "REGRESSION GUARD: every backend that was never asked is named, the mirror first")
+    C.eq(triage.skipped_dbs(asked), [],
+         "a backend that answered, or failed to answer, was asked")
+    for status in ("timeout", "error", "rate_limited", "no_match", "author_mismatch", "match",
+                   "not_applicable"):
+        C.eq(triage.skipped_dbs({"db_verification": {"db_results": [{"db": "X", "status": status}]}}),
+             [], f"a backend row of {status!r} is not 'never asked'")
+
+    # What the identifier resolved to: dead, another title, the cited title, nothing known.
+    dead = ref(3, "not_found", [("DOI", "no_match")],
+               parsed={"title": "A paper with a dead DOI", "authors": ["Ada Byte"],
+                       "doi": "10.1000/dead"},
+               extra={"doi_info": {"doi": "10.1000/dead", "valid": False, "title": None}})
+    other = ref(4, "not_found", [("DOI", "no_match")],
+                parsed={"title": "The title the citation gives", "authors": ["Ada Byte"],
+                        "doi": "10.1000/other"},
+                extra={"doi_info": {"doi": "10.1000/other", "valid": True,
+                                    "title": "An unrelated work the DOI really names"}})
+    same = ref(5, "mismatch", [("arXiv", "author_mismatch")],
+               parsed={"title": "Modeling library popu-larity within a software ecosystem",
+                       "authors": ["Ada Byte"], "arxiv_id": "2407.08138"},
+               extra={"arxiv_info": {"arxiv_id": "2407.08138", "valid": True,
+                                     "title": "Modeling Library Popularity Within a Software "
+                                              "Ecosystem"}})
+    none = ref(6, "not_found", [("DOI", "skipped")])
+    C.eq(triage.identifier_evidence(dead),
+         [{"kind": "doi", "id": "10.1000/dead", "resolves": False, "title": None,
+           "cited_title": None}],
+         "REGRESSION GUARD: a dead identifier is reported as one -- fabrication signal (D)")
+    C.eq([(e["resolves"], e["cited_title"]) for e in triage.identifier_evidence(other)],
+         [(True, False)],
+         "REGRESSION GUARD: an identifier naming another work is reported as resolving to a "
+         "different title -- the opposite verdict from a dead one")
+    C.eq([(e["kind"], e["cited_title"]) for e in triage.identifier_evidence(same)],
+         [("arxiv", True)],
+         "a resolved title that differs only in case and a line-break hyphen is the cited title")
+    C.eq(triage.identifier_evidence(none), [], "no identifier, nothing claimed")
+
+    # Through the worklist, the report and the verification sheet, which is where a triager reads.
+    near = {"key": "conf/x/Near20", "title": "A Near Title With One Extra Word",
+            "authors": ["Author A"], "edits": 1, "year": 2020, "venue": "X"}
+    lead = ref(7, "not_found", [("DBLP", "no_match")], extra={"dblp_nearest": near})
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td)
+        refs = [short, asked, dead, other, same, none, lead]
+        (out / "p.json").write_text(json.dumps(
+            {"paper_id": "p", "pdf_path": "p.pdf", "num_references": len(refs),
+             "references": refs}))
+        triage.cmd_worklist(out)
+        wl = {e["number"]: e for e in json.loads((out / "triage_worklist.json").read_text())}
+        C.eq(wl[1]["skipped_dbs"], ["DBLP", "DOI", "arXiv", "Semantic Scholar"],
+             "REGRESSION GUARD: the worklist entry says which backends never asked")
+        C.eq(wl[2]["skipped_dbs"], [], "and says nothing where every backend was asked")
+        C.eq([e["resolves"] for e in wl[3]["identifiers"]], [False],
+             "the worklist entry carries the dead identifier")
+        C.eq((wl[4]["identifiers"][0]["cited_title"], wl[5]["identifiers"][0]["cited_title"]),
+             (False, True), "and whether each resolved title is the cited one")
+        C.eq(wl[7]["dblp_nearest"], near,
+             "REGRESSION GUARD: the mirror's nearest title travels with the entry")
+        triage.cmd_record(out, "p", "1", "unclear", "the mirror was never asked")
+        triage.cmd_record(out, "p", "4", "unclear", "the DOI names another work")
+        triage.cmd_report(out)
+        check = (out / "reports" / "reference-check-p.md").read_text()
+        sheet = (out / "reports" / "verify-p.md").read_text()
+        C.true("- Not asked: DBLP, DOI, arXiv, Semantic Scholar" in check,
+               "REGRESSION GUARD: the per-paper report says the mirror was never asked")
+        C.true("- DOI 10.1000/dead does not resolve" in check,
+               "the report names a dead identifier")
+        C.true("- DOI 10.1000/other resolves to a different title: An unrelated work the DOI "
+               "really names" in check,
+               "REGRESSION GUARD: the report shows the title an identifier really names")
+        C.true("- arXiv 2407.08138 resolves to the cited title" in check,
+               "the report says when an identifier confirms the cited title")
+        C.true("- Nearest DBLP title, 1 word edit away, with every cited author on it "
+               "(`conf/x/Near20`): A Near Title With One Extra Word -- year=2020, venue=X"
+               in check,
+               "REGRESSION GUARD: the report offers the mirror's nearest title as a lead")
+        C.true("- Not asked: DBLP" in sheet and "resolves to a different title" in sheet,
+               "the verification sheet carries the same evidence")
+
+    # The nearest title, through the function the audit calls, on a fixture mirror.
+    with tempfile.TemporaryDirectory() as td:
+        db = Path(td) / "dblp.db"
+        _build_fixture_db(db)
+
+        def entry(title, authors):
+            return types.SimpleNamespace(reference=Reference(title=title, authors=authors))
+
+        def dv(status="not_found", dblp="no_match"):
+            return {"status": status, "db_results": [{"db": "DBLP", "status": dblp}]}
+
+        near_title = "A study of synthetic widgets in distributed environments"
+        entries = [entry(near_title, ["Alice Anderson", "Bob Brown"]),
+                   entry(near_title, ["Alice Anderson", "Mallory Fake"]),
+                   entry(near_title, ["Alice Anderson"]),
+                   entry("Patterns of imaginary data in testing frameworks", ["Frank Foster"]),
+                   entry(near_title, ["Alice Anderson", "Bob Brown"]),
+                   entry("A study of synthetic widgets in distributed systems",
+                         ["Alice Anderson", "Mallory Fake"]),
+                   entry(near_title, ["Alice Anderson", "Bob Brown"])]
+        vs = [dv(), dv(), dv(), dv(), dv(dblp="skipped"), dv("mismatch", "author_mismatch"),
+              dv("verified", "match")]
+        audit.attach_mirror_evidence(str(db), entries, vs)
+        C.eq((vs[0].get("dblp_nearest") or {}).get("key"), "conf/ic/AndersonB20",
+             "REGRESSION GUARD: a title one word off, under every cited author, is offered")
+        C.eq((vs[0].get("dblp_nearest") or {}).get("edits"), 1,
+             "with how far off it is")
+        C.eq(vs[0]["dblp_nearest"]["authors"], ["Alice Anderson", "Bob Brown"],
+             "and the record's own author list")
+        C.true("dblp_nearest" not in vs[1],
+               "REGRESSION GUARD: a cited person the near record does not carry withholds it -- "
+               "ungated, half the corpus hits were different works")
+        C.eq((vs[2].get("dblp_nearest") or {}).get("key"), "conf/ic/AndersonB20",
+             "a citation naming fewer authors than the record still has every cited person on it")
+        C.true("dblp_nearest" not in vs[3],
+               "REGRESSION GUARD: three word edits is a different title, and is not offered")
+        C.true("dblp_nearest" not in vs[4],
+               "REGRESSION GUARD: a title the mirror was never asked about gets no near miss")
+        C.true("dblp_nearest" not in vs[5],
+               "a title the mirror found under other authors gets no near miss -- the record it "
+               "found travels as `matched`")
+        C.true("dblp_nearest" not in vs[6] and "dblp_record" not in vs[6],
+               "a verified reference gets no evidence attached")
 
 
 def tier3g_stale_verdicts() -> None:
@@ -2184,6 +2341,17 @@ def tier6_measured_values() -> None:
            "REGRESSION GUARD: a letter carrying a stroke folds to its ASCII form")
     C.true(D._author_matches("O. LeBenich", "Olaf Le\u00dfenich"),
            "REGRESSION GUARD: an eszett a PDF renders as a capital B is read as one")
+    C.true(D.authors_match(["Stefan Buettcher"], ["Stefan B\u00fcttcher"]),
+           "REGRESSION GUARD: the German transliteration of an umlaut pairs with the letter -- "
+           "two corpus references, and the corruption harness unchanged")
+    C.true(D.authors_match(["Juergens, E."], ["Elmar J\u00fcrgens"]),
+           "in either author order")
+    C.true(not D.authors_match(["Miguel Roe"], ["Migul Roe"]),
+           "REGRESSION GUARD: the reading is taken off the umlaut, never by contracting 'ue' in "
+           "a name that has none")
+    C.eq(D._NEAREST_EDITS, 2,
+         "REGRESSION GUARD: the mirror's nearest title is at most two word edits away -- the "
+         "shapes read in the corpus residue; at three a title is a different title")
 
     # triage: which db_results rows are a matched record. Named positively, so a failure value the
     # verifier adds later cannot read as a match -- an exclusion list did exactly that with
@@ -2542,6 +2710,7 @@ def main() -> int:
     tier3b_triage_concurrency()
     tier3c_title_first_gate()
     tier3g_stale_verdicts()
+    tier3j_residue_evidence()
     tier3h_author_absence()
     tier3i_dblp_author_encoding()
     tier4_end_to_end()

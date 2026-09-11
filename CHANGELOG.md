@@ -30,8 +30,87 @@ All notable changes to hallucite are documented here. The format follows
   corruption harness once, from a fixed seed, and scores an implementation against a built set;
   `head_to_head.py` scores the old and new parser and DBLP check over the recorded cases or the
   corpus, and keeps the old verifier off the network by construction; `mutations.py` reverts one
-  fix at a time and requires the suite to fail. The built sets live beside the other anchors in
-  `~/hallucite/`.
+  fix at a time and requires the suite to fail; `residue_evidence.py` reads an offline audit's
+  output and prints, per unverified reference, what the three items below found. The built sets
+  live beside the other anchors in `~/hallucite/`.
+
+- **The evidence the audit already had reaches the triager.** Three things `verifier` knew about
+  an unverified reference that no worklist or report showed. Each was re-measured over the
+  55-paper corpus's offline residue -- 788 of 2857 references -- before anything was built
+  against it, because the numbers `TODO.md` carried came from a residue whose PDFs are gone. The
+  worklist entry, the per-paper report and the verification sheet now carry all three; nothing
+  here changes a status.
+
+  - *That the mirror was asked at all.* The DBLP backend reports `skipped` for a title
+    `queryable` refuses, and a `not_found` read the same whether the mirror came back empty or was
+    never asked. Over the corpus residue that is 123 references, not the seven the head-to-head
+    had counted: most are tools and web pages with a one-word title that the mirror would not hold
+    anyway, but Breiman's "Random Forests", Cochran's "Sampling Techniques", Hubert and Arabie's
+    "Comparing partitions", Seaman's "Qualitative Methods", Dolan's "Algebraic subtyping" and a
+    dozen more real two-word publications are among them, and every one read as a clean negative.
+    `skipped_dbs` travels with the worklist entry, and the report prints `Not asked: DBLP, ...`
+    under the DB status, keyed on the one status string `verifier` emits for it and never on a
+    list of names. The same list surfaced parser artifacts, recorded in `TODO.md`: a Springer
+    `URL https://...` entry read as the title `URL`, and a title cut at its exclamation mark.
+
+  - *What the cited identifier resolves to.* `verifier` fills `doi_info` and `arxiv_info` with the
+    resolved title, and `triage.py` read neither. Resolved for the 169 residue references that
+    carry a DOI or an arXiv id -- the DOI and arXiv backends only, nothing else asked, no request
+    refused. Of the 127 DOIs, 88 resolve to the cited title, 34 to a different one and 5 are dead;
+    of the 54 arXiv ids, six were never reached because the DOI ahead of them had already
+    confirmed the reference, 25 resolve to the cited title and 23 to a different one. Reading the
+    57 that differ: most are the parser's title carrying venue text (`..., arXiv preprint`,
+    `Empirical Software Engineering 30, 1 (2025), 26`) or cut short (`VII`, `Hey!`, a bare `DOI
+    10.48550/...`), where the resolved title is exactly what a reviewer needs; about a dozen are a
+    preprint renamed between versions; a few are artifact DOIs whose deposit title differs from
+    the paper's; and four name another work outright -- a DOI *and* an arXiv id for "Benchmarking
+    LLM Test Generation on Complex Control-Flow Structures" that both resolve to "A Systematic
+    Approach for Assessing Large Language Models' Test Case Generation Capability", a second DOI
+    in the same paper, BashExplainer's DOI resolving to a paper on AutoML tools, and a
+    "Syntax-aware Retrieval Augmented Code Generation" arXiv id resolving to a paper on narrative
+    XAI. Three of the five dead DOIs are one the layout broke after a period (`doi:10.1109/ICET.2017.
+    8281704`) and the parser kept only up to the break; the rejoin that covers an underscore does
+    not cover this, and `TODO.md` records it. The worklist entry carries `identifiers` -- kind, id, whether it resolves, the resolved title, and whether
+    that is the cited title under `titles_match` -- and the report prints one line per
+    identifier: dead, resolves to the cited title, or resolves to a different title, named.
+
+  - *The mirror's nearest title, gated on authorship.* `dblp_check.nearest_title` is a sibling of
+    `record_context`: asked only where the DBLP backend answered `no_match`, it offers a record
+    whose title is within two word-level edits of the cited one and requires every cited person to
+    be on it. Retrieval leaves every pair of the title's selective words out of an AND query, so a
+    record that still carries all but two of them comes back whichever two moved. Over the 619
+    corpus residue references the mirror answered `no_match` for, 66 have a title within two
+    edits ungated, and 33 of the 66 are different works -- Roy and Cordy's clone-detection survey
+    against a 2019 paper of nearly the same title, Ford and Fulkerson's "Maximal flow through a
+    network" against Strang's "Maximal flow through a domain", Kaplan and Meier against an
+    encyclopedia entry, three Technometrics *reviews* of the cited statistics books, six Apache
+    Software Foundation pages against one Computer column -- each of which would have argued a
+    correct citation of an uncovered work into a "citation error". Gated, 32 remain and all 32 are
+    the cited work: the content-word titles the head-to-head refuses on purpose ("in-depth study"
+    for "In-depth Empirical Study", "state-aware" for "Context-Aware", "design implementation" for
+    "Design and Implementation"), eight arXiv preprints whose citation glued ", arXiv preprint"
+    onto the title, an "Elipse" typo, an HTML entity for an ampersand, and two Zenodo deposits
+    offered the paper they accompany. The gate costs one real lead: Holmqvist's eye-tracking
+    handbook, cited under its six authors where DBLP lists only the first, is refused because the
+    record does not mark itself truncated. The lookup takes 47 s over the residue. `dblp_nearest`
+    travels with the worklist entry, and the report prints it with the distance and the record's
+    metadata.
+
+  Guarded by smoke tier 3j through `attach_mirror_evidence`, `cmd_worklist` and `cmd_report`, and
+  by six mutation entries; the mutation run fails for each.
+
+- **The German transliteration of an umlaut pairs with the letter.** "Buettcher" answers to
+  "Büttcher" and "Juergens" to "Jürgens". The reading is taken off the side that carries the
+  umlaut, so only a name that really has one gains the second spelling; contracting `ue` in every
+  name would rewrite "Miguel" and "Rodriguez" into spellings an invented author could hide behind.
+  Measured before it was added: the corruption harness is unchanged on every column that decides
+  -- 250 / 250 / 250 / 0 / 0 / 0 / 0 over the 250 complete records, 90 / 0 over the 90 truncated
+  ones -- and one correct citation now confirms against the published twin of its sampled preprint
+  rather than the preprint, because DBLP stores the same author as "Höfler" on one record and
+  "Hoefler" on the other. On the recorded cases the head-to-head goes from 1508 to 1509
+  confirmations against the old path's 1519; over the whole corpus, verified against the offline
+  mirror alone, exactly the two references `TODO.md` named move from `mismatch` to `verified` and
+  nothing else moves. The other seven name forms stay refused, for the reason given there.
 
 - `build_dblp.py`: the offline mirror, built by hallucite. It replaces `hallucinator-cli
   update-dblp`, and with it the Rust toolchain, the prebuilt binary, `install-cli`,

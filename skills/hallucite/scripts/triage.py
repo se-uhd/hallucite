@@ -42,6 +42,8 @@ try:
 except ImportError:  # pragma: no cover -- non-POSIX fallback
     fcntl = None
 
+from dblp_check import titles_match
+
 FLAG_CATEGORIES = ("likely-hallucinated", "partial-match", "unclear")
 SEVERITY = {
     "real-published": "low", "real-grey-literature": "low",
@@ -248,6 +250,80 @@ def is_degraded(ref: dict) -> bool:
     return bool((ref.get("db_verification") or {}).get("degraded"))
 
 
+def skipped_dbs(ref: dict) -> list[str]:
+    """The backends that were never asked about this reference.
+
+    `skipped` is the verifier's word for it (VERIFICATION-SPEC.md: not applicable, never a
+    disagreement): a title too short to query the mirror with, no identifier to resolve, no key
+    for a keyed backend. A `not_found` reads the same whether the mirror came back empty or was
+    never asked, and that is the first question triage turns on -- does any record carry the
+    cited title -- so the list travels with the reference. Keyed on the one status string that
+    means it; a status added later is not read as either."""
+    return [r.get("db") for r in (ref.get("db_verification") or {}).get("db_results") or []
+            if r.get("status") == "skipped"]
+
+
+def identifier_evidence(ref: dict) -> list[dict]:
+    """What each cited identifier resolved to, from the `doi_info` and `arxiv_info` the verifier
+    fills: whether it resolves, the title it resolves to, and whether that is the cited title.
+
+    A dead identifier and one that resolves to a different work point at opposite verdicts -- the
+    first is fabrication signal (D) on its own, the second is a real record stapled to the wrong
+    citation or a slipped digit -- and one that resolves to the cited title says the work exists
+    whatever the databases made of its authors. The verifier had all three and triage read none of
+    them. The title comparison is the same one every backend confirms on."""
+    dv = ref.get("db_verification") or {}
+    cited = (ref.get("parsed") or {}).get("title") or ""
+    out = []
+    for kind, key, info in (("doi", "doi", dv.get("doi_info")),
+                            ("arxiv", "arxiv_id", dv.get("arxiv_info"))):
+        if not info or not info.get(key):
+            continue
+        title = info.get("title") or None
+        out.append({"kind": kind, "id": info[key], "resolves": bool(info.get("valid")),
+                    "title": title,
+                    "cited_title": titles_match(cited, title) if title else None})
+    return out
+
+
+def _evidence_lines(ref: dict) -> list[str]:
+    """What the audit learned about an unverified reference, as Markdown lines: the backends that
+    were never asked, the mirror's record for the cited title or its nearest one, and what each
+    cited identifier resolved to. Shared by the per-paper report and the verification sheet, so
+    the two put the same evidence in front of a human."""
+    dv = ref.get("db_verification") or {}
+    lines = []
+    skipped = skipped_dbs(ref)
+    if skipped:
+        lines.append(f"- Not asked: {', '.join(skipped)} -- skipped, with nothing to ask (a title "
+                     f"too short to query, no identifier to resolve), so the status above is not "
+                     f"their answer")
+    rec = dv.get("dblp_record")
+    if rec:
+        bits = [f"{k}={rec[k]}" for k in
+                ("year", "venue", "volume", "number", "pages", "ee", "kind") if rec.get(k)]
+        lines.append(f"- DBLP record `{rec.get('key')}`: " + ", ".join(bits))
+    near = dv.get("dblp_nearest")
+    if near:
+        bits = [f"{k}={near[k]}" for k in
+                ("year", "venue", "volume", "number", "pages", "ee", "kind") if near.get(k)]
+        edits = near.get("edits")
+        lines.append(f"- Nearest DBLP title, {edits} word edit{'s' if edits != 1 else ''} away, "
+                     f"with every cited author on it (`{near.get('key')}`): {near.get('title')}"
+                     + (" -- " + ", ".join(bits) if bits else ""))
+    for e in identifier_evidence(ref):
+        label = "DOI" if e["kind"] == "doi" else "arXiv"
+        if not e["resolves"]:
+            lines.append(f"- {label} {e['id']} does not resolve: a dead identifier")
+        elif not e["title"]:
+            lines.append(f"- {label} {e['id']} resolves, but the registry returned no title")
+        elif e["cited_title"]:
+            lines.append(f"- {label} {e['id']} resolves to the cited title: {e['title']}")
+        else:
+            lines.append(f"- {label} {e['id']} resolves to a different title: {e['title']}")
+    return lines
+
+
 def _matched_records(dv: dict) -> list[dict]:
     """The records individual backends matched, with the authors they hold. A `mismatch` means some
     backend found a candidate and disagreed about its fields -- that candidate, and how it differs,
@@ -402,12 +478,24 @@ def cmd_worklist(out_dir: Path, pending: bool = False, paper_id: str | None = No
                 "doi": p.get("doi"),
                 "arxiv_id": p.get("arxiv_id"),
                 "failed_dbs": dv.get("failed_dbs", []),
+                # Backends never asked about this reference. Without it a `not_found` reads the
+                # same whether the mirror came back empty or was never asked; over the 55-paper
+                # corpus 123 of 788 residue references had never been put to the mirror.
+                "skipped_dbs": skipped_dbs(ref),
                 # Cited authors that no author of the matched publication accounts for. The
                 # reference is here *because* of them, so they travel with the entry.
                 "authors_absent": dv.get("authors_absent", []),
                 # DBLP's own record metadata for this title: year, venue, volume/pages, DOI.
                 # Evidence to weigh, not a verdict -- see dblp_check.record_context.
                 "dblp_record": dv.get("dblp_record"),
+                # Where no record carries the cited title: the mirror's nearest one, offered only
+                # with every cited author on it -- see dblp_check.nearest_title. A lead, not a
+                # match: a human confirms a title that differs in a content word.
+                "dblp_nearest": dv.get("dblp_nearest"),
+                # What each cited DOI or arXiv id resolved to, and whether that is the cited
+                # title. A dead identifier and one resolving to another work point at opposite
+                # verdicts.
+                "identifiers": identifier_evidence(ref),
                 "raw_citation": ref["raw_citation"],
                 # What a "mismatch" actually matched. Without it the triager re-derives from
                 # scratch what the validator already had -- and cannot see that the candidate is
@@ -460,7 +548,9 @@ def _verify_sheet(paper: dict, items: list) -> str:
             + (f" · DOI: {p['doi']}" if p.get('doi') else "")
             + (f" · arXiv: {p['arxiv_id']}" if p.get('arxiv_id') else ""),
             f"- Raw citation: {ref['raw_citation']}",
+            f"- DB status: {(ref.get('db_verification') or {}).get('status')}",
         ]
+        lines += _evidence_lines(ref)
         if is_fabrication(v):
             lines.append("- **Fabrication signal: cited title names no real publication "
                          "(desk-reject candidate).**")
@@ -594,12 +684,7 @@ def cmd_report(out_dir: Path) -> None:
                 degraded = " **(degraded: " + ", ".join(dv.get("failed_dbs") or []) \
                     + " did not answer -- not a clean negative)**" if is_degraded(r) else ""
                 lines.append(f"- DB status: {dv['status']}{degraded}")
-                rec = dv.get("dblp_record")
-                if rec:
-                    bits = [f"{k}={rec[k]}" for k in
-                            ("year", "venue", "volume", "number", "pages", "ee", "kind")
-                            if rec.get(k)]
-                    lines.append(f"- DBLP record `{rec.get('key')}`: " + ", ".join(bits))
+                lines += _evidence_lines(r)
                 if dv.get("authors_absent"):
                     lines.append(f"- Cited author(s) not on the matched publication: "
                                  f"{', '.join(dv['authors_absent'])}")

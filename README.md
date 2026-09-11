@@ -83,7 +83,10 @@ mise exec -- python skills/hallucite/scripts/triage.py status --out out         
 
 Stage 3 reads the per-paper JSON the audit has already written, so it can run on finished papers
 while the audit is still processing the rest. There is no need to wait for the whole corpus. Verdicts
-accumulate, and `worklist --pending` surfaces only references not yet recorded. To fan triage out,
+accumulate, and `worklist --pending` surfaces only references not yet recorded. Each worklist entry
+carries what the audit knew about the reference: which backends matched it and which were never
+asked, CrossRef's closest records, DBLP's record for the cited title or its nearest title under the
+same authors, and what a cited DOI or arXiv id resolves to. To fan triage out,
 hand each worker its own `worklist --paper <id>` slice (exact id match) instead of the shared
 worklist, so a worker can't grab the wrong paper (e.g. `paper6` vs `paper66`); `record` locks the
 verdicts file, so concurrent workers don't lose each other's verdicts.
