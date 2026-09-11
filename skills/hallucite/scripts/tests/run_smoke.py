@@ -2084,6 +2084,98 @@ def tier5_reference_parser() -> None:
     C.eq(r.authors if r else None, ["Pereira, R.", "Couto, M.", "Fernandes, J.a.P.", "Saraiva, J.a."],
          "REGRESSION GUARD: a dotted lowercase initial beside a capital stays with its surname")
 
+    # Springer labels the address it prints, and the label is not the title's last word: eleven
+    # corpus references parsed to the title "URL".
+    r = parsed("Podman. URL https://podman.io/")
+    C.eq((r.title, r.authors) if r else None, ("Podman", []),
+         "REGRESSION GUARD: `Podman. URL https://...` is a title and an address, not an author "
+         "and the title `URL`")
+    r = parsed("Chowdhury, N., Madry, A.: Introducing SWE-bench verified (2024). URL "
+               "https://openai.com/index/x/")
+    C.eq((r.title, r.authors) if r else None,
+         ("Introducing SWE-bench verified", ["Chowdhury, N.", "Madry, A."]),
+         "and an inverted Springer list still ends at its colon when the address follows the year")
+
+    # A ? or ! ends the title only when the *next field* is the venue -- not when the sentence
+    # after it runs on through the rest of the title and into a comma-joined venue.
+    C.eq(parsed("Ann Bee and Bob Cee. Hey! are you committing tangled changes? In Proceedings of "
+                "the 22nd International Conference on Program Comprehension, ICPC 2014, page "
+                "262-265, New York, NY, USA, 2014. ACM.").title,
+         "Hey! are you committing tangled changes?",
+         "REGRESSION GUARD: an exclamation mark inside a title does not cut it to its first word")
+    C.eq(parsed('Frey, G., Drath, R., 2012. "safety automata" - A new specification language for '
+                "PLC safety applications, in: Proceedings of 2012 17th International Conference on "
+                "Emerging Technologies & Factory Automation, IEEE, Krakow, Poland. pp. 1-8.").title,
+         "safety automata - A new specification language for PLC safety applications",
+         "REGRESSION GUARD: a title that opens with a quoted phrase runs on past it even when "
+         "Elsevier's `, in:` venue follows in the same sentence")
+    C.eq(parsed("Weber, M., Apel, S., 2023. Twins or false friends? a study on energy consumption "
+                "and performance of configurable software, in: 2023 IEEE/ACM 45th International "
+                "Conference on Software Engineering (ICSE), IEEE. pp. 2098-2110.").title,
+         "Twins or false friends? a study on energy consumption and performance of configurable "
+         "software",
+         "REGRESSION GUARD: nor does a question mark cut the title when Elsevier's `, in:` venue "
+         "follows in the same sentence")
+    C.eq(parsed("Lev Sorokin and Shiva Nejati. 2025. Can search-based testing effectively cover "
+                "failure-revealing test inputs? Empirical Software Engineering 30, 1 (2025), 26. "
+                "doi:10.1007/s10664-024-10564-3").title,
+         "Can search-based testing effectively cover failure-revealing test inputs?",
+         "REGRESSION GUARD: a journal named without a venue word still ends the title at the "
+         "question mark, on its `30, 1 (2025)`")
+
+    # A numbered heading, and a listed role.
+    C.eq(parsed("Pearson, K.: VII. Note on regression and inheritance in the case of two parents. "
+                "Proceedings of the Royal Society of London 58(347-352), 240-242 (1895).").title,
+         "VII. Note on regression and inheritance in the case of two parents",
+         "REGRESSION GUARD: a title that opens with its own roman numeral is not cut to the numeral")
+    C.eq(parsed("John Smith III. A title of a paper. In Proc. X, 2020.").authors, ["John Smith III"],
+         "and a name suffix still ends the author sentence")
+    r = parsed("M. P. Robillard, W. Maalej, R. J. Walker, and T. Zimmermann, editors. Recommendation "
+               "Systems in Software Engineering. Springer, 2014.")
+    C.eq((r.title, len(r.authors)) if r else None,
+         ("Recommendation Systems in Software Engineering", 4),
+         "REGRESSION GUARD: the role after IEEE's comma-delimited names is not the title `editors`")
+
+    # Elsevier's numeric style joins the venue to the title with a comma and no "in:".
+    r = parsed("J. White, Q. Fu, S. Hays, et al., A prompt pattern catalog to enhance prompt "
+               "engineering with ChatGPT, arXiv preprint arXiv:2302.11382")
+    C.eq((r.title, r.arxiv_id) if r else None,
+         ("A prompt pattern catalog to enhance prompt engineering with ChatGPT", "2302.11382"),
+         "REGRESSION GUARD: an `et al.` followed by a comma says the venue is the next comma field")
+    C.eq(parsed('A. One, B. Two, et al., "A study of things," in Proc. ICSE, 2020, pp. 1-10.').title,
+         "A study of things", "and a quoted title after such an `et al.` still marks its own end")
+    for text, title in (
+            ("C. Wohlin, P. Runeson, Experimentation in Software Engineering, Springer, Berlin, "
+             "Heidelberg, 2012. doi:10.1007/978-3-642-29044-2.",
+             "Experimentation in Software Engineering"),
+            ("E. Calboreanu, LATTICE: Layered architecture for trusted intelligence, SSRN, "
+             "https://ssrn.com/abstract=6151128 (Jan. 2026).",
+             "LATTICE: Layered architecture for trusted intelligence"),
+            ("S. M. Barnett, S. J. Ceci, When and where do we apply what we learn? a taxonomy for "
+             "far transfer, Psychological Bulletin 128 (4) (2002) 612-637.",
+             "When and where do we apply what we learn? a taxonomy for far transfer"),
+            ("A. V. Aho, R. Sethi, J. D. Ullman, Compilers: Principles, Techniques, and Tools, "
+             "Addison-Wesley, Reading, Massachusetts, U.S.A., 1986.",
+             "Compilers: Principles, Techniques, and Tools")):
+        C.eq(parsed(text).title, title,
+             f"REGRESSION GUARD: the comma-joined venue field comes off the title: {title[-30:]!r}")
+
+    # A DOI the layout broke on one of its own periods, or right after a two-character suffix, or
+    # before a hyphen: the front half of an ACM DOI is the proceedings volume, another work.
+    for text, doi in (
+            ("Ann Bee. 2020. A title. doi:10.1109/ICET.2017. 8281704", "10.1109/ICET.2017.8281704"),
+            ("Ann Bee. 2020. A title. doi:10.1145/3395363. 3397366", "10.1145/3395363.3397366"),
+            ("Ann Bee. 2020. A title. doi:10.1109/CoG47356. 2020.9231762",
+             "10.1109/CoG47356.2020.9231762"),
+            ("Ann Bee. 2020. A title. DOI 10.1007/s1 1219-009-9075-x. URL http://x.org/",
+             "10.1007/s11219-009-9075-x"),
+            ("Ann Bee. 2020. A title. doi:10.1016/B978 -0-12-396535-6.00001-6.",
+             "10.1016/B978-0-12-396535-6.00001-6")):
+        C.eq(parsed(text).doi, doi,
+             f"REGRESSION GUARD: {doi} is rejoined across the break the layout put in it")
+    C.eq(parsed("Ann Bee. 2020. A title. doi:10.1145/3498537. 2020.").doi, "10.1145/3498537",
+         "REGRESSION GUARD: the entry's own year after a complete DOI is not joined to it")
+
 
 def tier5b_verifier() -> None:
     """The check half of VERIFICATION-SPEC.md, on a fixture DBLP file with every online backend

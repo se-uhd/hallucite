@@ -4,7 +4,7 @@
 
 Measured head to head over the same 2065 citations of `~/hallucite/cases.json`, the same mirror,
 DBLP only and nothing else asked, the new path now confirms 1509 against the old path's 1519; over
-the whole 55-paper corpus it confirms 2070 against 2009. The CHANGELOG entry carries the numbers,
+the whole 55-paper corpus it confirms 2106 against 2009. The CHANGELOG entry carries the numbers,
 the rules that were measured and rejected, and the reading of every reference that moved. What is
 left on the losing side is deliberate, and each item is a judgment call rather than a defect:
 
@@ -38,6 +38,12 @@ that pads the names it does list with one it does not, because an unmatched name
 list is absence of evidence by design; what it no longer clears is a citation that pairs with none
 of them.
 
+A `?` is not a subtitle mark in `titles_match`, though a colon and a dash are. Measured over the 35
+corpus residue titles that carry one, widening it would match four: three were parser cuts, since
+fixed, that verify on the whole title, and the fourth pairs Conway's "How do committees invent?"
+with an ACM Queue column of that head by another author, a `mismatch` against an unrelated work.
+A citation that prints only the question is what the widening would serve, and the corpus has none.
+
 `_MIN_TOKENS` stays at 3. Measured on the whole corpus at 2 it buys nine confirmations, one of
 them wrong (Sommerville's textbook "Software engineering" confirmed against his 1983 conference
 paper of the same title), and moves six references from `not_found` to `mismatch` against records
@@ -47,63 +53,63 @@ three real two-word titles it would have recovered ("Reproducible containers", "
 "Sampling Techniques") reach triage as `skipped`, which the worklist and the report now say in so
 many words: 123 of the corpus residue's 788 references were never put to the mirror.
 
-## Finish the online anchor
+## The anchors
 
-`~/hallucite/cases-hallucite.json` is the regression anchor: 2081 references recorded from the
-shipped modules, verified against the offline mirror alone. It replays in 30 seconds with no
-network, which is most of what an anchor is for -- a recording made across the network bakes in
-whoever's rate limit was in force that afternoon, which is not a property of this code.
+Three recordings sit in `~/hallucite/`, and each answers a different question.
+
+`cases.json` stays frozen: what `hallucinator` returned for the 41-paper corpus, the specification
+the modules were written against.
+
+`cases-hallucite.json` is the offline regression anchor: 2081 references recorded from the shipped
+modules on 2026-09-10, verified against the mirror alone, replayed in 30 seconds with no network:
 
     characterize.py compare ~/hallucite/cases-hallucite.json --impl verifier
 
-`~/hallucite/cases.json` stays frozen beside it: what `hallucinator` returned for the same corpus,
-which is the specification the modules were written against. `compare` reads which recording it has
-been handed and says so, and replays an offline one offline.
+Replayed on 2026-09-11 it reports 30 parse differences, all of them the parser fixes in the
+CHANGELOG's Unreleased entry (29 DOIs rejoined across a period, one title cut at its question
+mark), and six references that cross the verified line, all of them changes committed since it was
+recorded: the commit before the parser fixes replays it with no parse difference and the same six
+moves. Re-record it offline once the parser fixes are committed, so the next replay starts from
+zero.
 
-The anchor for the four online backends, which decide about 8% of confirmations between them, was
-started on 2026-09-11, the first day the Semantic Scholar quota was fresh:
+`cases-online.json` is the recording of the four online backends: 2857 references, all backends,
+recorded on 2026-09-11 from 17:40 to 19:22 with the parser as of `9f8fd8f`, log in
+`cases-online.log`. 2290 verified (DBLP 2070, CrossRef 175, arXiv 16, Semantic Scholar 16, the DOI
+resolver 13), 536 not found, 31 mismatch. Semantic Scholar refused 458 of the 583 references it
+was asked about, 252 rate-limited and 206 errors, with the key, so every one of the 458 unverified
+references that carries a backend failure carries that one and no other.
 
-    characterize.py record ~/hallucite/corpus --out ~/hallucite/cases-online.json
+Replayed with the key unset, 2841 of the 2857 land where they were recorded, and the 16 that move
+are exactly the 16 Semantic Scholar confirmed: 14 to `not_found`, two to `mismatch` on the CrossRef
+author complaint it had overruled ("Ultra-large-scale systems", "Constructing Grounded Theory"). A
+verifier without a key does not ask it, so the replay reports no failures at all. The 16 say what
+the backend is worth when it answers: the grounded-theory books, "Building microservices", the EMF
+book, the SEI ultra-large-scale-systems report and the GPT-2 report, Holm's 1979 test procedure and
+Plotkin's 1970 note, Apache Maven, and six papers the mirror answered `no_match` for, one of them
+cited as "Elipse IDE". So the file is an anchor for CrossRef, the DOI resolver and arXiv, whose
+statuses replay identically, and a record of one afternoon's Semantic Scholar rather than an anchor
+for it: its coverage was not measured, because it mostly refused. The parse half is the parser
+before the fixes, so a replay lists the 113 parse differences the CHANGELOG entry describes until
+the file is re-recorded; the check half replays the recorded parse and is unaffected. Re-recording
+is one corpus replay, an hour and forty minutes without `--mailto`. Do it with `--mailto`, on a
+day the quota is fresh, and never two in one afternoon.
 
-with its log at `~/hallucite/cases-online.log`. It is one corpus replay -- about 1500 CrossRef and
-700 Semantic Scholar requests, sequential, an hour or more -- and three of those in one afternoon
-are what exhausted the quota last time, so do not start a second while one is running. What is
-left: if the log does not end in `recorded 2857 cases`, start it once more, with `--mailto <you>`
-for CrossRef's polite pool; when it does, replay it and read the movement report before treating it
-as an anchor, because a reference whose only backend failure is Semantic Scholar's says something
-about that afternoon's throttle and nothing about the code:
+## Parser gaps the residue evidence still shows
 
-    characterize.py compare ~/hallucite/cases-online.json --impl verifier
+The six that reading the corpus residue's `skipped` list and its identifier resolutions first
+surfaced -- the `URL https://...` title, the `!` and closing-quote cuts, the comma-joined venue,
+`VII` and `editors`, the DOI broken after a period -- are fixed and measured in the CHANGELOG
+entry. The same reading of the residue still shows:
 
-## Parser gaps the residue evidence surfaced
-
-Reading the corpus residue's `skipped` list and what its identifiers resolve to
-(`measure/residue_evidence.py`) turned up entries the parser reads wrongly. None of them is a
-verification defect -- each reaches triage as an honest `not_found` -- but every one costs a
-human a lookup the tool could have made:
-
-- A Springer entry of the shape `Podman. URL https://podman.io/` parses to the title `URL`
-  (eleven references in `emse-2605.21238v1` and `emse-2608.11513v1`). The word before `URL` is
-  the title, or the author is.
-- A title is cut at an exclamation mark inside it (`Hey! are you committing tangled changes?`
-  becomes `Hey!`) and at a closing quote (`"safety automata" - A new specification language ...`
-  becomes `safety automata`).
-- One JSS paper (`jss-2605.26146v1`) joins the venue to the title with a comma and no `in:`
-  (`..., arXiv preprint`, `..., SSRN`, `..., Springer, Berlin, Heidelberg`); about twenty of its
-  references carry the venue in the title, and `_TRAILING_IN_VENUE` covers only `, in:`. The
-  nearest-title lead and the arXiv resolution both recover the real title, which is how it was
-  noticed.
-- `VII. Note on regression and inheritance ...` parses to the title `VII`, and
-  `M. P. Robillard, ..., and T. Zimmermann, editors. Recommendation Systems ...` to `editors`.
-- A DOI the layout broke after a period keeps only its first half (`doi:10.1109/ICET.2017.
-  8281704` yields `10.1109/ICET.2017`, which resolves as dead). The rejoin that covers an
-  underscore break does not cover a period, and three of the corpus residue's five dead DOIs are
-  this shape. Check the far side continues the DOI, as the underscore rejoin does; a four-digit
-  year is the entry's own date running on.
-- `titles_match` treats a colon or a dash as the subtitle mark but not a question mark, so
-  `Does the whole exceed its parts?` reads as a different title from `Does the Whole Exceed its
-  Parts? The Effect of AI Explanations ...`. Measure on both corruption harness sets before
-  widening it.
+- Five references in `jss-2605.26146v1` keep a comma-joined field the parser has no name for:
+  `, GitHub repository` on three tool citations, `, Working Paper v3.1, Capitol Technology
+  Uni-versity`, and a NIST special publication whose corporate author is read as the title. All
+  five are grey literature no database holds, so each reaches triage as `not_found` with a title a
+  human can read, and nothing verifiable is lost.
+- Three DOIs are wrong as printed and now travel whole rather than as a dead front half: a TVCG
+  identifier for Wall et al.'s Podium, a TPAMI one for Viering and Loog's learning-curve review, and
+  an ACM `10.5555` pseudo-DOI, which doi.org has never resolved. Each is a verified reference, so
+  the identifier evidence that would show a reader the dead DOI is not printed for it.
 
 ## The corpus is 55 papers and still thin
 
@@ -158,6 +164,12 @@ runs.
 - The DOI, year and venue checks were measured and rejected as automatic demotions; the table is
   in CHANGELOG under 1.19.0. Do not revisit without a fresh measurement on a corpus with
   trustworthy verdicts.
+- Where several DBLP records share a title and all carry the cited authors, the record the report
+  points at is whichever the index returned first, CoRR last: Fowler's *Refactoring* points at the
+  XP 2002 talk record rather than the book, Tokuda and Batory's 2001 journal article at their 1999
+  conference paper, Wohlin's 2012 book at its 2024 edition. `VERIFICATION-SPEC.md` says the record
+  type and year separate them; nothing implements that, and a triager following `paper_url` lands
+  on the wrong edition of the right work.
 - `authors_absent` is read by `triage.py` and written by nothing since the cutover: the
   `_author_absence_pass` that filled it is gone, and a `mismatch` now carries the matched record's
   authors under `matched` instead. Either derive the absent names from `matched` or drop the field

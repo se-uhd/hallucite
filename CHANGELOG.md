@@ -658,6 +658,67 @@ All notable changes to hallucite are documented here. The format follows
   non-answers; the replacement emits `timeout`, so it would have reported a backend that never
   answered as one that found something.
 
+- **Six parser gaps the residue evidence surfaced.** Each reached triage as an honest `not_found`
+  and cost a human a lookup the tool could have made. Measured over the 55-paper corpus, verified
+  against the offline mirror alone: 35 references move from `not_found` to `verified`, two to
+  `mismatch`, and 751 of 2857 are left for triage where 786 were. Every one of the 35 is the cited
+  work, with the cited people on the matched record. The corruption harness is unchanged on every
+  deciding column (250 / 250 / 250 / 0 / 0 / 0 / 0 over the complete records, 90 / 0 over the
+  truncated ones), the head-to-head over the recorded cases is unchanged in all four combinations
+  (1519 / 1509 / 1462 / 1543, no reference moved), and the extraction census is unchanged. Over
+  the whole corpus, DBLP only, the new path confirms 2106 against the old path's 2009, where it
+  confirmed 2070 before.
+
+  - *A DOI the layout broke on one of its own periods* (`doi:10.1109/ICET.2017. 8281704`,
+    `doi:10.1145/3395363. 3397366`) kept only its front half: an IEEE front half is dead, and an
+    ACM one is the proceedings volume, another work. Over the corpus 60 DOIs break after a period,
+    and every one resumes with digits -- an article number, a year-led segment (`CoG47356.
+    2020.9231762`), an Elsevier `03.006`. Nothing else follows a DOI's period with a run of digits
+    except the entry's own year, which is the one shape refused. The same pass rejoins a Springer
+    DOI broken after a two-character suffix (`10.1007/s1 1219-009-9075-x`) and an Elsevier book
+    DOI broken before a hyphen (`10.1016/B978 -0-12-396535-6.00001-6`). 42 corpus DOIs change, in
+    19 papers. Resolved through the DOI backend alone, 42 requests and nothing else asked: 38
+    resolve to the cited title, three are dead as printed -- the paper's own wrong identifier, now
+    whole rather than half -- and one resolved to a title the parser was still cutting, fixed
+    below.
+  - *Springer's `URL https://...`* read as the title `URL`, with the real title as the author:
+    eleven references in two EMSE papers. The label goes with the address.
+  - *A `?` or `!` cut the title to its first clause* whenever the sentence after the mark ran on
+    into a comma-joined venue ("Hey! are you committing tangled changes? In Proceedings of ...,
+    2014"; "Twins or false friends? a study on ..., in: 2023 IEEE/ACM ..."), and a title that
+    opens with a quoted phrase was cut at the closing quote for the same reason (`"safety
+    automata" - A new specification language ..., in: Proceedings ...`). The venue test now reads
+    the text up to the next mark and short of `, in:`, and a journal named without a venue word
+    ("Empirical Software Engineering 30, 1 (2025)", "Psychological Bulletin 128 (4) (2002)") is
+    recognised by its volume, issue and year.
+  - *Elsevier's numeric style joins the venue to the title with a comma and no `in:`*
+    (`..., et al., A prompt pattern catalog ..., arXiv preprint arXiv:2302.11382`;
+    `Experimentation in Software Engineering, Springer, Berlin, Heidelberg, 2012`). An `et al.`
+    followed by a comma now says the fields are comma-delimited and the IEEE comma reading's cut
+    applies, and a comma field that is a publisher or preprint server and nothing else
+    ("Springer", "SSRN", "Addison-Wesley Professional", "Tech. rep.", the names the corpus prints
+    there) ends the title. 19 of the JSS paper's 44 references change title and 13 of them verify;
+    two statistics books ("Practical Nonparametric Statistics", "Statistics for Experimenters")
+    now reach triage as `mismatch` against the Technometrics review of each rather than as
+    `not_found`, with the reviewer's name where the record's authors are shown.
+  - *`VII. Note on regression and inheritance ...`* parsed to `VII`, and `..., and T. Zimmermann,
+    editors. Recommendation Systems ...` to `editors`. A bare roman numeral is a numbered heading,
+    not a sentence, and the role after IEEE's initials-led names belongs to the author list. The
+    first version of that rule also read `Compilers:` as the role *compilers* and took the Dragon
+    Book's first word; it now reads editors only, with the period or comma the role is written
+    with.
+
+  Measured and rejected: a `?` as a subtitle mark in `titles_match`, so that "Does the whole exceed
+  its parts?" would match "Does the Whole Exceed its Parts? The Effect of AI Explanations ...".
+  Over the 35 corpus residue titles that carry a `?`, the widening gains a record for four. Three
+  are the parser cuts fixed above, which now verify on the whole title, and the fourth pairs
+  Conway's "How do committees invent?" with an ACM Queue column of that head by another author,
+  which would have reached triage as `mismatch` against an unrelated work. The matcher stays as
+  it is.
+
+  Guarded in smoke tier 5 through `parse_reference`, with ten mutation entries; the mutation run
+  fails for each.
+
 ### Changed
 
 - `.env.local` in the repo root, gitignored, holds the API keys the online backends want. mise

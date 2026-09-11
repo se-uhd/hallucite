@@ -100,24 +100,51 @@ def _trim_identifier(s: str) -> str:
 
 
 # The rest of an identifier, on the far side of a line break. Digit-led, because that is what a
-# broken DOI resumes with and an ordinary following word does not.
-_DOI_CONTINUES = re.compile(r"\s+(\d[0-9A-Za-z._()/-]*)")
+# broken DOI resumes with and an ordinary following word does not -- or hyphen-led into a digit,
+# which is how an Elsevier book DOI resumes ("10.1016/B978 -0-12-396535-6.00001-6").
+_DOI_CONTINUES = re.compile(r"\s+((?:\d|-\d)[0-9A-Za-z._()/-]*)")
+# What follows an identifier's own period when the layout broke it there: runs of digits, with
+# periods between them ("8281704", "2020.9231762", "03.006"). Over the corpus every one of the 60
+# period breaks resumes this way, and nothing else does -- a four-digit year alone is the entry's
+# own date running on, and a word is the next field.
+_DOI_DIGITS = re.compile(r"^\d+(?:\.\d+)*$")
+_YEAR_ALONE = re.compile(r"^(?:19|20)\d{2}$")
+
+
+def _continues(raw: str, part: str) -> bool:
+    """Does `part`, the token after the untrimmed identifier `raw`, continue it across a line
+    break that fell on one of the identifier's own separators?
+
+    A hyphen-led run of digits always does: no bibliography prints " -0-12-" after a DOI for any
+    other reason. Digits after a period do when the period was the identifier's, not the
+    sentence's -- "doi:10.1109/ICET.2017. 8281704" is one DOI, "doi:10.1145/3498537. 2020." is a
+    DOI and the entry's year."""
+    if part.startswith("-"):
+        return True
+    if not raw.endswith("."):
+        return False
+    part = _trim_identifier(part)
+    return bool(_DOI_DIGITS.match(part)) and not _YEAR_ALONE.match(part)
 
 
 def _doi(text: str) -> str | None:
     for m in _DOI.finditer(text):
         raw = re.sub(r"\s+", "", m.group(0))
         doi = _trim_identifier(raw)
-        # Two shapes say the identifier was cut in half by a line break rather than ended: it stops
-        # on a hyphen ("10.1007/978-3-030- 66534-0_2"), or its suffix carries no digit at all
-        # ("10.48550/arXiv. 2503.14713"). Either half is a DOI that resolves to nothing, which
-        # triage reads as a fabrication signal. The join is made on the untrimmed match, so the
-        # separator the break fell on survives.
-        if _looks_cut(doi):
-            rest = _DOI_CONTINUES.match(text, m.end())
-            if rest:
-                doi = _trim_identifier(raw + rest.group(1))
-        joined = _rejoin_underscore(doi, text, m.end())
+        end = m.end()
+        # Three shapes say the identifier was cut in half by a line break rather than ended: it
+        # stops on a hyphen ("10.1007/978-3-030- 66534-0_2"), its suffix carries no digit at all
+        # ("10.48550/arXiv. 2503.14713") or is too short to be one ("10.1007/s1 1219-009-9075-x"),
+        # or the break fell on one of its own periods and digits follow ("10.1109/ICET.2017.
+        # 8281704"). Either half is a DOI that resolves to nothing, or to another work -- the
+        # front half of an ACM DOI is the proceedings volume -- which triage reads as a
+        # fabrication signal. The join is made on the untrimmed match, so the separator the break
+        # fell on survives.
+        rest = _DOI_CONTINUES.match(text, end)
+        if rest and (_looks_cut(doi) or _continues(raw, rest.group(1))):
+            doi = _trim_identifier(raw + rest.group(1))
+            end = rest.end()
+        joined = _rejoin_underscore(doi, text, end)
         if joined != doi:
             doi = joined
         elif _looks_cut(doi):
@@ -139,10 +166,14 @@ _ARXIV_DOI = re.compile(rf"^10\.48550/arxiv\.({_ARXIV_NEW}|{_ARXIV_OLD})(v\d+)?$
 def _looks_cut(doi: str) -> bool:
     """Does this identifier stop mid-way rather than end?
 
-    Three shapes say so: it ends on a hyphen, its suffix carries no digit, or it registers an
-    arXiv preprint under an identifier that is not one -- "10.48550/arXiv.2411" is the front half
-    of "10.48550/arXiv.2411.19043", and both halves carry digits."""
+    Four shapes say so: it ends on a hyphen, its suffix carries no digit, its suffix is one or
+    two characters -- no publisher registers "s1", and "10.1007/s1 1219-009-9075-x" is a Springer
+    article DOI broken after its second character -- or it registers an arXiv preprint under an
+    identifier that is not one: "10.48550/arXiv.2411" is the front half of
+    "10.48550/arXiv.2411.19043", and both halves carry digits."""
     if doi.endswith("-") or not any(c.isdigit() for c in _doi_suffix(doi)):
+        return True
+    if len(_doi_suffix(doi)) <= 2:
         return True
     return doi.lower().startswith("10.48550/arxiv.") and not _ARXIV_DOI.match(doi)
 
@@ -361,6 +392,11 @@ _VENUE_WORDS = re.compile(
     re.I)
 _VOLUME_ISSUE = re.compile(r"\b\d{1,4}\s*[,(]\s*\d")
 _PAREN_YEAR = re.compile(r"\((?:19|20)\d{2}[a-z]?\)")
+# A journal's volume, issue and year, as Elsevier's numeric style writes them ("128 (4) (2002)")
+# and as ACM's does ("30, 1 (2025)"), after a venue name that need not carry any word of the list
+# above ("Psychological Bulletin", "Science", "Empirical Software Engineering"). No title is
+# written that way.
+_VOLUME_ISSUE_YEAR = re.compile(r"\b\d{1,4}\s*(?:\(\d{1,4}\)|,\s*\d{1,4})\s*\((?:19|20)\d{2}\)")
 
 
 # A field that is only numbers: a page range, or a volume and issue.
@@ -378,6 +414,8 @@ def _looks_like_venue(sentence: str) -> bool:
     if re.match(r"^(?:in|in:)\s", s, re.I):
         return True
     if _NUMBERS_ONLY.match(s):
+        return True
+    if _VOLUME_ISSUE_YEAR.search(s):
         return True
     return bool(_VENUE_WORDS.search(s)) and bool(
         _VOLUME_ISSUE.search(s) or _PAREN_YEAR.search(s) or _HAS_DIGIT.search(s))
@@ -405,6 +443,11 @@ _ABBREV = re.compile(
 # "Qwen2. 5-coder"). A venue that opens with a year is the other way round, a letter then a digit,
 # and that one does end the title ("... vulnerabilities. 2006 IEEE Symposium on ...").
 _SPLIT_VERSION = re.compile(r"\d\.\s+\d")
+# A title that opens with its own number, as the Royal Society printed them: "VII. Note on
+# regression and inheritance in the case of two parents" is one title, and CrossRef records it
+# with the numeral. Only a numeral that is the whole of the sentence so far counts, so a name
+# suffix ("John Smith III. A title.") still ends the author sentence.
+_ROMAN_HEAD = re.compile(r"^[IVXLC]{2,6}\.$")
 
 
 def _sentence_end(text: str, start: int = 0) -> int:
@@ -415,7 +458,8 @@ def _sentence_end(text: str, start: int = 0) -> int:
         if m is None:
             return len(text)
         head = text[:m.end()]
-        if _ABBREV.search(head) or _SPLIT_VERSION.match(text, m.start() - 1):
+        if (_ABBREV.search(head) or _SPLIT_VERSION.match(text, m.start() - 1)
+                or _ROMAN_HEAD.match(text[start:m.end()].lstrip())):
             i = m.end()
             continue
         return m.end()
@@ -436,8 +480,16 @@ def _question_end(text: str) -> int | None:
         rest = text[m.end():].strip()
         if not rest:
             continue
-        nxt = rest[:_sentence_end(rest)].rstrip(". ")
-        if _looks_like_venue(nxt):
+        nxt = _TRAILING_IN_VENUE.sub("", rest[:_sentence_end(rest)])
+        # Up to the next mark, and short of Elsevier's ", in:". In the styles that join the venue
+        # to the title with a comma, the sentence after "Hey!" is "are you committing tangled
+        # changes? In Proceedings of ..., 2014", and the one after "Twins or false friends?" is
+        # "a study on energy consumption ..., in: 2023 IEEE/ACM 45th ..."; both read as a venue
+        # and cut the title to its question.
+        nm = re.search(r"[?!](?=\s)", nxt)
+        if nm:
+            nxt = nxt[:nm.end()]
+        if _looks_like_venue(nxt.rstrip(". ")):
             return m.end()
     return None
 
@@ -512,8 +564,11 @@ def _title_from(rest: str) -> str:
             # Predictions of Any Classifier`, `"How Was Your Weekend?" Software Development Teams
             # Working From Home`. Reading only the quoted half of those loses the words that
             # identify the paper.
-            if (not after or m.closed_on in ",."
-                    or _looks_like_venue(after[:_sentence_end(after)].rstrip(". "))):
+            # The sentence after the quote is tested up to a ", in:" -- Elsevier joins the venue
+            # to the title with a comma, and `"safety automata" - A new specification language
+            # ..., in: Proceedings of ...` read as a quoted title followed by a venue.
+            nxt = _TRAILING_IN_VENUE.sub("", after[:_sentence_end(after)]).rstrip(". ")
+            if not after or m.closed_on in ",." or _looks_like_venue(nxt):
                 return _clean_title(m.group(1))
     q = _question_end(rest)
     end = _sentence_end(rest)
@@ -527,7 +582,10 @@ def _title_from(rest: str) -> str:
     return _clean_title(title)
 
 
-_TRAILING_IDENT = re.compile(r"(?:\s*[,.;:]\s*)?(?:doi\s*:|https?://|arxiv\s*:).*$", re.I)
+# Springer labels the address it prints ("Podman. URL https://podman.io/"), and the label goes
+# with it: eleven corpus references parsed to the title "URL".
+_TRAILING_IDENT = re.compile(
+    r"(?:\s*[,.;:]\s*)?(?:doi\s*:|(?:\burl\s+)?https?://|arxiv\s*:).*$", re.I)
 # An access note. It only counts as one where a field starts, because every one of these words is
 # also an ordinary word: "the readily available tests" is a title, and so is "Online impact
 # analysis". "Online" is only recognised in the brackets the styles print it in.
@@ -600,6 +658,11 @@ _LEADING_DATE = re.compile(
 # The initials may be hyphenated ("K.-W. Chang", "J.-P. Katoen"); without the hyphen the last
 # author of "..., B. Ray, and K.-W. Chang. Unified pre-training ..." was read as the title "and K.-W".
 _INITIALS_LED = re.compile(r"^(?:and\s+)?[A-Z]\.(?:\s*-?\s*[A-Z]\.)*\s+\S")
+# The role that follows the names, at the head of what is left after them ("..., and
+# T. Zimmermann, editors. Recommendation Systems in Software Engineering"). Editors only, with the
+# period or comma the role is written with: "Editor wars" opens a title, and so does "Compilers:
+# Principles, Techniques, and Tools", which the role "compilers" read off the Dragon Book.
+_LEADING_ROLE = re.compile(r"^(?:editors?[.,]|eds?\.,?)\s+", re.I)
 # The order the medical styles print and `VERIFICATION-SPEC.md` names beside the inverted one:
 # "Wohlin C, Runeson P, Host M. Experimentation in software engineering." Its last initial ends the
 # author list with a period that reads exactly like an initial's, so no sentence rule can find the
@@ -645,19 +708,32 @@ def _ieee_comma_split(text: str) -> tuple[str, str] | None:
         taken += 1
     if not taken or taken >= len(fields):
         return None
-    return ", ".join(fields[:taken]), ", ".join(fields[taken:])
+    rest = _LEADING_ROLE.sub("", ", ".join(fields[taken:]))
+    if not rest.strip():
+        return None
+    return ", ".join(fields[:taken]), rest
+
+
+# A comma field that is a publisher or a preprint server and nothing else ("Springer", "SSRN",
+# "Wiley-Interscience", "Addison-Wesley Professional", "Tech. rep."): the field after a title in
+# the comma-delimited styles, with no digit for `_looks_like_venue` to key on. The names are the
+# ones the corpus prints there.
+_BARE_VENUE = re.compile(
+    r"^(?:springer|elsevier|wiley|addison-wesley|ieee|acm|usenix|arxiv|ssrn|corr|"
+    r"tech\.?\s*rep\.?)\b[^,\d]{0,30}$", re.I)
 
 
 def _cut_at_trailing_field(rest: str) -> str:
     """`rest` truncated before the comma-delimited field that follows a title.
 
     Only sound where the style delimits its fields with commas, so it is used on the IEEE comma
-    reading alone; a title that carries a comma of its own would otherwise lose everything after
-    it."""
+    reading and on an "et al." that a comma follows; a title that carries a comma of its own would
+    otherwise lose everything after it."""
     fields = rest.split(", ")
     for i in range(1, len(fields)):
         tail = fields[i]
-        if _AFTER_TITLE.match(tail) or _looks_like_venue(tail[:_sentence_end(tail)]):
+        if (_AFTER_TITLE.match(tail) or _BARE_VENUE.match(tail)
+                or _looks_like_venue(tail[:_sentence_end(tail)])):
             return ", ".join(fields[:i])
     return rest
 
@@ -715,7 +791,14 @@ def _candidates(text: str, prev_authors: list[str] | None):
     # next to the names ("... Chetan Rane, et al. Swe-bench pro: Can AI agents ...").
     m = _ET_AL_END.search(text)
     if m and _is_author_segment(text[:m.start()]):
-        yield _split_names(text[:m.start()]), _LEADING_DATE.sub("", text[m.end():])
+        rest = _LEADING_DATE.sub("", text[m.end():])
+        # A comma after the "et al." says the entry delimits its fields with commas, so the venue
+        # is the comma field after the title ("..., et al., A prompt pattern catalog ..., arXiv
+        # preprint arXiv:2302.11382") and the IEEE comma reading's cut applies. A quoted title
+        # marks its own end and is left alone.
+        if m.group(0).rstrip().endswith(",") and rest[:1] not in _OPEN_Q:
+            rest = _cut_at_trailing_field(rest)
+        yield _split_names(text[:m.start()]), rest
 
     # A quoted title marks its own boundary, so whatever precedes it is the author list -- but only
     # where the quote opens a field. A title may quote a word of its own ("The "Goodness" of Code
