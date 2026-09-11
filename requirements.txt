@@ -1,14 +1,12 @@
 # Python dependencies for the hallucinated-reference audit pipeline.
 #
-# `hallucinator` provides both reference extraction (PdfExtractor) and
-# multi-database verification (Validator: offline DBLP + CrossRef/arXiv/
-# Semantic Scholar/...). It ships prebuilt wheels targeting
-# CPython 3.12 — mise.toml pins python = "3.12" so pip resolves a wheel
-# instead of building from source (which would need Rust + maturin).
+# There are none. Reference extraction (`pdf_references.py`), parsing
+# (`reference_parser.py`) and verification (`verifier.py`, `dblp_check.py`) are hallucite's own and
+# use only the standard library, except that `pdf_references.py` shells out to `pdftotext`
+# (poppler) for PDF text extraction.
 #
-# The driver scripts (audit_references.py, triage.py, pdf_references.py) otherwise use
-# only the Python standard library, except that pdf_references.py shells out to
-# `pdftotext` (poppler) for PDF text extraction.
+# `hallucinator` is no longer imported by anything the audit runs. `characterize.py record` needs
+# it only to make a *new* recording of the behaviour the modules were written against; install it
+# for that alone:
 #
-# Pin the exact version after the first install:  uv pip freeze | grep -i hallucinator
-hallucinator
+#     uv pip install hallucinator

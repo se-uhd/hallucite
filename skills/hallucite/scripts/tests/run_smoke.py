@@ -10,8 +10,9 @@ Tiers (any failing check exits non-zero):
                               compiles, referenced script paths exist, Claude and Codex
                               marketplace shapes, repo-local symlink shims, AGENTS.md, and
                               SKILL.md runner resolver branches.
-  1b run.sh bootstrap       -- the wrapper syntax-checks, rejects an unknown command, and fails
-                              loud (sentinel + non-zero) when its Python lacks hallucinator.
+  1b run.sh bootstrap       -- the wrapper syntax-checks, rejects an unknown command, fails loud
+                              (sentinel + non-zero) when its Python is unusable, and reads the
+                              gitignored .env.local without letting it override the environment.
   1c Codex CLI marketplace  -- optional when `codex` is installed: register this repo in an
                               isolated CODEX_HOME and assert hallucite@hallucite is listed.
   3  logic contract        -- needs_triage / paper_status_counts on synthetic records,
@@ -39,20 +40,36 @@ Tiers (any failing check exits non-zero):
                               author-year one reports the citation key the paper itself uses, and
                               any tool-internal index is marked as not appearing in the paper.
   4  end-to-end (offline)   -- build a tiny fixture DBLP DB, run the real audit --offline on a
-                              synthetic fixture PDF, assert verified/not_found. Needs the
-                              hallucinator package and pdftotext (poppler); skipped if absent.
+                              synthetic fixture PDF, assert verified/not_found. Needs pdftotext
+                              (poppler); skipped if absent.
   4b extraction segmentation -- a bracket-numeric bibliography under LaTeX lineno margins, across a
                               page-break margin reset, segments as [1]..[N] (the margin numbers do
                               not hijack the sequence, drop the first entry, or collapse the tail).
                               Pure pdf_references logic; no network, DB, or poppler.
-  4d DBLP second opinion    -- the all-candidates title+author check over the offline DBLP file:
-                              matches the right one of several same-title records (hallucinator's
-                              backend compares only the first FTS candidate), tolerates the DB's
-                              truncated author rows, and refuses wrong, padded, or invented
-                              citations. Pure dblp_check logic on a fixture DB; no network.
+  4d DBLP title+author check -- the all-candidates check over the offline DBLP file: matches the
+                              right one of several same-title records, reads an "et al." citation
+                              as a truncation, and refuses wrong, invented, and phantom-author
+                              citations -- a correct author list with one invented name spliced in
+                              is the pattern the tool exists to catch. Pure dblp_check logic on a
+                              fixture DB; no network.
   4e small-caps headings    -- an IEEE-style heading letter-spaced by pdftotext ("R EFERENCES")
                               still opens the bibliography, and the entries under it segment.
                               Pure pdf_references logic; no network, DB, or poppler.
+  4h page furniture         -- the three ways a bibliography loses whole references: a running
+                              head hiding the gutter on a short page, a gutter cut placed inside a
+                              word, and an entry wearing a running head's disguises. No network/DB.
+  4i hanging indent         -- the unnumbered author-first bibliography (Elsevier Harvard, plainnat,
+                              ACM author-year): the right column aligned to the left, a bare or
+                              venue-field year still voting author-year, continuations opening with
+                              digits not voting numeric, and the trailing author biographies dropped.
+                              No network/DB/poppler.
+  5  reference parsing     -- one entry of each style the corpus prints (IEEE quoted, ACM
+                              year-first, Springer inverted, the repeated-author dash), plus the
+                              identifier forms, held to VERIFICATION-SPEC.md. No network/DB.
+  5b verification contract  -- hallucite's own `check` on a fixture DBLP file with the online
+                              backends disabled: 1:1 alignment, `verified`/`mismatch`/`not_found`,
+                              a did-not-answer backend named in failed_dbs rather than folded into
+                              no_match, and a disabled backend leaving no trace. No network.
   4c author-year extraction -- a Springer author-year bibliography under LaTeX lineno margins,
                               driven through the real PDF: margin numbers must be detected in both
                               renderings and blanked (not deleted) so the hanging indent still
@@ -67,6 +84,7 @@ alignment that fixture exists to test).
 """
 from __future__ import annotations
 
+import gzip
 import json
 import os
 import re
@@ -74,6 +92,8 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import time
+import urllib.parse
 from pathlib import Path
 from shutil import which
 
@@ -197,7 +217,7 @@ def tier1_packaging() -> None:
     C.true(re.search(r'^\s*name:\s*hallucite\s*$', fm, re.M) is not None,
            "SKILL.md frontmatter name = hallucite")
 
-    for p in sorted(SCRIPTS.glob("*.py")):
+    for p in sorted(SCRIPTS.glob("*.py")) + sorted((SCRIPTS / "measure").glob("*.py")):
         r = subprocess.run([sys.executable, "-m", "py_compile", str(p)],
                            capture_output=True, text=True)
         C.true(r.returncode == 0, f"compiles: {p.name}"
@@ -270,9 +290,10 @@ def tier1c_codex_cli_marketplace() -> None:
 def tier1b_runner() -> None:
     """The run.sh bootstrap contract, without needing a network or a built venv: it must
     syntax-check, reject an unknown command, fail loud (sentinel + non-zero) on a Python that
-    cannot import hallucinator, and -- when hallucinator is present -- print HALLUCITE_OK and
-    forward a subcommand. The auto-provision path (build a venv + pip install) needs the network
-    and is exercised manually, not here; tier4 runs a real audit *through* run.sh."""
+    is not a usable Python, and otherwise print HALLUCITE_OK and
+    forward a subcommand. It also has to read `.env.local` where one exists, tolerate one that does
+    not, and let an explicit environment variable win. Tier 4 runs a real audit *through*
+    run.sh."""
     print("Tier 1b: run.sh bootstrap contract")
     run_sh = SCRIPTS / "run.sh"
     if which("bash") is None:
@@ -296,31 +317,60 @@ def tier1b_runner() -> None:
 
     r = run([])
     C.true(r.returncode != 0, "run.sh with no subcommand exits non-zero (usage)")
-    C.true("upgrade" in r.stderr, "usage lists the upgrade subcommand")
+    C.true("check-env" in r.stderr and "audit" in r.stderr,
+           "usage lists the subcommands")
 
-    # `upgrade` manages only the venv run.sh itself built. Pointing HALLUCITE_PYTHON at an
-    # interpreter and having run.sh pip-install into it would mutate an environment the user owns,
-    # so that combination must refuse rather than "helpfully" upgrade.
-    r = run(["upgrade"], env_add={"HALLUCITE_PYTHON": sys.executable})
-    C.true(r.returncode != 0 and SENTINEL in r.stderr and "HALLUCITE_PYTHON" in r.stderr,
-           "REGRESSION GUARD: upgrade refuses to modify a user-provided HALLUCITE_PYTHON")
+    # `.env.local` carries the API keys the online backends want. It is optional, and an explicit
+    # environment variable has to win, or a one-off `S2_API_KEY=... run.sh audit` would be ignored.
+    with tempfile.TemporaryDirectory() as td:
+        tree = Path(td) / "skills" / "hallucite" / "scripts"
+        tree.mkdir(parents=True)
+        copied = tree / "run.sh"
+        copied.write_text(run_sh.read_text())
+        show = ["python", "-c", "import os; print(os.environ.get('SMOKE_FAKE_KEY', 'unset'))"]
+
+        def run_copy(**over):
+            env = {k: v for k, v in os.environ.items() if k != "SMOKE_FAKE_KEY"}
+            env.update({"HALLUCITE_NO_VERSION_CHECK": "1", **over})
+            return subprocess.run(["bash", str(copied), *show], capture_output=True, text=True,
+                                  env=env)
+
+        before = run_copy()
+        C.true(before.returncode == 0 and before.stdout.strip() == "unset",
+               "run.sh runs with no .env.local present")
+        (Path(td) / ".env.local").write_text(
+            "# a comment\n\nSMOKE_FAKE_KEY=from-the-file\n")
+        C.eq(run_copy().stdout.strip(), "from-the-file",
+             "run.sh reads .env.local, skipping comments and blank lines")
+        C.eq(run_copy(SMOKE_FAKE_KEY="from-the-environment").stdout.strip(),
+             "from-the-environment",
+             "REGRESSION GUARD: a variable already set in the environment wins over the file")
+
+    # The interpreter probe reads the *output*, not the exit status. Plenty of executables take
+    # `-c` and exit 0 without running anything, and a wrapper that accepts one hands the audit an
+    # interpreter that silently does nothing.
+    for fake in ("/bin/echo", "/usr/bin/true"):
+        if not Path(fake).exists():
+            continue
+        r = run(["check-env"], env_add={"HALLUCITE_PYTHON": fake})
+        C.true(r.returncode != 0 and SENTINEL in r.stderr,
+               f"REGRESSION GUARD: {fake} accepts `-c` and exits 0, and is still refused")
 
     # FAIL-LOUD, exercised deterministically regardless of the host's Pythons: a HALLUCITE_PYTHON
-    # that is not even executable can never import hallucinator, so resolve_python must `die` with
+    # that is not even executable can never be a Python, so resolve_python must `die` with
     # the sentinel rather than fall through to a silent run. This is the guarantee that stops a
     # broken environment from masquerading as a clean audit.
     r = run(["check-env"], env_add={"HALLUCITE_PYTHON": str(TESTS / "no-such-python")})
     C.true(r.returncode != 0 and SENTINEL in r.stderr,
            "REGRESSION GUARD: run.sh fails loud (sentinel) when HALLUCITE_PYTHON is unusable")
 
-    # HAPPY PATH + subcommand dispatch, when a hallucinator-capable Python exists. Point
+    # HAPPY PATH + subcommand dispatch. Point
     # HALLUCITE_PYTHON at it so no venv is provisioned, then check both `check-env` and that an unknown
     # *script* flag is forwarded (proving args reach the underlying script, not swallowed by run.sh).
-    if subprocess.run([sys.executable, "-c", "import hallucinator"],
-                      capture_output=True).returncode == 0:
+    if True:
         r = run(["check-env"], env_add={"HALLUCITE_PYTHON": sys.executable})
         C.true(r.returncode == 0 and "HALLUCITE_OK:" in r.stdout,
-               "run.sh check-env prints HALLUCITE_OK for a hallucinator-capable Python")
+               "run.sh check-env prints HALLUCITE_OK for a usable Python")
         r = run(["audit", "--this-flag-does-not-exist"],
                 env_add={"HALLUCITE_PYTHON": sys.executable})
         C.true(r.returncode != 0 and SENTINEL not in r.stderr
@@ -340,7 +390,7 @@ def tier1b_runner() -> None:
                    and "pdftotext" in r.stderr,
                    "check-env warns on stderr about a missing pdftotext but stays OK (exit 0)")
     else:
-        C.skip("hallucinator not importable from sys.executable; run.sh happy-path checks skipped")
+        C.skip("no usable Python for the run.sh happy-path checks")
 
 
 def tier3_logic() -> None:
@@ -361,11 +411,7 @@ def tier3_logic() -> None:
     C.true(triage.needs_triage(ref("mismatch")),
            "REGRESSION GUARD: a 'mismatch' reference reaches triage")
 
-    try:
-        import audit_references as audit
-    except SystemExit:
-        C.skip("paper_status_counts: hallucinator absent; audit_references import skipped")
-        return
+    import audit_references as audit
     record = {"references": [
         {"db_verification": {"status": "verified"}},
         {"db_verification": {"status": "not_found"}},
@@ -446,11 +492,7 @@ def tier3e_reference_labels() -> None:
     hunting the PDF for a "[22]" that was never printed, which is what happened on the paper that
     prompted this."""
     print("Tier 3e: reference labels follow the bibliography style (no network/DB)")
-    try:
-        from audit_references import reference_label
-    except SystemExit:
-        C.skip("hallucinator absent; audit_references import skipped")
-        return
+    from audit_references import reference_label
     import triage
 
     def lab(n, raw, authors, style):
@@ -509,11 +551,7 @@ def tier3f_degraded_verification() -> None:
     one backend that never answered, and nothing said so."""
     print("Tier 3f: degraded verification is not a clean negative (no network/DB)")
     import triage
-    try:
-        import audit_references as audit
-    except SystemExit:
-        C.skip("hallucinator absent; audit_references import skipped")
-        return
+    import audit_references as audit
 
     def ref(status, failed=()):
         return {"original_number": 1, "raw_citation": "R", "parsed": {"title": "T"},
@@ -731,127 +769,74 @@ def tier3h_author_absence() -> None:
     pages -- under an author list carrying two people who are not on the paper, CrossRef matched
     the title, and it never reached the worklist, the report, or a human.
 
-    The counter-cases matter as much as the catch. Demoting on a backend's own `author_mismatch`
-    verdict was measured over 1016 verified references and flagged 22, almost all of them DBLP's
-    truncated author rows against a correctly cited work; that rule is not used. The shapes below
-    are taken from those runs."""
+    The counter-cases matter as much as the catch, and every shape below is one that came out of a
+    corpus run rather than out of somebody's head. The rule lives in `dblp_check.authors_match`
+    now -- one implementation, shared by every backend -- rather than in a pass the audit ran
+    afterwards over whatever a lenient backend had cleared."""
     print("Tier 3h: an absent cited author demotes a verified reference (no network/DB)")
-    try:
-        import audit_references as audit
-    except SystemExit:
-        C.skip("author absence: hallucinator absent; audit_references import skipped")
-        return
-    import triage
-
-    class Ref:
-        def __init__(self, authors): self.authors = authors
-
-    class Entry:
-        def __init__(self, authors): self.reference = Ref(authors)
-
-    def dv(status, source, found, failed=()):
-        return {"status": status, "source": source, "degraded": False,
-                "failed_dbs": list(failed), "found_authors": list(found), "db_results": []}
-
-    def run(cited, verification):
-        audit._author_absence_pass([Entry(cited)], [verification])
-        return verification
+    from dblp_check import authors_match, matched_authors, mirror_authors_complete
 
     # The catch: two cited names are on no author of the matched work.
-    bad = run(["Keila L. Lucas", "Elvys S. Soares", "Marcio Ribeiro", "Rohit Gheyi",
-               "Ivan Machado"],
-              dv("verified", "CrossRef", ["Elvys Soares", "Márcio Ribeiro", "Rohit Gheyi",
-                                          "Guilherme Amaral", "André Santos"]))
-    C.eq(bad["status"], "author_mismatch",
-         "REGRESSION GUARD: a cited author absent from the matched work reaches triage")
-    C.eq(bad["authors_absent"], ["Keila L. Lucas", "Ivan Machado"],
-         "REGRESSION GUARD: a middle initial is not mistaken for a sentence and skipped")
-    C.true(triage.needs_triage({"db_verification": bad}), "the demoted reference is triaged")
+    cited = ["Keila L. Lucas", "Elvys S. Soares", "Marcio Ribeiro", "Rohit Gheyi", "Ivan Machado"]
+    record = ["Elvys Soares", "Márcio Ribeiro", "Rohit Gheyi", "Guilherme Amaral", "André Santos"]
+    C.true(not authors_match(cited, record),
+           "REGRESSION GUARD: a cited author absent from the matched work reaches triage")
+    C.eq(matched_authors(cited, record), (3, 5),
+         "REGRESSION GUARD: and the three that do match are counted, so the near miss a triager "
+         "is shown is the record accounting for most of them")
 
     # Name forms that differ without naming a different person.
-    same = [
-        (["Dave Binkley"], ["Dave W. Binkley"], "a middle initial in the record"),
-        (["Marcio Ribeiro"], ["Márcio Ribeiro"], "diacritics"),
-        (["Shekoufeh Kolahdouz-Rahimi"], ["Shekoufeh Kolahdouz Rahimi"], "a hyphenated surname"),
-        (["Samuel Binny"], ["Binny M. Samuel"], "swapped given/surname order"),
-        (["Marcelo Amorim"], ["Marcelo d'Amorim"], "a compound surname"),
-        (["Bart Van Rompaey"], ["Bart Van Rompaey"], "a surname particle"),
-    ]
-    for cited, found, why in same:
-        C.eq(run(cited, dv("verified", "CrossRef", found))["status"], "verified",
-             f"{why} does not demote")
+    for cited, found, why in (
+            (["Dave Binkley"], ["Dave W. Binkley"], "a middle initial in the record"),
+            (["Marcio Ribeiro"], ["Márcio Ribeiro"], "diacritics"),
+            (["Shekoufeh Kolahdouz-Rahimi"], ["Shekoufeh Kolahdouz Rahimi"], "a hyphenated surname"),
+            (["Samuel Binny"], ["Binny M. Samuel"], "swapped given/surname order"),
+            (["Marcelo Amorim"], ["Marcelo d'Amorim"], "a compound surname"),
+            (["Bart Van Rompaey"], ["Bart Van Rompaey"], "a surname particle"),
+            (["Marcelo Amorim"], ["Marcelo d'Amorim"], "an elided particle the citation drops"),
+            (["Marcio Ribeiro"], ["Márcio Ribeiro 0001"], "a DBLP homonym suffix"),
+            (["A. Przybyłek"], ["Adam Przybylek"], "l with stroke"),
+            (["Kåre Synnes"], ["Kare Synnes"], "a ring above"),
+            (["Lars Bjørnvig"], ["Lars Bjornvig"], "o with stroke"),
+            (["Hans Weiß"], ["Hans Weiss"], "sharp s")):
+        C.true(authors_match(cited, found), f"{why} does not demote")
 
-    # Parser artifacts must never be held against a citation.
-    artifacts = [
-        (["Hammond Pearce", "Privacy (SP)"], ["Hammond Pearce", "Baleegh Ahmad"],
-         "a venue fragment parsed as an author"),
-        (["Alberto Bacchelli", "Christian Bird. Expectations, outcomes"],
-         ["Alberto Bacchelli", "Christian Bird"], "the sentence after the author list"),
-        (["Annibale Panichella", "An"], ["Annibale Panichella", "Anand Ashok Sawant"],
-         "a single-token fragment of a split name"),
-    ]
-    for cited, found, why in artifacts:
-        C.eq(run(cited, dv("verified", "CrossRef", found))["status"], "verified",
-             f"{why} does not demote")
+    # Parser artifacts must never be held against a citation: they are skipped, not compared.
+    for cited, found, why in (
+            (["Hammond Pearce", "Privacy (SP)"], ["Hammond Pearce", "Baleegh Ahmad"],
+             "a venue fragment parsed as an author"),
+            (["Alberto Bacchelli", "Christian Bird. Expectations, outcomes"],
+             ["Alberto Bacchelli", "Christian Bird"], "the sentence after the author list")):
+        C.true(authors_match(cited, found), f"{why} does not demote")
 
-    # Evidence quality gates.
-    C.eq(run(["Claes Wohlin", "Per Runeson", "Martin Höst"],
-             dv("verified", "DBLP", ["Per Runeson", "Claes Wohlin", "Magnus C. Ohlsson"]))["status"],
-         "verified",
-         "REGRESSION GUARD: DBLP's truncated author rows never demote a reference")
-    C.eq(run(["Patrick Lewis", "Ethan Perez", "Heinrich Küttler"],
-             dv("verified", "CrossRef", ["Patrick Lewis", "Ethan Perez"]))["status"], "verified",
-         "a shorter record than the citation is treated as incomplete, not as absence")
-    C.eq(run(["Anna Apple"], dv("not_found", "CrossRef", ["Ben Berry"]))["status"], "not_found",
-         "the pass never clears -- it only demotes")
+    # A citation naming fewer people than the record is what "et al." means.
+    C.true(not authors_match(["Anna Amorim"], ["Marcelo d'Amorim"]),
+           "REGRESSION GUARD: and dropping the particle widens the surname, not the person")
+    C.true(authors_match(["Claes Wohlin"], ["Per Runeson", "Claes Wohlin", "Magnus C. Ohlsson"]),
+           "a citation shorter than the record is not an absence")
+    # And a record shorter than the citation is only absence where the record is complete.
+    C.true(not authors_match(["Patrick Lewis", "Ethan Perez", "Heinrich Küttler"],
+                             ["Patrick Lewis", "Ethan Perez"]),
+           "REGRESSION GUARD: against a complete record the extra cited name is the signal")
+    C.true(authors_match(["Patrick Lewis", "Ethan Perez", "Heinrich Küttler"],
+                         ["Patrick Lewis", "Ethan Perez"], record_complete=False),
+           "REGRESSION GUARD: and against a record that cannot be complete it is not")
 
-    degraded = run(["Anna Apple", "Ivan Machado"],
-                   dv("verified", "CrossRef", ["Anna Apple", "Ben Berry"],
-                      failed=["Semantic Scholar"]))
-    C.true(degraded["degraded"], "a demoted reference with a failed backend is marked degraded")
-
-    # Letters carrying a stroke or bar survive NFKD, so folding them needs an explicit map. Without
-    # it "Przybylek" and "Przybyłek" are different people and the citation is flagged as inventing
-    # an author -- two of the three flags in the corpus measurement were exactly this.
-    for cited, found, why in [
-        (["A. Przybyłek"], ["Adam Przybylek"], "l with stroke"),
-        (["Kåre Synnes"], ["Kare Synnes"], "a ring above"),
-        (["Lars Bjørnvig"], ["Lars Bjornvig"], "o with stroke"),
-        (["Hans Weiß"], ["Hans Weiss"], "sharp s"),
-    ]:
-        C.eq(run(cited, dv("verified", "CrossRef", found))["status"], "verified",
-             f"REGRESSION GUARD: {why} folds to its ASCII form")
-
-    # DBLP's homonym suffix is not a name fragment.
-    C.eq(run(["Marcio Ribeiro"], dv("verified", "CrossRef", ["Márcio Ribeiro 0001"]))["status"],
-         "verified", "a DBLP homonym suffix does not read as an absent author")
-
-    # Which backends count is decided per run from the mirror in hand. Hard-coding DBLP out
-    # survived the mirror being repaired, and the reference with two invented authors verified
-    # again because the check skipped its DBLP clearance.
+    # Which tier the run is in is decided from the mirror in hand. Hard-coding DBLP out survived
+    # the mirror being repaired, and a reference with two invented authors verified again.
     with tempfile.TemporaryDirectory() as td:
         good = f"{td}/good.db"
         con = sqlite3.connect(good)
         con.execute("CREATE TABLE authors (id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL)")
         con.executemany("INSERT INTO authors (name) VALUES (?)",
-                        [("Márcio Ribeiro",)] + [(f"Filler {i}",)
-                                                 for i in range(audit._DBLP_MIN_AUTHORS)])
+                        [("Márcio Ribeiro",)] + [(f"Filler {i}",) for i in range(1200)])
         con.commit()
         con.close()
-        C.true("DBLP" in audit._complete_author_dbs(Path(good)),
-               "REGRESSION GUARD: a mirror that kept its accented authors lets DBLP count")
-        C.true("DBLP" not in audit._complete_author_dbs(Path(f"{td}/absent.db")),
-               "a missing mirror does not let DBLP count")
+        C.true(mirror_authors_complete(good),
+               "REGRESSION GUARD: a mirror that kept its accented authors gets the strict rule")
+        C.true(not mirror_authors_complete(f"{td}/absent.db"),
+               "a missing mirror cannot support an absence claim")
 
-    dblp_cleared = dv("verified", "DBLP",
-                      ["Márcio Ribeiro 0001", "Rohit Gheyi", "André L. M. Santos",
-                       "Elvys Soares", "Guilherme Amaral"])
-    audit._author_absence_pass(
-        [Entry(["Keila L. Lucas", "Elvys S. Soares", "Marcio Ribeiro", "Rohit Gheyi",
-                "Ivan Machado"])],
-        [dblp_cleared], audit.COMPLETE_AUTHOR_DBS | {"DBLP"})
-    C.eq(dblp_cleared["authors_absent"], ["Keila L. Lucas", "Ivan Machado"],
-         "REGRESSION GUARD: a DBLP-cleared reference with invented authors is demoted")
 
 def tier3i_dblp_author_encoding() -> None:
     """An offline DBLP mirror that holds no accented author name has a broken ingest, and the audit
@@ -864,11 +849,7 @@ def tier3i_dblp_author_encoding() -> None:
     disagree with correctly cited references. Nothing else surfaces it: counts and titles look
     right."""
     print("Tier 3i: offline DBLP mirror that dropped accented authors (no network)")
-    try:
-        import audit_references as audit
-    except SystemExit:
-        C.skip("dblp encoding: hallucinator absent; audit_references import skipped")
-        return
+    import audit_references as audit
 
     def build(path, names, n_pubs=0):
         """A mirror holding `names` plus enough filler to pass for a real build."""
@@ -900,7 +881,7 @@ def tier3i_dblp_author_encoding() -> None:
         C.true(not audit._dblp_drops_non_ascii_authors(Path(f"{td}/missing.db")),
                "a missing database is not reported as broken")
 
-        # A failed download leaves a valid, empty database behind and `update-dblp` exits 0. That
+        # A failed download leaves a valid, empty database behind, and the ingest exits 0. That
         # is a different fault from a mangled ingest and must not be reported as one -- sending
         # the reader after character entities when the dump never arrived.
         empty = build(f"{td}/empty.db", [], n_pubs=0)
@@ -965,7 +946,7 @@ def tier3g_stale_verdicts() -> None:
 
 
 def _build_fixture_db(path: Path) -> None:
-    """A few-KB DBLP DB matching hallucinator's offline schema (4 tables + an FTS5 index).
+    """A few-KB DBLP DB matching the mirror's schema (4 tables + an FTS5 index).
     Seeded so the synthetic fixture PDF yields verified (1, 4) and not_found (2, 3)."""
     con = sqlite3.connect(str(path))
     c = con.cursor()
@@ -1008,11 +989,6 @@ def tier4_end_to_end() -> None:
     if not pdf.exists():
         C.fail(f"missing fixture PDF {pdf}")
         return
-    try:
-        import hallucinator  # noqa: F401
-    except ImportError:
-        C.skip("hallucinator not installed; end-to-end tier skipped")
-        return
     if which("pdftotext") is None:
         C.skip("pdftotext (poppler) not installed; end-to-end tier skipped")
         return
@@ -1054,13 +1030,16 @@ def tier4_end_to_end() -> None:
 
 
 def tier4d_dblp_second_opinion() -> None:
-    """hallucinator's offline DBLP backend judges a reference against a single FTS candidate, so
-    a cited title that several publications share is compared with whichever ranks first --
-    "Experimentation in Software Engineering" hit Basili's 1986 article and reported the Wohlin
-    book not_found. The second-opinion pass re-asks the same file over ALL same-title candidates,
-    and must stay strict: exact normalized title, and agreement of every comparable author (the
-    DB's own author rows can be truncated, so the shorter list sets the bar)."""
-    print("Tier 4d: offline DBLP second opinion, all-candidates title+author check (no network)")
+    """The offline DBLP check, which decides most of hallucite's confirmations and is the first
+    backend its verifier asks.
+
+    A cited title that several publications share -- "Experimentation in Software Engineering" is a
+    book, a 1986 TSE article and four other works -- has to be judged against all of them, not
+    against whichever an FTS query ranks first. The decision then has to stay strict in one
+    direction and lenient in the other: a citation may name fewer authors than the record, which is
+    what "et al." means, and may not name more, which is the fabrication this tool exists to
+    catch."""
+    print("Tier 4d: offline DBLP title+author check over all same-title records (no network)")
     import dblp_check as D
 
     with tempfile.TemporaryDirectory() as td:
@@ -1081,6 +1060,23 @@ def tier4d_dblp_second_opinion() -> None:
             (2, "books/x/Second12", "A Shared Placeholder Title: About Fictional Pipelines",
              ["Carla Chen", "Magnus D. Delta"]),
             (3, "conf/x/Solo92", "Determining fictional sample sizes properly", ["Golf D. Hotel"]),
+            # A word the record's own title carries split, an edition suffix in each shape DBLP
+            # writes, and an alias in parentheses.
+            (4, "conf/x/Split24", "Improving Fictional Clone Detection U sing Equivalent Methods",
+             ["India Juliet", "Kilo Lima"]),
+            (5, "books/x/Book75", "The fictional man-month - essays on placeholder engineering (2. ed.)",
+             ["Mike November"]),
+            (6, "books/x/Book11", "Fictional mining: practical placeholder tools and techniques, 3rd Edition",
+             ["Oscar Papa", "Quebec Romeo"]),
+            (7, "journals/x/Alias23", "Study the placeholder correlation of fictional readme files",
+             ["Tango (Tom) Uniform", "Victor Whiskey"]),
+            (8, "conf/x/Glued20", "A C/C++ fictional vulnerability dataset with placeholder changes",
+             ["Xray Yankee", "Zulu Alpha"]),
+            # A record DBLP truncated, and one credited to a group rather than to people.
+            (9, "journals/x/Trunc24", "A placeholder model for fictional code at very large scale",
+             ["Bravo Charlie", "Delta Echo", "et al."]),
+            (10, "journals/x/Group23", "A fictional technical report on placeholder models",
+             ["PlaceholderAI"]),
         ]
         aid: dict[str, int] = {}
         for pid, key, title, authors in pubs:
@@ -1099,7 +1095,7 @@ def tier4d_dblp_second_opinion() -> None:
         # The collision: the cited authors belong to the SECOND same-title record; the cited
         # title carries a line-break hyphen and different casing on top.
         m = D.second_opinion(db, "A shared placeholder ti-tle about fictional pipelines",
-                             ["Chen C", "Delta MD", "Foxtrot G", "Golf H"])
+                             ["Chen C", "Delta MD"])
         C.true(m is not None and m.key == "books/x/Second12",
                "REGRESSION GUARD: the right same-title candidate matches, not the first FTS hit")
         C.true(D.second_opinion(db, "A shared placeholder title about fictional pipelines",
@@ -1111,12 +1107,88 @@ def tier4d_dblp_second_opinion() -> None:
         C.true(D.second_opinion(db, "A shared placeholder title about fictional pipelines",
                                 ["Alpha Aaron", "Fake F", "Made M", "Up U"]) is None,
                "REGRESSION GUARD: a padded author list is refuted, not rescued by one real name")
+        # The phantom-author pattern: the record's own authors, correct and complete, with one
+        # invented name spliced in. Every other field of such a citation is right, so this rule is
+        # the only thing standing between it and a clean verification.
+        C.true(D.second_opinion(db, "A shared placeholder title about fictional pipelines",
+                                ["Carla Chen", "Magnus D. Delta", "Quentin Fabrikant"]) is None,
+               "REGRESSION GUARD: one invented name appended to a correct author list refutes")
+        C.true(D.second_opinion(db, "A shared placeholder title about fictional pipelines",
+                                ["Carla Chen"]) is not None,
+               "a citation naming one of the record's authors is a truncation, not a disagreement")
         s = D.second_opinion(db, "Determining fictional sample sizes properly", ["Hotel GD"])
         C.true(s is not None and s.key == "conf/x/Solo92",
                "a single-author work matches on its one comparable author")
         C.true(D.second_opinion(db, "A shared placeholder title about fictional pipelines",
                                 []) is None,
                "no cited authors, no clearance -- the check never verifies on title alone")
+        C.true(D.second_opinion(db, "A shared placeholder title about fictional pipelines",
+                                ["Proceedings of the Workshop (WS)"]) is None,
+               "venue text parsed as an author is not a person, so it clears nothing")
+        C.true(D.second_opinion(db, "A shared placeholder title about: fictional pipelines",
+                                ["Carla Chen", "Magnus D. Delta"]) is not None,
+               "punctuation and spacing do not make two spellings of a title different")
+
+        # Retrieval catching up with the decision: `titles_match` never saw these differences,
+        # and the record was there to be found the whole time.
+        for cited, key, why in (
+                ("Improving fictional clone detection using equivalent methods", "conf/x/Split24",
+                 "a word split inside the record's own title"),
+                ("A C/C++ fictional vulnera bility dataset with placeholder changes", "conf/x/Glued20",
+                 "a word split in the citation with both halves longer than a fragment"),
+                ("Ac/c++ fictional vulnerability dataset with placeholder changes", "conf/x/Glued20",
+                 "an article the layout glued to its neighbour"),
+                ("The fictional man-month: essays on placeholder engineering", "books/x/Book75",
+                 "an edition suffix the record writes as \"(2. ed.)\""),
+                ("Fictional mining: practical placeholder tools and techniques", "books/x/Book11",
+                 "an edition suffix the record writes as \", 3rd Edition\""),
+                ("Study the placeholder correlation of fictional readme files", "journals/x/Alias23",
+                 "an alias the record writes in parentheses")):
+            authors = {"conf/x/Split24": ["India Juliet", "Kilo Lima"],
+                       "conf/x/Glued20": ["Xray Yankee", "Zulu Alpha"],
+                       "books/x/Book75": ["Mike November"],
+                       "books/x/Book11": ["Oscar Papa", "Quebec Romeo"],
+                       "journals/x/Alias23": ["Tango Tom Uniform", "Victor Whiskey"]}[key]
+            got = D.second_opinion(db, cited, authors)
+            C.true(got is not None and got.key == key, f"REGRESSION GUARD: {why} is retrieved")
+        C.true(D.second_opinion(db, "The fictional man-month: essays on placeholder engineering",
+                                ["Mike November", "Papa Invented"]) is None,
+               "the wider retrieval does not loosen the decision: a padded list still refutes")
+        C.true(D.second_opinion(db, "Improving fictional clone detection using equivalent techniques",
+                                ["India Juliet", "Kilo Lima"]) is None,
+               "and a title differing in a content word is still not the record")
+        C.eq(D._MAX_DROPPED, 12, "the leave-a-pair-out fallback is bounded")
+
+        # The lenient tier is for a record that cannot refute, and it is not a wildcard: the
+        # people a truncated record does list still have to account for at least one cited name.
+        trunc = "A placeholder model for fictional code at very large scale"
+        C.true(D.second_opinion(db, trunc, ["Bravo Charlie", "Foxtrot Golf", "et al."]) is not None,
+               "a truncated record clears a citation whose unmatched name it may simply not carry")
+        C.true(D.second_opinion(db, trunc, ["Mallory Fake", "Trent Nobody"]) is None,
+               "REGRESSION GUARD: a truncated record does not clear a citation that pairs with "
+               "none of the people it lists")
+        C.true(D.second_opinion(db, "A fictional technical report on placeholder models",
+                                ["Hotel India", "Juliet Kilo"]) is not None,
+               "a group byline has no person to pair against and still clears on the title")
+
+    # Name comparison, on the cases VERIFICATION-SPEC.md names. A middle initial or a particle the
+    # other side does not carry is tolerated; a contradicted given name is not.
+    for cited, stored, want, why in (
+            ("Mohammed F Kharma", "Mohammed Kharma", True, "a middle initial the record lacks"),
+            ("C. E. Jimenez", "Carlos Jimenez", True, "a middle initial beside an initialled given name"),
+            ("Emiliano De Cristofaro", "Cristofaro, E.", True, "a particle on one side only"),
+            ("Frederick P. Brooks Jr.", "Frederick P. Brooks", True, "a generational suffix"),
+            ("Kolahdouz-Rahimi", "Shekoufeh Kolahdouz Rahimi", True, "a hyphen written as a space"),
+            ("J. Smith", "Alice Smith", False, "a contradicted given initial"),
+            ("A. E. Jimenez", "Carlos Jimenez", False, "a wrong given initial beside a middle one"),
+            ("Wei Wang", "Wei Zhang", False, "a shared given name and a different surname"),
+            ("Eric O\u2019Donoghue", "Eric O'Donoghue", True, "a curly apostrophe against a straight one"),
+            ("Eric O'Brien", "Eric O'Donoghue", False, "two different surnames that share a particle"),
+            ("O. LeBenich", "Olaf Le\u00dfenich", True, "an eszett the PDF rendered as a capital B"),
+            ("JetBrains Team", "Jane Brains", False, "a name that really carries a capital B")):
+        C.eq(D._author_matches(cited, stored), want, f"{cited!r} vs {stored!r}: {why}")
+    C.eq(D.matched_authors(["Xin Xia", "Xin Xiao"], ["Xin Xiao", "Xin Xia 0001"]), (2, 2),
+         "REGRESSION GUARD: author lists are paired to a maximum, not first-fit")
 
 
 def tier4b_extraction_lineno() -> None:
@@ -1461,6 +1533,1004 @@ def tier4c_extraction_authoryear_lineno() -> None:
            "page ranges survive (the running-head filter does not eat short continuations)")
 
 
+def tier4h_extraction_furniture() -> None:
+    """The three ways a bibliography loses whole references to page furniture, none of which the
+    audit can see afterwards: the entries simply are not there.
+
+    A running head spans both columns, so the column gap is not blank on its line, and `_gutter`
+    weighs such lines as a *proportion* -- which means the same head passes on a full page and
+    fails on a short one. A band found at 97% tolerance still contains lines that run into it, so
+    its midpoint cuts through a word. And a reference can wear a head's two disguises at once, a
+    wide justification gap and digits that `_head_norm` strips."""
+    print("Tier 4h: page furniture, gutter placement and entry recovery (no network/DB)")
+    import pdf_references as P
+
+    head = "Where Does Balance Break? Boundary Discovery under a Budget          ASE '26, Munich"
+
+    def body(first: int) -> list[str]:
+        return ["[%d] A. Author, \"A title of a work,\" in Proc. X, 2020.        [%d] B. Other, "
+                "\"Another title,\" in Proc. Y, 2021." % (i, i + 40) for i in range(first, first + 6)]
+
+    pages = ["\n".join([head] + body(1)), "\n".join([head] + body(7))]
+    C.eq(P._page_furniture(pages), {P._furniture_norm(head)},
+         "a line repeated at the edge of two pages is page furniture, and the references are not")
+    C.eq(P._page_furniture(["\n".join(["pp. 12-19."] + body(1)),
+                            "\n".join(["pp. 20-27."] + body(7))]), set(),
+         "REGRESSION GUARD: a short edge line is not furniture -- `_head_norm` strips its digits, "
+         "and it would collapse onto the tail of every reference")
+
+    short = [head] + body(1)
+    C.true(P._gutter(short) is None,
+           "the running head hides the gutter on a short page, which is the bug")
+    C.true(P._gutter(short[1:]) is not None,
+           "and the gutter is there once the head is gone")
+
+    # A band whose columns are not all blank: the midpoint falls inside a word.
+    ragged = ["left text here" + " " * 10 + "right text here",
+              "left text here" + " " * 10 + "right text here",
+              "left text longer x" + " " * 6 + "right text here",
+              "left text here" + " " * 10 + "right text here",
+              "left text here" + " " * 10 + "right text here"]
+    g = P._gutter(ragged)
+    C.true(g is not None and all(len(l) <= g or l[g] == " " for l in ragged),
+           "REGRESSION GUARD: the cut lands where every line is blank, never inside a word")
+
+    # An entry that looks like a running head still opens its entry.
+    section = ['[1] A. Author, "A title," in Proc. X, 2020, pp. 1-10.',
+               '[2] "CVE-2017-12652,"        https://nvd.nist.gov/vuln/detail/CVE-2017-12652,',
+               '[3] "CVE-2022-1975,"         https://nvd.nist.gov/vuln/detail/CVE-2022-1975,',
+               '[4] B. Other, "Another title," in Proc. Y, 2021, pp. 11-20.']
+    # The invariant a numbered bibliography gives for free, and the only way a swallowed entry is
+    # visible at all: nothing downstream can report a reference that never arrived.
+    made = lambda ns, text="": [P.ExtractedRef(n, text or f"[{n}] A. Author, \"T,\" 2020.", None)
+                                for n in ns]
+    C.eq(P._missing_numbers(made([1, 2, 4, 5]), "bracket-numeric"), [3],
+         "an entry the bibliography numbers but extraction never produced is reported")
+    C.eq(P._missing_numbers(made([1, 2, 3]), "bracket-numeric"), [],
+         "a complete run reports nothing")
+    tail = made([1, 2]) + [P.ExtractedRef(3, '[3] A. Author, "T," 2020.   [4] B. Other, "U," 2021.',
+                                          None)]
+    C.eq(P._missing_numbers(tail, "bracket-numeric"), [4],
+         "REGRESSION GUARD: an entry swallowed past the end of the run is reported too -- the "
+         "last page is where a two-column layout fails")
+    C.eq(P._missing_numbers(made([1, 2, 4]), "author-year"), [],
+         "an unnumbered bibliography has no such invariant and is not held to one")
+
+    got = [n for n, _, _ in P._segment(section, "bracket-numeric", section)]
+    C.eq(got, [1, 2, 3, 4],
+         "REGRESSION GUARD: entries whose justification gap and stripped digits make them look "
+         "like a repeated running head still open their own entry")
+
+
+def tier4i_hanging_indent_author_first() -> None:
+    """The unnumbered hanging-indent author-first bibliography: Elsevier's Harvard style, Springer's
+    plainnat, ACM author-year. Five corpus papers lost their whole bibliography to it -- two read as
+    no style at all and three as numeric on a handful of continuation lines that open with digits
+    -- and three more were quietly losing every entry the author-year gate could not match. The
+    hanging indent is the structural signal: an entry starts at the left edge, its continuations
+    are indented. Driven through `extract_references` with `_pages` standing in for pdftotext, so
+    the guard covers the column alignment, the style vote, the entry gate and the biography stop
+    together; any one of them can be reverted without the others noticing."""
+    print("Tier 4i: hanging-indent author-first bibliographies (no network/DB/poppler)")
+    import pdf_references as P
+    import reference_parser
+
+    page1 = "\n".join([
+        "Some body text of the paper, which ends on this line.",
+        "References",
+        "Apple, A., Berry, B., 2024. A fictional study of invented widgets, in: Proceedings of the",
+        "  1st Imaginary Conference on Widgets, pp. 1–10. URL: https://doi.org/10.0000/fake.",
+        "  1142. doi:10.0000/fake.1142.",
+        "Cherry, C., Date, D., Elder, E., 2021. Deep learning for placeholder detection: Are we",
+        "  there yet? Journal of Imaginary Software 48, 3280–3296.",
+        "                                     35",
+        "Fred Fig, Gail Gold, and Hugo Hill. Semistructured invention: Rethinking widgets. In",
+        "  Proceedings of the 19th Imaginary Symposium, pages 190–200, Szeged, Hungary, September",
+        "  2011. Association for Fictional Machinery.",
+        "Ivy Ash and Jo Kemp. 2011. Practical change impact analysis for invented programs. In",
+        "  Proceedings of the 4th Imaginary Workshop, pages 1–10.",
+        "Karl Knot. A state-of-the-art survey on fictional merging. Imaginary Transactions on",
+        "  Software, 28(5):449–462, 2002.",
+        "OpenAI (2024) Gpt-4 technical report. URL https://arxiv.org/abs/2303.08774",
+        "popular-3k python (2023) Dataset — Software Heritage documentation. URL https://",
+        "  docs.example.org/popular-3k-python",
+    ])
+    # A two-column page: the right column's text starts a few columns past the gutter cut, and
+    # the centred page number lands inside it, left of its text.
+    left = ["Lime, L., Moss, M., 2020. Placeholder testing of",
+            "  invented mobile systems. Imaginary Software",
+            "  Engineering 21, 1107–1142.",
+            "Nest, N., 2019. Modeling with invented UML.",
+            "  Imaginary Press. doi:10.0000/fake.2019.",
+            "Oak, O., Pine, P., 2018. Faster all-pairs shortest",
+            "  paths via fictional circuits. SIAM J. Imag. 47,",
+            "  1965–1985. doi:10.0000/fake.2018.",
+            "", "", "", ""]
+    right = ["Quinn, Q., Reed, R., 2017. On path cover problems",
+             "  in invented digraphs. IEEE Trans. Imag. 5, 520–529.",
+             "Rose, R., Stone, S., 2016. Random testing of invented",
+             "  systems: Theoretical results. IEEE Trans. Imag. 38,",
+             "  258–277. doi:10.0000/fake.2016.",
+             "Vale, V., 2015. Integer priority queues with decrease",
+             "  key in constant time. SIAM J. Imag. 33, 1–10.",
+             "", "", "", "", ""]
+    rows = [l.ljust(52) + " " * 6 + r for l, r in zip(left, right)]
+    rows[-1] = " " * 56 + "36"
+    page2 = "\n".join(rows)
+    page3 = "\n".join([
+        "Lisa Lime is an assistant professor at Imaginary Technical",
+        "University. She received B.Sc., M.Sc., and Ph.D. degrees from",
+        "Placeholder University, in 2014, 2016, and 2023, respec-",
+        "tively, and continued her research at Fictional University.",
+        "Her interests include invented testing and fictional widgets.",
+    ])
+    real_pages = P._pages
+    try:
+        P._pages = lambda _path: [page1, page2, page3]
+        lines = P._linearize("ignored.pdf")
+        info = P.extract_references("ignored.pdf", reference_parser)
+    finally:
+        P._pages = real_pages
+
+    # Column alignment, asserted through `_linearize`.
+    oak = next((l for l in lines if l.lstrip().startswith("Quinn, Q.")), None)
+    C.true(oak is not None and not oak.startswith(" "),
+           "REGRESSION GUARD: the right column's entries are shifted to the left column's edge")
+    C.true(any(l.startswith("  in invented digraphs") for l in lines),
+           "and its continuations keep their hanging indent")
+    C.true(not any(l.strip() == "36" for l in lines),
+           "the centred page number the gutter cut is dropped, not moved to the entry column")
+
+    section = P._references_section(P._strip_line_numbers(lines)[0])
+    C.eq(P._dominant_style(section), "author-year",
+         "REGRESSION GUARD: bare trailing years and years in the venue field still vote "
+         "author-year; two continuations opening with digits do not make it numeric")
+    C.eq(info.style, "author-year", "extract_references reports the style")
+    starts = [r.raw_text.split(",")[0].split(" (")[0] for r in info.refs]
+    C.eq(len(info.refs), 13,
+         "REGRESSION GUARD: thirteen entries across both pages, and none for the biographies")
+    text = {s: r.raw_text for s, r in zip(starts, info.refs)}
+    C.true("Apple" in text and "1142. doi:10.0000/fake.1142." in text["Apple"],
+           "REGRESSION GUARD: a continuation opening with digits stays inside its entry")
+    C.true(not any(s.startswith("1142") for s in starts), "and opens no entry of its own")
+    joined = " ".join(r.raw_text for r in info.refs)
+    C.true(re.search(r"\b3[56]\b", joined) is None, "neither page number reaches a reference")
+    for who, why in (("Ivy Ash and Jo Kemp. 2011. Practical", "a two-author ACM entry"),
+                     ("Karl Knot. A state-of-the-art", "a lone author with the year in the venue"),
+                     ("Fred Fig", "a plainnat entry with no year on its first line"),
+                     ("OpenAI (2024)", "an organisation"),
+                     ("popular-3k python (2023)", "a lowercase organisation with a (year)"),
+                     ("Rose, R.", "a right-column entry"), ("Vale, V.", "the last right-column entry")):
+        C.true(any(r.raw_text.startswith(who) for r in info.refs),
+               f"REGRESSION GUARD: {why} opens its own entry")
+    C.true("Lime" in text and "invented mobile systems" in text["Lime"],
+           "a left-column entry keeps its continuations")
+    C.true("assistant professor" not in joined and "Ph.D." not in joined,
+           "REGRESSION GUARD: the author biographies after the bibliography are not references")
+    C.true(all(r.reference is not None for r in info.refs), "every entry parses")
+
+    def parsed(prefix):
+        return next((r.reference for r in info.refs if r.raw_text.startswith(prefix)), None)
+    C.eq(getattr(parsed("Apple"), "title", None), "A fictional study of invented widgets",
+         "REGRESSION GUARD: Elsevier's comma-joined venue (\", in: Proceedings ...\") is not title")
+    C.eq(getattr(parsed("Ivy Ash"), "authors", None), ["Ivy Ash", "Jo Kemp"],
+         "the two-author ACM entry reads both names")
+
+    # The vote itself: with a hanging indent, a continuation that opens with digits is not a
+    # numeric label, however many there are. Three Elsevier entries whose wrapped page ranges and
+    # URLs outnumber them would otherwise read as a four-entry numeric bibliography.
+    digits = ["Apple, A., Berry, B., 2024. A fictional study of invented widgets. Imaginary Software",
+              "  1142. URL: https://doi.org/10.0000/fake.1142.",
+              "  423. OpenJDK JDK Enhancement Proposal.",
+              "Cherry, C., Date, D., 2021. Deep learning for placeholder detection. Imaginary Journal 48,",
+              "  276. doi:10.0000/fake.276.",
+              "Elder, E., 2020. A third invented entry. Imaginary Letters 12,",
+              "  353. doi:10.0000/fake.353. special issue on widgets."]
+    C.eq(P._dominant_style(digits), "author-year",
+         "REGRESSION GUARD: continuations opening with digits outnumbering the entries do not "
+         "vote the section numeric")
+
+    # A plain-numeric bibliography with a hanging indent stays numeric under the same vote.
+    numeric = ["1. Xavier Xu, Yara Young. A numeric entry with a hanging indent. Venue,",
+               "   2019.",
+               "2. Zack Zeal. Another numeric entry. Venue, 2020.",
+               "3. Wendy West. A third numeric entry. Venue, 2021.",
+               "   pp. 1-9."]
+    C.eq(P._dominant_style(numeric), "numeric",
+         "a numbered hanging-indent bibliography is not pulled into author-year")
+
+
+def tier5_reference_parser() -> None:
+    """The parse half of VERIFICATION-SPEC.md, on one entry of each style the corpus prints.
+
+    Both title conventions (quoted, and the field between the authors and the venue), both author
+    orders, surname particles, hyphenated surnames, "et al.", the repeated-author dash, and DOIs
+    and arXiv ids in every form they are written in. The last group is the one worth guarding
+    hardest: a truncated identifier resolves to a real record that the paper never cited."""
+    print("Tier 5: reference parsing (no network/DB)")
+    import reference_parser as P
+
+    def parsed(text, prev=None):
+        return P.parse_reference(text, prev)
+
+    r = parsed('A. Author and B. Other, "A study of things," in Proc. ICSE, 2020, pp. 1-10.')
+    C.eq((r.title, r.authors), ("A study of things", ["A. Author", "B. Other"]),
+         "IEEE: the quoted span is the title and what precedes it the authors")
+
+    r = parsed("Jane Doe and John Roe. 2023. An unquoted title. In Proceedings of X. ACM, 1-10.")
+    C.eq((r.title, r.authors), ("An unquoted title", ["Jane Doe", "John Roe"]),
+         "ACM: the standalone year separates the authors from the title")
+
+    r = parsed("Wohlin C, Runeson P, Host M. Experimentation in things. Springer; 2012.")
+    C.eq((r.title, r.authors),
+         ("Experimentation in things", ["Wohlin C", "Runeson P", "Host M"]),
+         "Vancouver: a run of surname-and-initials ends at the period after its last initial")
+    C.eq(parsed("Thomas G. Dietterich. Approximate statistical tests for comparing learners. "
+                "Neural Computation, 10(7):1895-1923, 1998.").authors,
+         ["Thomas G. Dietterich"],
+         "REGRESSION GUARD: a lone author with a middle initial is not read as that run")
+
+    r = parsed("Wohlin, Claes, Per Runeson, and Martin Host. Experimentation in things. "
+               "Springer, 2012.")
+    C.eq(r.authors, ["Wohlin, Claes", "Per Runeson", "Martin Host"],
+         "Chicago inverts only its first author, and writes the given name out")
+
+    C.eq(parsed("Alice Cooper and Bob Marley. In search of effective recommendation. "
+                "Journal of Systems and Software, 2020.").title,
+         "In search of effective recommendation",
+         "REGRESSION GUARD: a title may open with the word 'In' without being a venue")
+
+    r = parsed('A. B. Smith and C. Doe, The "Goodness" of Code Reviews. IEEE Software, 2020.')
+    C.eq((r.title, r.authors),
+         ('The "Goodness" of Code Reviews', ["A. B. Smith", "C. Doe"]),
+         "REGRESSION GUARD: a quoted word inside a title is not the author/title boundary")
+
+    C.eq(parsed("John Doe. 2020. A study of U.S. software firms. In Proc. X. 1-10.").title,
+         "A study of U.S. software firms",
+         "an abbreviation of more than one letter does not end the title")
+
+    # A title may open with a quotation and run on past it; IEEE style, which tucks the entry's own
+    # comma inside the closing mark, means the opposite.
+    C.eq(parsed('Ann Bee. 2021. "How Was Your Weekend?" Software Teams Working From Home. '
+                "In Proceedings of ICSE. 624-636.").title,
+         "How Was Your Weekend? Software Teams Working From Home",
+         "REGRESSION GUARD: a quoted opener does not cut the title short")
+    C.eq(parsed('R. Tufano and G. Bavota, "Code review automation: Strengths and weaknesses," '
+                "IEEE Trans. Softw. Eng., vol. 50, no. 1, 2024.").title,
+         "Code review automation: Strengths and weaknesses",
+         "the comma inside the closing quote ends the title, as IEEE style intends")
+    C.eq(parsed('Q. Zhang and Z. Chen, "Automated repair: How far are we?" IEEE Trans. '
+                "Dependable Secur. Comput., vol. 21, no. 3, 2024.").title,
+         "Automated repair: How far are we?",
+         "a venue of abbreviations still reads as one field, not as several sentences")
+
+    C.eq(parsed("A. One, B. Two, et al. 2025. Deepseek-v3. 2: Pushing the frontier. "
+                "arXiv:2512.02556").title,
+         "Deepseek-v3. 2: Pushing the frontier",
+         "REGRESSION GUARD: a version number the layout broke is not two sentences")
+    C.eq(parsed("Ann Bee. 2006. Pixy: a static tool. 2006 IEEE Symposium on Security, 6-263.").title,
+         "Pixy: a static tool",
+         "a venue that opens with its year still ends the title")
+
+    for text, title in (
+            ("Ann Bee. 2025. Phraselette: A Poet's Palette (DIS '25). ACM, 1-15.",
+             "Phraselette: A Poet's Palette"),
+            ("Jacob Cohen. 1988. Statistical Power Analysis (2 ed.). Routledge.",
+             "Statistical Power Analysis"),
+            ("Ann Bee. Causes of unreproducible builds in java (2025). URL https://x.org/a",
+             "Causes of unreproducible builds in java")):
+        C.eq(parsed(text).title, title,
+             f"the parenthesis an entry appends to its own title comes off: {text[-24:-1]!r}")
+
+    C.eq(parsed("OpenAI, :, Aaron Hurst, et al. 2024. GPT-4o System Card. arXiv:2410.21276").authors,
+         ["OpenAI", "Aaron Hurst"],
+         "REGRESSION GUARD: a stray mark between two names does not disqualify the author list")
+
+    # A segmentation slip is how an entry of thousands of question marks arrives.
+    started = time.monotonic()
+    parsed("A. Author. " + "Really? " * 4000)
+    C.true(time.monotonic() - started < 1.0,
+           "REGRESSION GUARD: a 32 KB entry parses in well under a second, not in five")
+
+    r = parsed("Wohlin, C., Runeson, P., van den Bergh, J.: Experimentation in things. Springer (2012)")
+    C.eq((r.title, r.authors),
+         ("Experimentation in things", ["Wohlin, C.", "Runeson, P.", "van den Bergh, J."]),
+         "Springer: an inverted list ends at its colon, particles intact")
+
+    r = parsed("Nenad Kolahdouz-Rahimi, Marcelo d'Amorim, and Andrea De Lucia. 2019. "
+               "Pixy: a static tool. 2006 IEEE Symposium on Security and Privacy, 6-263.")
+    C.eq(r.authors, ["Nenad Kolahdouz-Rahimi", "Marcelo d'Amorim", "Andrea De Lucia"],
+         "hyphenated surnames and particles survive the author split")
+    C.eq(r.title, "Pixy: a static tool",
+         "REGRESSION GUARD: a venue introduced by no 'In' stays out of the title")
+
+    r = parsed("A. One, B. Two, C. Three, et al. 2024. Some title of a paper. In Proc. X. 1-9.")
+    C.eq(r.authors, ["A. One", "B. Two", "C. Three"], "'et al.' is not an author")
+
+    r = parsed("D. Four, E. Five, et al. A title with no year beside the names: and a subtitle. "
+               "arXiv preprint arXiv:2407.08138, 2024.")
+    C.eq((r.title, r.authors, r.arxiv_id),
+         ("A title with no year beside the names: and a subtitle", ["D. Four", "E. Five"],
+          "2407.08138"),
+         "'et al.' closes the author list even where no year follows it")
+
+    r = parsed("----. 2021. A later work by the same people. In Proc. Y. 3-4.",
+               ["Jane Doe", "John Roe"])
+    C.eq((r.title, r.authors), ("A later work by the same people", ["Jane Doe", "John Roe"]),
+         "the repeated-author dash takes the previous entry's authors")
+
+    r = parsed("Ann Bee. 2020. Can a title ask something? Studying how it reads. In Proc. Z. 1-2.")
+    C.eq(r.title, "Can a title ask something? Studying how it reads",
+         "REGRESSION GUARD: a question mark inside a title does not end it")
+    r = parsed("Ann Bee. 2020. Where are the fixes? IEEE Security & Privacy 22, 2 (2024), 49-59.")
+    C.eq(r.title, "Where are the fixes?", "a question mark before the venue does end it")
+
+    for text, doi in (
+            ("A. B. 2020. T of things. doi:10.1145/1234.5678", "10.1145/1234.5678"),
+            ("A. B. 2020. T of things. https://doi.org/10.1145/1234.5678.", "10.1145/1234.5678"),
+            ("A. B. 2020. T of things. DOI: 10.1145/1234.5678, 2020", "10.1145/1234.5678"),
+            ("A. B. 2020. T of things. doi:10.1145/ 3663529.3663801 [Online]",
+             "10.1145/3663529.3663801")):
+        C.eq(parsed(text).doi, doi, f"DOI read from {text.split('T of things. ')[1][:34]!r}")
+
+    C.eq(parsed("A. B. 2020. T of things. arXiv:cs.SE/0303001.").arxiv_id, "cs.SE/0303001",
+         "an old-form arXiv id is read")
+    C.eq(parsed("A. B. 2020. T of things. arXiv:2407.08138v2.").arxiv_id, "2407.08138",
+         "a version suffix is not part of the identifier")
+    C.eq(parsed("A. B. 2020. T of things. doi:10.48550/arXiv.2602.01107").arxiv_id, "2602.01107",
+         "an arXiv id is read out of its DOI")
+    C.eq(parsed("A. B. 2020. T of things. arXiv:2407.081385.").arxiv_id, None,
+         "REGRESSION GUARD: a malformed six-digit id is refused, not truncated to a real one")
+    C.eq(parsed('A. B., "T of things," CoRR, vol. abs/2410.15631, 2024.').arxiv_id, "2410.15631",
+         "an identifier written as a CoRR volume is read")
+
+    # A DOI cut in half by a line break resolves to nothing, which triage reads as a dead DOI.
+    for text, doi in (
+            ("Ann Bee. 2020. A title. doi:10.1007/978-3-030- 66534-0_2",
+             "10.1007/978-3-030-66534-0_2"),
+            ("Ann Bee. 2020. A title. doi:10.48550/arXiv. 2503.14713", "10.48550/arXiv.2503.14713"),
+            ("Ann Bee. 2020. A title. doi:10.48550/arXiv.2411. 19043.", "10.48550/arXiv.2411.19043"),
+            ("Ann Bee. 2020. A title. doi:10.1109/FOSE. 2007.25", "10.1109/FOSE.2007.25")):
+        C.eq(parsed(text).doi, doi, f"a DOI broken at {text.split('doi:')[1][:22]!r} is rejoined")
+    C.eq(parsed("Ann Bee. 2020. A title. doi:10.1145/3498537. Retrieved March 2025.").doi,
+         "10.1145/3498537",
+         "REGRESSION GUARD: an ordinary sentence after a complete DOI is not joined to it")
+
+    for text in ("[12]", "1769-1786.", "pp. 1-10, doi: 10.1109/ICSE.2019.00035", "  ", ".,;:--"):
+        C.true(parsed(text) is None,
+               f"{text.strip()!r} is not a reference, and says so instead of inventing a title")
+    C.eq(parsed('"Ck," https://github.com/mauricioaniche/ck/releases/tag/ck-0.7.0, 2022.').title,
+         "Ck", "a tool's name is a title even at two letters")
+
+    r = parsed("Jane Doe. 2023. A title. In Proc. X. 1-10.")
+    C.eq((r.doi, r.arxiv_id), (None, None),
+         "fields the entry does not carry are absent, never invented")
+
+    C.eq(parsed("Deep Learning. MIT Press, 2016.").authors, [],
+         "REGRESSION GUARD: an entry with no author does not read its own title as one")
+
+
+    # A hyphenated initial ("K.-W. Chang") whose period read as a sentence end, and Elsevier's
+    # comma-joined venue, which no sentence break separates from the title.
+    r = parsed("W. U. Ahmad, S. Chakraborty, B. Ray, and K.-W. Chang. Unified pre-training for "
+               "program understanding and generation. arXiv preprint arXiv:2103.06333, 2021.")
+    C.eq((r.title, r.authors[-1]) if r else None,
+         ("Unified pre-training for program understanding and generation", "K.-W. Chang"),
+         "REGRESSION GUARD: a hyphenated initial does not end the author sentence")
+    r = parsed("Cao, S., Sun, X., Liu, W., 2024. Coca: Improving and explaining fictional detection "
+               "systems, in: Proceedings of the 46th Imaginary Conference, pp. 1-13.")
+    C.eq(r.title if r else None, "Coca: Improving and explaining fictional detection systems",
+         "REGRESSION GUARD: Elsevier's \", in: Proceedings ...\" is the venue, not the title")
+    # LaTeX abbreviates an accented given name to "J.ã.P." and pdftotext drops the tilde.
+    r = parsed("Pereira, R., Couto, M., Fernandes, J.a.P., Saraiva, J.a., 2016. The influence of "
+               "the fictional collection framework on energy, in: Proceedings of GREENS, pp. 1-9.")
+    C.eq(r.authors if r else None, ["Pereira, R.", "Couto, M.", "Fernandes, J.a.P.", "Saraiva, J.a."],
+         "REGRESSION GUARD: a dotted lowercase initial beside a capital stays with its surname")
+
+
+def tier5b_verifier() -> None:
+    """The check half of VERIFICATION-SPEC.md, on a fixture DBLP file with every online backend
+    disabled. What is guarded is the vocabulary the audit and the triage rules are built on:
+    results align 1:1 with the input, `verified` means a backend matched, a real title with the
+    wrong authors is `mismatch` rather than `not_found`, a backend that did not answer lands in
+    `failed_dbs` and never reads as `no_match`, and a disabled backend leaves no trace at all --
+    which is what keeps the audit's --offline tripwire honest."""
+    print("Tier 5b: verification contract (fixture DBLP, no network)")
+    import verifier as V
+
+    with tempfile.TemporaryDirectory() as td:
+        db = Path(td) / "dblp.db"
+        con = sqlite3.connect(str(db))
+        c = con.cursor()
+        c.executescript("""
+            CREATE TABLE authors (id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL);
+            CREATE TABLE publication_authors (pub_id INTEGER NOT NULL, author_id INTEGER NOT NULL,
+                PRIMARY KEY (pub_id, author_id));
+            CREATE TABLE publications (id INTEGER PRIMARY KEY, key TEXT UNIQUE NOT NULL, title TEXT NOT NULL);
+            CREATE VIRTUAL TABLE publications_fts USING fts5(title, content='publications', content_rowid='id');
+        """)
+        # Two records share the title, as real ones do -- a book and an article, a preprint and
+        # its published version.
+        c.execute("INSERT INTO publications(id,key,title) VALUES(1,'conf/x/One20',"
+                  "'A placeholder title about fictional pipelines')")
+        c.execute("INSERT INTO publications(id,key,title) VALUES(2,'journals/x/Other86',"
+                  "'A Placeholder Title About Fictional Pipelines')")
+        names = ["Alpha Aaron", "Beta Brown", "Gamma Green", "Delta Drew"]
+        for i, name in enumerate(names, start=1):
+            c.execute("INSERT INTO authors(id,name) VALUES(?,?)", (i, name))
+        for pub, ids in ((1, (1, 2)), (2, (3, 4))):
+            for i in ids:
+                c.execute("INSERT INTO publication_authors(pub_id,author_id) VALUES(?,?)", (pub, i))
+        c.execute("INSERT INTO publications_fts(publications_fts) VALUES('rebuild')")
+        con.commit()
+        con.close()
+
+        offline = {"dblp_path": str(db),
+                   "disabled_dbs": (V.CROSSREF, V.DOI, V.ARXIV, V.SEMANTIC_SCHOLAR)}
+        refs = [
+            V.Reference(title="A placeholder title about fictional pipelines",
+                        authors=["Alpha Aaron", "Beta Brown"]),
+            V.Reference(title="A placeholder title about fictional pipelines",
+                        authors=["Fake F. Faker", "Invented I. Inventor"]),
+            V.Reference(title="A wholly invented title never stored anywhere",
+                        authors=["Alpha Aaron"]),
+        ]
+        got = V.check(refs, **offline)
+        C.eq(len(got), len(refs), "one result per reference, aligned to the input")
+        C.eq(got[0].status, "verified", "a stored title with its own authors verifies")
+        C.eq((got[0].source, got[0].paper_url),
+             ("DBLP", "https://dblp.org/rec/conf/x/One20"),
+             "the confirming backend and its record travel with the result")
+        C.eq(got[0].found_authors, ["Alpha Aaron", "Beta Brown"],
+             "the matched record's author list travels too")
+        C.eq(got[1].status, "mismatch",
+             "REGRESSION GUARD: a real title with the wrong authors is a mismatch, not not_found")
+        C.eq([d.status for d in got[1].db_results if d.db_name == "DBLP"], ["author_mismatch"],
+             "the backend reports which of the two questions it answered no to")
+        C.eq(got[2].status, "not_found", "an invented title is not found")
+        padded = V.check([V.Reference(title="A placeholder title about fictional pipelines",
+                                      authors=["Alpha Aaron", "Beta Brown", "Quentin Fabrikant"])],
+                         **offline)[0]
+        C.eq((padded.status, padded.paper_url),
+             ("mismatch", "https://dblp.org/rec/conf/x/One20"),
+             "REGRESSION GUARD: of two records sharing a title, the near miss reported is the one "
+             "accounting for most of the cited authors")
+        C.true(all(not r.failed_dbs for r in got),
+               "nothing failed, so no reference carries a backend failure")
+        C.true(all(all(d.db_name == "DBLP" for d in r.db_results) for r in got),
+               "REGRESSION GUARD: a disabled backend leaves no db_results row to mistake for a run")
+
+        # Batching: a backend is asked only about what the ones before it did not match. Checked
+        # by standing in for the HTTP call, both to keep the tier offline and because the point is
+        # exactly *which* references produce a request.
+        asked: list[str] = []
+
+        def no_network(url, timeout, user_agent, retries):
+            asked.append(url)
+            return {"message": {"items": []}}, "ok"
+
+        real = V._fetch_json
+        V._fetch_json = no_network
+        try:
+            got = V.check(refs, dblp_path=str(db),
+                          disabled_dbs=(V.DOI, V.ARXIV, V.SEMANTIC_SCHOLAR),
+                          max_workers=1)
+        finally:
+            V._fetch_json = real
+        C.eq([d.status for d in got[0].db_results if d.db_name == "CrossRef"], ["skipped"],
+             "a matched reference is not sent on to the next backend")
+        C.eq(len(asked), 2, "only the two references DBLP did not match reach CrossRef")
+
+    # Record shapes, without asking a backend anything.
+    record = V._crossref_record({
+        "title": ["RETRACTED: Mining <i>N</i>-grams &amp; more"], "subtitle": ["A study"],
+        "author": [{"given": "Ada", "family": "Byte"}], "DOI": "10.1234/x",
+        "update-to": [{"DOI": "10.1234/notice", "type": "retraction", "source": "publisher"}]})
+    C.eq(record.title, "Mining N-grams & more: A study",
+         "a CrossRef title loses its markup and its retraction marker, and keeps its subtitle")
+    C.true(record.retraction is not None and record.retraction.is_retracted,
+           "REGRESSION GUARD: a retraction deposited under update-to is still a retraction")
+    C.eq(V._crossref_record({"title": ["RETRACTED: A paper"]}).retraction.retraction_source,
+         "CrossRef title", "the marker publishers write into the title counts on its own")
+    C.true(V._crossref_record({"title": ["An ordinary paper"]}).retraction is None,
+           "an ordinary record reports no retraction")
+
+    C.eq(V._arxiv_key("cs.SE/0303001v2"), "cs/0303001",
+         "REGRESSION GUARD: an old-form arXiv id drops the subject class its citation prints -- "
+         "asked for with it, arXiv omits the record from the answer without saying so")
+
+    entries = V._arxiv_entries(b"""<feed xmlns="http://www.w3.org/2005/Atom"><entry>
+        <id>http://arxiv.org/abs/2407.08138v2</id><title>A title\n  of a preprint</title>
+        <author><name>Ada Byte</name></author></entry></feed>""")
+    C.eq(list(entries), ["2407.08138"], "an arXiv id is read back without its version suffix")
+    C.eq(entries["2407.08138"].title, "A title of a preprint",
+         "a wrapped arXiv title comes back on one line")
+
+    # An identifier a batch omitted is asked for again alone before it is called dead.
+    asked_ids: list[str] = []
+
+    def one_empty_feed(url, accept, timeout, user_agent, retries):
+        asked_ids.append(urllib.parse.parse_qs(urllib.parse.urlparse(url).query)["id_list"][0])
+        return b'<feed xmlns="http://www.w3.org/2005/Atom"/>', "ok"
+
+    real, V._fetch, V._ARXIV_PAUSE_REAL = V._fetch, one_empty_feed, V._ARXIV_PAUSE
+    V._ARXIV_PAUSE = 0.0
+    try:
+        got = V.check([V.Reference(title="Some preprint", authors=["Ada Byte"],
+                                   arxiv_id="2310.99999")],
+                      dblp_path=None,
+                      disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI,
+                                    V.SEMANTIC_SCHOLAR))[0]
+    finally:
+        V._fetch, V._ARXIV_PAUSE = real, V._ARXIV_PAUSE_REAL
+    C.eq(asked_ids, ["2310.99999", "2310.99999"],
+         "an identifier missing from the batch is asked for again on its own")
+    C.true(got.arxiv_info is not None and got.arxiv_info.valid is False,
+           "an identifier absent from both answers is reported as not existing")
+
+    # A rate limit is not an answer about the reference.
+    real = V._fetch
+    V._fetch = lambda *a, **k: (None, V.RATE_LIMITED)
+    try:
+        got = V.check([V.Reference(title="Some preprint", authors=["Ada Byte"],
+                                   arxiv_id="2407.08138")],
+                      dblp_path=None,
+                      disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI,
+                                    V.SEMANTIC_SCHOLAR))[0]
+    finally:
+        V._fetch = real
+    C.eq([d.status for d in got.db_results if d.db_name == "arXiv"], ["rate_limited"],
+         "REGRESSION GUARD: a rate-limited arXiv request is not read as a missing preprint")
+    C.eq((got.failed_dbs, got.arxiv_info), (["arXiv"], None),
+         "the backend that did not answer is named, and claims nothing about the identifier")
+
+    C.eq(V._query_forms("Modeling library popu-larity within a software ecosystem"),
+         ["Modeling library popu-larity within a software ecosystem",
+          "Modeling library popularity within a software ecosystem"],
+         "REGRESSION GUARD: a search is asked for the joined reading of a line-break hyphen too")
+    C.eq(V._query_forms("A title with no hyphen"), ["A title with no hyphen"],
+         "a title carrying no hyphen is asked for once")
+
+    # doi.org redirects to whichever registry holds the DOI, and a DataCite record can take half a
+    # minute to come back. The ordinary ceiling turned those answers into timeouts.
+    timeouts = []
+    real = V._fetch
+
+    def note_timeout(url, accept, timeout, *a, **k):
+        timeouts.append((url.split("/")[2], timeout))
+        return None, "not_found"
+
+    V._fetch, real_json = note_timeout, V._fetch_json
+    V._fetch_json = lambda url, timeout, *a, **k: (timeouts.append(
+        (url.split("/")[2], timeout)), (None, "not_found"))[1]
+    try:
+        V.check([V.Reference(title="A paper", authors=["Ada Byte"], doi="10.5281/zenodo.1")],
+                dblp_path=None, timeout=15.0,
+                disabled_dbs=(V.DBLP, V.CROSSREF, V.ARXIV, V.SEMANTIC_SCHOLAR))
+    finally:
+        V._fetch, V._fetch_json = real, real_json
+    C.eq([t for host, t in timeouts if host == "doi.org"], [V._DOI_ORG_TIMEOUT],
+         "REGRESSION GUARD: doi.org content negotiation gets its own, longer ceiling")
+
+    # Semantic Scholar is asked only where a key is configured: anonymous callers share one small
+    # quota, and asking anyway marks an arbitrary handful of references degraded.
+    reached = []
+    batch = [V.Reference(title="Some paper about things", authors=["Ada Byte"])] * (
+        V._S2_GIVE_UP_AFTER + 3)
+    real = V._fetch
+    V._fetch = lambda *a, **k: (reached.append(a[0]), (None, V.RATE_LIMITED))[1]
+    try:
+        got = V.check(batch, dblp_path=None, s2_api_key="",
+                      disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI, V.ARXIV))
+        C.eq((reached, [d.status for d in got[0].db_results]), ([], ["skipped"]),
+             "with no key, Semantic Scholar is not asked and claims nothing")
+        got = V.check(batch, dblp_path=None, s2_api_key="fake-key", rate_limit_retries=0,
+                      disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI, V.ARXIV))
+    finally:
+        V._fetch = real
+    C.eq(len(reached), V._S2_GIVE_UP_AFTER,
+         "REGRESSION GUARD: a keyed run that keeps being refused stops asking, but not before "
+         f"{V._S2_GIVE_UP_AFTER} of them -- a burst must not sit out the rest of the corpus")
+    C.eq([d.status for d in (r.db_results[0] for r in got)],
+         [V.RATE_LIMITED] * V._S2_GIVE_UP_AFTER + [V.SKIPPED] * 3,
+         "the references it did ask about are degraded; the rest claim nothing")
+
+    # The failure vocabulary, without asking a backend anything.
+    result = V.ValidationResult(status="", db_results=[
+        V.DbResult("DBLP", "no_match"), V.DbResult("CrossRef", "rate_limited"),
+        V.DbResult("DOI", "timeout"), V.DbResult("arXiv", "error")])
+    V.Verifier._finish(result)
+    C.eq(result.status, "not_found", "no backend matched, so the reference is not found")
+    C.eq(result.failed_dbs, ["CrossRef", "DOI", "arXiv"],
+         "REGRESSION GUARD: every backend that did not answer is named, none folded into no_match")
+    C.eq(result.source, None, "an unconfirmed reference names no deciding backend")
+
+
+def tier6_measured_values() -> None:
+    """The measurements themselves, pinned as literals.
+
+    Every constant below is a number somebody measured against the corpus, and each of them was
+    once the other value and cost something. A guard written as `C.eq(x, MODULE.THE_CONSTANT)`
+    passes whichever value the constant holds, so it guards the shape and not the finding -- and a
+    mutation run over the suite found seven fixes that could be reverted with the tests still
+    green, these among them. The literals are the point."""
+    print("Tier 6: measured values, pinned as literals (no network/DB)")
+    import verifier as V
+    import dblp_check as D
+    import triage as T
+
+    C.eq(V._S2_GIVE_UP_AFTER, 25,
+         "REGRESSION GUARD: the Semantic Scholar breaker survives a burst -- at three consecutive "
+         "refusals it sat out the rest of the corpus and cost 27 confirmations")
+    C.eq(V._S2_PATIENCE, 25,
+         "REGRESSION GUARD: under an *intermittent* block -- which never produces 25 refusals in a "
+         "row -- the retries stop but the asking does not; the ladder is what put a "
+         "2065-reference replay three hours in this one backend")
+    C.eq(V._DOI_ORG_TIMEOUT, 45.0,
+         "REGRESSION GUARD: doi.org content negotiation keeps its longer ceiling -- DataCite took "
+         "8 to 32 s for real Zenodo DOIs, and those references have no other identifier")
+    C.eq(V._S2_TIMEOUT, 45.0,
+         "REGRESSION GUARD: Semantic Scholar keeps its longer ceiling; a timeout claims nothing")
+    C.eq(D._MAX_CANDIDATES, 20000,
+         "REGRESSION GUARD: the FTS ceiling stays off the row-order cliff -- at 50 it dropped 3 "
+         "corpus confirmations, one of them a record at row 2,507")
+    C.true(D._author_matches("O\u2019Donoghue, P.", "Paul O'Donoghue"),
+           "a curly apostrophe and a straight one are one surname")
+    C.true(D._author_matches("P. ODonoghue", "Paul O'Donoghue"),
+           "REGRESSION GUARD: an apostrophe is dropped rather than compared, because extraction "
+           "sometimes loses it altogether -- the two mechanisms together were worth 7 corpus "
+           "confirmations")
+    C.true(D._author_matches("A. Przybylek", "Adam Przyby\u0142ek"),
+           "REGRESSION GUARD: a letter carrying a stroke folds to its ASCII form")
+    C.true(D._author_matches("O. LeBenich", "Olaf Le\u00dfenich"),
+           "REGRESSION GUARD: an eszett a PDF renders as a capital B is read as one")
+
+    # triage: which db_results rows are a matched record. Named positively, so a failure value the
+    # verifier adds later cannot read as a match -- an exclusion list did exactly that with
+    # `timeout`, and reverting that fix left this suite green.
+    for status in ("timeout", "error", "rate_limited", "no_match", "skipped", "quota_exceeded"):
+        C.eq(T._matched_records({"db_results": [{"db": "X", "status": status}]}), [],
+             f"a backend row of {status!r} is not a matched record")
+    C.eq([r["status"] for r in T._matched_records(
+        {"db_results": [{"db": "X", "status": "match"}, {"db": "Y", "status": "author_mismatch"}]})],
+        ["match", "author_mismatch"],
+        "REGRESSION GUARD: the two statuses that do mean a candidate came back still travel")
+
+
+def tier6b_completeness_tier() -> None:
+    """The phantom-author rule's two tiers, which VERIFICATION-SPEC.md requires be decided from the
+    data rather than from a backend's name.
+
+    The strict side is what the tool exists for and must not move: over 250 real DBLP records,
+    appending one, two or three invented names is confirmed 0 times. The lenient side is what keeps
+    it from accusing people: a record that declares itself truncated, a collaboration byline, and a
+    mirror whose ingest dropped its accented authors are all the record's gap, not the citation's --
+    42 corpus references were being refused on that account, and 154 more against a stock-built
+    mirror."""
+    print("Tier 6b: the author-completeness tier (no network)")
+    import dblp_check as D
+    import verifier as V
+
+    C.true(D.record_authors_complete(["Claes Wohlin", "Per Runeson"]),
+           "an ordinary byline of people is a complete author list")
+    C.true(not D.record_authors_complete(["Jane Doe", "et al."]),
+           "REGRESSION GUARD: a record storing a literal `et al.` says its own list is cut short")
+    for byline in (["OpenAI"], ["Qwen Team"], ["Llama Team"], ["DeepSeek-AI"]):
+        C.true(not D.record_authors_complete(byline),
+               f"REGRESSION GUARD: {byline[0]!r} is a collaboration byline, not an author list")
+    C.true(D.authors_match(["Josh Achiam", "Steven Adler", "Sandhini Agarwal"], ["OpenAI"],
+                           record_complete=False),
+           "a correct citation of a collaboration-credited work is not an author accusation")
+    C.true(not D.authors_match(["Claes Wohlin", "Mallory Invented"],
+                               ["Claes Wohlin", "Per Runeson"], record_complete=True),
+           "REGRESSION GUARD: against a complete record an unmatched cited name still refutes")
+    C.true(not D.authors_match(["Jane Roe"], ["Jane Doe", "et al."], record_complete=False),
+           "REGRESSION GUARD: a *contradicted* surname refutes whatever tier the record is in")
+    C.true(D.authors_match(["Zeller", "Andreas"], ["Andreas Zeller"]),
+           "REGRESSION GUARD: one inverted author split across two chunks is one person, not a "
+           "phantom -- the record is what settles it")
+    C.true(not D.authors_match(["Zeller", "Andreas", "Mallory Fake"], ["Andreas Zeller"]),
+           "REGRESSION GUARD: and an invented name alongside the split is still caught")
+
+    with tempfile.TemporaryDirectory() as td:
+        db = Path(td) / "tiny.db"
+        con = sqlite3.connect(str(db))
+        con.executescript("CREATE TABLE authors (id INTEGER PRIMARY KEY, name TEXT);")
+        con.executemany("INSERT INTO authors (name) VALUES (?)",
+                        [(f"Plain Name {i}",) for i in range(2000)])
+        con.commit(); con.close()
+        C.true(not D.mirror_authors_complete(str(db)),
+               "REGRESSION GUARD: a mirror holding no accented name at all had its authors dropped "
+               "by the ingest, and its absences cannot be held against a citation")
+        con = sqlite3.connect(str(db))
+        con.execute("INSERT INTO authors (name) VALUES ('Martin H\u00f6st')"); con.commit(); con.close()
+        C.true(D.mirror_authors_complete(str(db)),
+               "a repaired mirror gets the strict rule back, with no code change")
+
+    rec = V._Record(title="A Study of Things in Software", authors=["Jane Doe", "John Roe"])
+    ref = type("R", (), {"title": "A Study of Things in Software",
+                         "authors": ["Privacy (SP)", "Evolution (ICSME)"], "doi": None,
+                         "arxiv_id": None})()
+    C.eq(V._verdict(ref, rec), V.NO_MATCH,
+         "REGRESSION GUARD: an author list of nothing but venue fragments was never compared, so "
+         "it is `no_match` -- `author_mismatch` would show a triager a near miss that never was")
+
+
+def tier6c_answers_and_parsing() -> None:
+    """A 200 that is not an answer, and the parse cases VERIFICATION-SPEC.md names by example.
+
+    The first is the contract's sharpest rule: a backend that did not answer must never be
+    equivalent to `no_match`, because a `not_found` from an incomplete run is a weaker claim and
+    triage is told to treat it as one. An HTML outage page parses as perfectly good XML with no
+    entries -- which is exactly what an arXiv identifier that does not exist looks like."""
+    print("Tier 6c: non-answers, and the parse examples the contract names (no network)")
+    import verifier as V
+    import reference_parser as rp
+    import pdf_references as P
+
+    ATOM = b'<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"></feed>'
+    for body, want, label in (
+            (ATOM, V.NO_MATCH, "a real feed with no entries is a real negative"),
+            (b"<html><body>502</body></html>", V.ERROR,
+             "REGRESSION GUARD: an HTML outage page is well-formed XML with no entries -- the root "
+             "tag is what separates it from a preprint that does not exist"),
+            (b"<?xml version=", V.ERROR, "a truncated body is not an answer"),
+            (b"", V.ERROR, "an empty body is not an answer")):
+        entries = V._arxiv_entries(body)
+        C.eq(V.NO_MATCH if entries is not None else V.ERROR, want, label)
+
+    real = V._fetch
+    try:
+        for payload, want, label in (
+                (b'{"data": []}', V.NO_MATCH, "an empty Semantic Scholar result set is a negative"),
+                (b'{"message": "Too Many Requests"}', V.RATE_LIMITED,
+                 "REGRESSION GUARD: this backend's soft refusal is a 200 carrying no `data` key, "
+                 "and reading it as an empty result reports a clean negative and resets the "
+                 "give-up counter"),
+                (b'not json at all', V.ERROR, "a body that is not JSON is not an answer")):
+            V._fetch = lambda *a, **k: (payload, "ok")
+            got = V.check([rp.Reference(title="Some paper about things", authors=["Ada Byte"])],
+                          dblp_path=None, s2_api_key="k", rate_limit_retries=0,
+                          disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI, V.ARXIV))[0]
+            C.eq(got.db_results[0].status, want, label)
+        V._fetch = lambda *a, **k: (None, "not_found")
+        got = V.check([rp.Reference(title="Some paper about things", authors=["Ada Byte"])],
+                      dblp_path=None, s2_api_key="", rate_limit_retries=0,
+                      disabled_dbs=(V.DBLP, V.DOI, V.ARXIV, V.SEMANTIC_SCHOLAR))[0]
+        C.eq((got.db_results[0].status, got.failed_dbs), (V.ERROR, ["CrossRef"]),
+             "REGRESSION GUARD: a 404 from a *search* endpoint says the endpoint moved, not that "
+             "the work does not exist")
+    finally:
+        V._fetch = real
+
+    # Retrieval has to cover a word the layout split with nothing to mark it. `titles_match`
+    # compares on letters alone and never sees the space, so the record was always there to match;
+    # what was missing was a query that could find it.
+    from dblp_check import _glued_query, queryable, titles_match
+    C.true(titles_match("A study of synthetic widgets in distributed sy stems",
+                        "A study of synthetic widgets in distributed systems"),
+           "a word split with no hyphen is the same title once the letters are compared")
+    C.true(any('"systems"' in q for q in
+               _glued_query("A study of synthetic widgets in distributed sy stems")),
+           "REGRESSION GUARD: and a query that can find it is asked -- one fragment glued at a "
+           "time, because a title's real short words are short too")
+    C.eq(_glued_query("Experimentation software engineering practice"), [],
+         "a title carrying no short token asks no extra query")
+    C.true(len(_glued_query("A B C study of the sy stems in a lab")) <= 8,
+           "the fallback is bounded, not a sweep")
+    C.true(queryable("Ck sy stems for code"), "a title of fragments is still askable")
+
+    # Intermittent throttling: refusals accumulate but never 25 in a row, so the backend keeps
+    # being asked -- and stops being retried, which is where the wall clock went.
+    asked, retries_used = [], []
+    def flaky(url, accept, timeout, ua, retries, headers=None):
+        asked.append(url); retries_used.append(retries)
+        # one answer in five, so `refused_in_a_row` never reaches _S2_GIVE_UP_AFTER
+        if len(asked) % 5 == 0:
+            return b'{"data": []}', "ok"
+        return None, V.RATE_LIMITED
+    batch = [rp.Reference(title=f"A paper about things number {i}", authors=["Ada Byte"])
+             for i in range(V._S2_PATIENCE + 20)]
+    real = V._fetch
+    try:
+        V._fetch = flaky
+        got = V.check(batch, dblp_path=None, s2_api_key="k",
+                      disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI, V.ARXIV))
+    finally:
+        V._fetch = real
+    C.eq([d.status for d in (r.db_results[0] for r in got)].count(V.SKIPPED), 0,
+         "REGRESSION GUARD: an intermittent block never stops the asking -- capping that instead "
+         "cost five confirmations no other backend reaches")
+    C.true(retries_used[0] > 0 and retries_used[-1] == 0,
+           "REGRESSION GUARD: it stops the retrying instead, which is the 31 s a refusal costs")
+
+    # The three particle surnames the contract names, in the inverted order it also requires.
+    got = rp.parse_reference("van den Bergh, J., De Lucia, A., d\u2019Amorim, M.: A study of things "
+                             "in software. Journal of Systems and Software (2020)")
+    C.eq(len(got.authors if got else []), 3,
+         "REGRESSION GUARD: `d'Amorim` written surname-first is an author -- its only capital "
+         "follows the particle, and without it the whole byline read as no author list at all")
+    got = rp.parse_reference("Institute of Electrical and Electronics Engineers. 2019. IEEE "
+                             "Standard for Floating-Point Arithmetic. IEEE.")
+    C.eq(got.authors if got else [], ["Institute of Electrical and Electronics Engineers"],
+         "REGRESSION GUARD: one body's name is one author, however many `and`s it contains")
+    got = rp.parse_reference("A. Author. On Video Game Balancing: Joining Player- and Data-Driven "
+                             "Analytics. In Proc. FDG, 2021.")
+    C.true(got and "Player- and" in got.title,
+           "REGRESSION GUARD: a *suspended* hyphen is not a line break -- closing it invents the "
+           "word `Player-and`")
+    got = rp.parse_reference("B. Author. Test Co- Evolution in Software Projects. In ICSE, 2019.")
+    C.true(got and "Co-Evolution" in got.title,
+           "a line break inside a word still closes, and the matchers try both readings")
+    got = rp.parse_reference("N. Someone. A Study of Things. Springer, 2020. "
+                             "doi:10.1007/978-1-84800-044-5 2.")
+    C.eq(got.doi if got else "-", "10.1007/978-1-84800-044-5_2",
+         "REGRESSION GUARD: a Springer chapter DOI is rejoined at the underscore pdftotext dropped "
+         "-- the half that survives is the *book's* DOI, which resolves, to another work")
+    got = rp.parse_reference("N. Someone. Guide to Things. Springer, 2008. "
+                             "doi:10.1007/978-3-540-95880-2")
+    C.eq(got.doi if got else "-", "10.1007/978-3-540-95880-2",
+         "REGRESSION GUARD: and a citation of the whole *book* correctly carries the bare ISBN "
+         "suffix -- withholding those cost a real corpus confirmation")
+    got = rp.parse_reference("N. Someone. A Study. TACL, 2020. https://doi.org/10.1162/tacl a 00335")
+    C.eq(got.doi if got else "-", "10.1162/tacl_a_00335",
+         "an ACL DOI loses two underscores to the line break, and both are put back")
+    got = rp.parse_reference("N. Someone. A Study. Springer, 2019. doi:10.1007/978-3-030-16145-3 2019.")
+    C.eq(got.doi if got else "-", "10.1007/978-3-030-16145-3",
+         "REGRESSION GUARD: the entry's own year running on after the DOI is not a chapter number")
+    got = rp.parse_reference("N. Someone. A Study of Things. Venue, 2020. doi:10.1145/3597503.3639187")
+    C.eq(got.doi if got else None, "10.1145/3597503.3639187", "an intact DOI still comes through")
+
+    class E:
+        def __init__(self, n, t):
+            self.number, self.raw_text = n, t
+    C.eq(P._missing_numbers([E(n, f"[{n}] A. B, T. V, 2020.") for n in (3, 4, 5)],
+                            "bracket-numeric"), [1, 2],
+         "REGRESSION GUARD: entries lost from the *front* leave no hole in the run, so the run is "
+         "walked from 1 -- one corpus bibliography starts at [2] and nothing else could say so")
+    C.eq(P._missing_numbers([E(n, f"{n}. A. B, T. V, 2020. Accessed: 2026-05- 30. Next Author")
+                             for n in (1, 2)], "numeric"), [],
+         "REGRESSION GUARD: a bare `30.` is not an entry label -- over the corpus the bare-number "
+         "tail check found one thing, a broken access date, and no real swallowed entry")
+
+
+def tier6d_extraction_and_env() -> None:
+    """The two extraction fixes that recover whole references, and the `.env.local` reader.
+
+    All three were revertible with the suite green. The extraction pair is worth 15 references
+    across the corpus and neither has a fixture small enough for tier 4h to have caught; the reader
+    could take the whole audit down without the sentinel that is the one thing run.sh promises."""
+    print("Tier 6d: gutter placement, page furniture, and the .env.local reader")
+    import pdf_references as P
+
+    # A band the 97% tolerance accepts, with one line running into the middle of it. The cut has
+    # to fall in the longest run of columns blank on *every* line -- at the band's midpoint it
+    # lands inside that line's word, leaves a letter behind, and glues the next entry onto its
+    # predecessor. Asserted through `_gutter`, not through its helper: the helper can be correct
+    # while the caller ignores it.
+    page = ["x" * 40 + " " * 7 + "y" * 33 for _ in range(40)]
+    page.append("x" * 40 + "word" + " " * 3 + "y" * 33)          # runs into columns 40-43
+    C.eq(P._gutter(page), 45,
+         "REGRESSION GUARD: the gutter cut falls in the longest run of columns blank on every "
+         "line, not at the midpoint of a band found at 97% tolerance")
+
+    # A running head spans both columns, so the gutter is not blank on its line, and `_gutter`
+    # weighs such lines as a *proportion* -- so the same head passes on a full page and loses the
+    # column split on a short one, which cost one corpus paper the last seven references of its
+    # bibliography. It has to come off before the gutter is measured.
+    head = "IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. 51, NO. 3, MARCH 2025      %d"
+    def body(tag):
+        # Distinct lines: identical ones would themselves look like a repeated footer.
+        return [f"Left column line {tag}{i:02d}" + " " * 20 + f"Right column line {tag}{i:02d}"
+                for i in range(10)]
+    pages = ["\n".join([head % n] + body(t)) for n, t in ((1234, "a"), (1235, "b"), (1236, "c"))]
+    real_pages = P._pages
+    try:
+        P._pages = lambda _path: pages
+        out = P._linearize("ignored.pdf")
+    finally:
+        P._pages = real_pages
+    C.true(any("Right column line a00" == l.strip() for l in out),
+           "REGRESSION GUARD: the running head is removed before the gutter is measured, so a "
+           "short two-column page still splits -- left as it is, the right column is appended to "
+           "the left column's lines and half the bibliography disappears")
+    C.true(P._furniture_norm(head % 1234) in P._page_furniture(pages),
+           "a head differing only in its page number is recognised as furniture")
+    C.true(P._furniture_norm("Smith et al. Some Title 2020") not in P._page_furniture(pages),
+           "a line that appears once is not furniture")
+
+    # `.env.local` shapes an ordinary file carries. Any of them used to end the run with a bash
+    # error and no sentinel, which is the failure mode SKILL.md's stop conditions key on.
+    run_sh = SCRIPTS / "run.sh"
+    if which("bash") is None:
+        C.skip("bash not available; .env.local reader skipped")
+        return
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "skills" / "hallucite" / "scripts").mkdir(parents=True)
+        (root / "skills" / "hallucite" / "scripts" / "run.sh").write_bytes(run_sh.read_bytes())
+        os.chmod(root / "skills" / "hallucite" / "scripts" / "run.sh", 0o755)
+        for label, text in (
+                ("an indented comment", "  # a note about the key\nS2_API_KEY=abc\n"),
+                ("an `export` prefix", "export S2_API_KEY=abc\n"),
+                ("CRLF line endings", "S2_API_KEY=abc\r\n"),
+                ("a value containing `=`", "S2_API_KEY=a=b=c\n"),
+                ("a blank file", "\n\n")):
+            (root / ".env.local").write_text(text)
+            env = {k: v for k, v in os.environ.items() if k != "S2_API_KEY"}
+            env["HALLUCITE_NO_VERSION_CHECK"] = "1"
+            proc = subprocess.run(
+                ["bash", str(root / "skills" / "hallucite" / "scripts" / "run.sh"), "no-such-cmd"],
+                capture_output=True, text=True, env=env)
+            C.true("HALLUCITE_BOOTSTRAP_FAILED:" in proc.stderr,
+                   f"REGRESSION GUARD: {label} in .env.local does not take run.sh down without "
+                   f"its sentinel")
+
+
+def tier6e_dblp_ingest() -> None:
+    """The mirror hallucite now builds for itself, on a dump small enough to check by eye.
+
+    Two failures put the whole author rule out of true and neither shows in a count or a title. An
+    ingest that cannot resolve the dump's own character entities drops every author whose name
+    carries a diacritic, which makes the mirror disagree with correctly cited references; and one
+    that splices UTF-8 into a document declaring ISO-8859-1 turns "Jürgen" into "JÃ¼rgen", which is
+    the same failure wearing a different mask. The dump is 4.5 GB, so both are guarded here on
+    twenty lines of it."""
+    print("Tier 6e: hallucite's own DBLP ingest (no network)")
+    import build_dblp
+    import dblp_check as D
+
+    dump = b"""<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE dblp SYSTEM "dblp.dtd">
+<dblp>
+<article mdate="2020-01-01" key="journals/x/Beyerer14">
+<author>J&uuml;rgen Beyerer</author><author>Fran&ccedil;ois Chaumette</author>
+<title>Semantics of context-free languages</title><year>2014</year>
+<journal>Math. Systems Theory</journal><volume>2</volume><pages>127-145</pages>
+<ee>https://doi.org/10.1007/BF01692511</ee></article>
+<book mdate="2020-01-01" key="books/x/Ikeuchi14">
+<editor>Katsushi Ikeuchi</editor><title>Computer Vision, A Reference Guide</title>
+<year>2014</year><publisher>Springer</publisher></book>
+<www mdate="2020-01-01" key="homepages/12/345"><author>Jane Doe</author>
+<title>Home Page</title></www>
+</dblp>
+"""
+    with tempfile.TemporaryDirectory() as td:
+        gz = Path(td) / "dblp.xml.gz"
+        with gzip.open(gz, "wb") as fh:
+            fh.write(dump)
+        db = Path(td) / "dblp.db"
+        build_dblp.build(gz, db, None, 0)
+        con = sqlite3.connect(str(db))
+        names = {r[0] for r in con.execute("SELECT name FROM authors")}
+        C.true("Jürgen Beyerer" in names,
+               "REGRESSION GUARD: a named entity resolves to its character -- an ingest that drops "
+               "them loses every author whose name carries a diacritic")
+        C.true("JÃ¼rgen Beyerer" not in names,
+               "REGRESSION GUARD: and it is spliced back as a numeric reference, not as UTF-8 "
+               "bytes -- the dump declares ISO-8859-1, which would decode them as Latin-1")
+        C.true("Katsushi Ikeuchi" in names,
+               "REGRESSION GUARD: an edited book records its people in <editor>, and that is who a "
+               "citation of it names")
+        C.true("Jane Doe" not in names,
+               "REGRESSION GUARD: a <www> person homepage is not a publication -- three million of "
+               "them would put a person's name in the title index")
+        row = con.execute("SELECT title, year, venue, ee, kind, volume, pages FROM publications "
+                          "WHERE key='journals/x/Beyerer14'").fetchone()
+        C.eq(row, ("Semantics of context-free languages", 2014, "Math. Systems Theory",
+                   "https://doi.org/10.1007/BF01692511", "article", "2", "127-145"),
+             "every column the second opinion and the triage evidence read is populated")
+        con.close()
+        C.true(D.mirror_authors_complete(str(db)),
+               "the completeness tier reads this mirror as one that kept its authors")
+        got = D.title_candidates(str(db), "Semantics of Context-Free Languages")
+        C.eq([(c.key, c.authors) for c in got],
+             [("journals/x/Beyerer14", ["Jürgen Beyerer", "François Chaumette"])],
+             "and dblp_check queries the result through its own FTS index")
+
+
+
+
 def main() -> int:
     tier1_packaging()
     tier1b_runner()
@@ -1481,6 +2551,15 @@ def main() -> int:
     tier4d_dblp_second_opinion()
     tier4f_dblp_record_metadata()
     tier4g_two_column_gutter()
+    tier4h_extraction_furniture()
+    tier4i_hanging_indent_author_first()
+    tier5_reference_parser()
+    tier5b_verifier()
+    tier6_measured_values()
+    tier6b_completeness_tier()
+    tier6c_answers_and_parsing()
+    tier6d_extraction_and_env()
+    tier6e_dblp_ingest()
     print()
     if C.failed:
         print(f"SMOKE FAILED: {C.failed} check(s) failed, {C.skipped} skipped")

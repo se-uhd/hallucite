@@ -6,3 +6,7 @@ triage_verdicts.json.lock
 __pycache__/
 *.pyc
 .DS_Store
+
+# Local secrets: API keys for the online verification backends. Never committed.
+.env.local
+ai-slop-report.md

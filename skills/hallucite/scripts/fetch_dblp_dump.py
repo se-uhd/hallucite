@@ -1,9 +1,8 @@
-"""Fetch `dblp.xml.gz` with a real browser, for `mise run build-dblp --from-file`.
+"""Fetch `dblp.xml.gz` with a real browser, for `mise run build-dblp`.
 
 dblp.org and both its mirrors front the dump with an Anubis proof-of-work challenge. Every plain
-HTTP client -- `curl`, and the downloader inside `update-dblp` -- receives the challenge page
-instead of the file and ingests it as zero publications, so a working mirror is silently replaced
-by an empty one.
+HTTP client, `curl` among them, receives the challenge page instead of the file, and an ingest
+reads it as zero publications -- so a working mirror is silently replaced by an empty one.
 
 A browser answers that challenge with its own JS engine, the same way it does for a person clicking
 the link. Nothing here forges or replays a token, and nothing disguises the client: Playwright's

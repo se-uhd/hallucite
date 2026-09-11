@@ -2,10 +2,10 @@
 
 These are paper PDF files in a mix of layouts: single- and two-column,
 with or without the LaTeX `lineno` margin line numbers, and numeric, bracket-label,
-or plain author-year bibliography styles. hallucinator's built-in MuPDF reader
+or plain author-year bibliography styles. A MuPDF-based reader
 mangles the `lineno` papers (line numbers bleed into titles/DOIs), so we do the
 PDF-to-references step here and hand each segmented reference string to
-hallucinator's `parse_reference`, which parses clean single-reference text well.
+`reference_parser.parse_reference`, which reads one clean reference at a time.
 
 Pipeline:
   1. `pdftotext -layout` → split into pages.
@@ -21,7 +21,8 @@ Pipeline:
      `lineno` margin number, which otherwise hijacks the sequence and collapses the tail of the
      bibliography after a per-page line-number reset. Author-year anchors on the hanging indent
      when the section has one, because an author-year entry carries no label to anchor on and its
-     year may sit on the following line.
+     year may sit on the following line -- or, in the Elsevier and Springer journal styles, at the
+     end of the author list or inside the venue field, so the indent is the only mark there is.
 """
 
 from __future__ import annotations
@@ -66,11 +67,33 @@ _BRACKET = re.compile(r"^\[[^\]]*(?:19|20)\d{2}[a-z]?[^\]]*\]")  # "[Smith et al
 # Initials are capitals; matching them case-insensitively lets any short lowercase word stand in
 # for them, and a running head ("... Questions on Stack Overflow") then parses as an author list.
 _UP = r"[A-ZÀ-ÖØ-Þ]"
-_PARTICLE = r"(?:(?:d[aeiou]|van|von|del|della|der|den|dos|la|le|ten|ter)\s+)?"
+# Up to two particle words, because "van der Hoek" and "de la Vara" are one particle each and a
+# pattern that takes one word leaves "der" to fail the capital the surname needs.
+_PARTICLE = r"(?:(?:d[aeiou]|van|von|del|della|der|den|dos|la|le|ten|ter)\s+){0,2}"
+# `pdftotext` writes an accented letter as a base letter plus a combining mark as often as not, and
+# a name class without the marks stops at "Ha" in "Händler".
+_NAME_CHARS = r"[\w\u0300-\u036f’'.\-]*"
 _AUTHORYEAR = re.compile(
-    rf"^{_PARTICLE}{_UP}[\w’'.\-]*"                       # surname
-    rf"(?:\s+{_UP}[\w’'.\-]*)*?"                          # further surname words
+    rf"^{_PARTICLE}{_UP}{_NAME_CHARS}"                    # surname
+    rf"(?:\s+{_UP}{_NAME_CHARS})*?"                       # further surname words
     rf"(?:,\s+{_UP}|\s+{_UP}{{1,4}}[,(\s])",              # ", I." (APA) or " AB," (Springer)
+    re.UNICODE)
+
+# What opens an entry once a hanging indent says where entries open. The column is the structural
+# signal there, and this only has to tell an entry from the furniture that can share its column: a
+# page number, a URL, a heading. Every author-first style starts with a name -- or an organisation,
+# "OpenAI (2024)", "GitHub (2021)" -- and then either goes on to more names (a comma, an "and", an
+# "et al.") or dates the work (a year, bare or parenthesised); a lone author closes with a period
+# and the title's capital follows ("Tom Mens. A state-of-the-art survey ..."); and a parenthesised
+# year marks an entry whatever precedes it ("popular-3k python (2023) Dataset ..."). Holding these
+# entries to `_AUTHORYEAR` instead lost every two-author ACM entry ("Haipeng Cai and Raul
+# Santelices. 2014.") and every organisation to the entry before it, silently: 16 of 68 in one
+# corpus paper.
+_ENTRY_HEAD = re.compile(
+    rf"^(?:{_PARTICLE}{_UP}{_NAME_CHARS}.{{0,300}}?"
+    r"(?:,\s|\s(?:and|&)\s|\bet\s+al\b|\(?(?:19|20)\d{2}[a-z]?\)?(?:[.,;:)\s]|$))"
+    rf"|{_PARTICLE}{_UP}{_NAME_CHARS}(?:\s+{_UP}{_NAME_CHARS}){{1,3}}\.\s+{_UP}"
+    r"|.{0,300}?\((?:19|20)\d{2}[a-z]?\))",
     re.UNICODE)
 
 # A bracket-numeric entry label "[12]", optionally preceded by a `lineno` margin number that
@@ -90,7 +113,7 @@ _WIDE_GAP = re.compile(r"\S\s{8,}\S")
 class ExtractedRef:
     number: int            # printed number, or sequential index for non-numeric styles
     raw_text: str          # the reconstructed single-line citation text
-    reference: object | None  # hallucinator.Reference, or None if it didn't parse
+    reference: object | None  # a parsed Reference, or None if it didn't parse
     # `raw_text` with the hyphens closed by line-break joins removed ("Experimen-tation" ->
     # "Experimentation"), or None when no such join happened. The kept-hyphen form is right for a
     # real compound broken at its own hyphen and wrong for a soft-hyphenated word -- and FTS
@@ -110,6 +133,10 @@ class ExtractionInfo:
     # them and the second entry's year sat on a wrapped line. A warning, not a verdict -- but a
     # merged entry never reaches verification on its own, so it must not stay invisible.
     suspect_merged: list[int] = field(default_factory=list)
+    # Entry numbers the bibliography prints that no extracted reference carries. A numbered
+    # bibliography numbers itself consecutively, so a gap is a reference that never reached
+    # verification -- invisible afterwards, because the audit only ever sees what did arrive.
+    missing_numbers: list[int] = field(default_factory=list)
 
 
 # ── PDF text → linearized lines ──────────────────────────────────────────────
@@ -156,19 +183,129 @@ def _gutter(page_lines: list[str]) -> int | None:
             break
         else:
             band = [c]
-    return band[len(band) // 2] if len(band) >= _MIN_GUTTER else None
+    if len(band) < _MIN_GUTTER:
+        return None
+    # The 97% tolerance is right for *finding* the band and wrong for placing the cut in it: on a
+    # page where one line runs into the band, the band's midpoint falls inside that line's word,
+    # and the split leaves a letter behind and glues the next entry onto its predecessor. Cut in
+    # the longest run of columns blank on every line instead, where there is one wide enough.
+    strict = _longest_blank_run(band, nb)
+    if len(strict) >= _MIN_GUTTER:
+        return strict[len(strict) // 2]
+    return band[len(band) // 2]
+
+
+def _longest_blank_run(band: list[int], lines: list[str]) -> list[int]:
+    """The longest stretch of `band` that is whitespace on every one of `lines`."""
+    best: list[int] = []
+    run: list[int] = []
+    for c in band:
+        if all(c >= len(l) or l[c] == " " for l in lines):
+            run.append(c)
+            if len(run) > len(best):
+                best = list(run)
+        else:
+            run = []
+    return best
+
+
+def _page_furniture(pages: list[str]) -> set[str]:
+    """The running head and footer, as `_head_norm` sees them.
+
+    Collected before anything else happens to the text, because the head is what hides the gutter:
+    it spans both columns, so the column gap is not blank on its line. `_gutter` tolerates a
+    proportion of such lines rather than a count, so the same head passes on a full page and fails
+    on a short one -- a final bibliography page of 33 lines gives one bridging line 3% of the vote
+    and loses the column split for the whole page.
+
+    Only the first and last non-blank line of a page can be furniture, and only if it says enough
+    to be recognised. What varies between one page's head and the next is the page number, which
+    sits at one end of the line, so only a leading and a trailing number are removed before they
+    are compared. `_head_norm`, which strips every digit, is too blunt here: two different
+    references whose text is otherwise alike collapse onto each other and the pair reads as a
+    repetition."""
+    counts: Counter[str] = Counter()
+    for page in pages:
+        lines = [l for l in page.split("\n") if l.strip()]
+        if len(lines) < 5:
+            continue
+        for line in (lines[0], lines[-1]):
+            norm = _furniture_norm(line)
+            if len(norm) >= 20 and len(re.findall(r"[^\W\d_]{2,}", norm)) >= 3:
+                counts[norm] += 1
+    return {n for n, c in counts.items() if c >= 2}
+
+
+# The number a running head carries sits at one end of it: "IEEE TRANSACTIONS ... FEBRUARY 2019
+# 123" or ACM's "89:12   Layered Supervision in ...".
+_EDGE_NUMBER = re.compile(r"^[\d:.\s]+|[\d:.\s]+$")
+
+
+def _furniture_norm(s: str) -> str:
+    return re.sub(r"\s+", " ", _EDGE_NUMBER.sub("", s)).strip()
+
+
+def _text_edge(lines: list[str]) -> int | None:
+    """The column a column's text starts at: the smallest indent of a line that carries text.
+
+    A page number centred under both columns is cut by the gutter and lands inside the right column,
+    left of its text, so a bare number does not count; a `lineno` margin number is furniture too,
+    and its line's text starts after the gap."""
+    edges = []
+    for l in lines:
+        if not l.strip() or _MARGIN_BARE.match(l):
+            continue
+        m = _MARGIN_GUTTER.match(l)
+        edges.append(m.end() if m else len(l) - len(l.lstrip()))
+    return min(edges) if edges else None
+
+
+def _align(left: list[str], right: list[str]) -> list[str]:
+    """The right column shifted so that its text edge sits at the left column's.
+
+    The cut falls in the middle of the gutter, so the right column's text keeps whatever the gutter
+    left in front of it -- two characters under an ACM template, seven under Elsevier's -- and a
+    hanging indent that means "entry" in the left column then means "continuation" in the right,
+    where the entries sit at the left column's continuation depth or past it. Both bibliographies
+    that lost half their entries this way were two-column journal papers. A bare number the shift
+    would cut is the centred page number and is dropped rather than moved to the entry column."""
+    le, re_ = _text_edge(left), _text_edge(right)
+    if le is None or re_ is None or le == re_:
+        return right
+    shift = re_ - le
+    if shift < 0:
+        return [" " * -shift + l if l.strip() else l for l in right]
+    out = []
+    for l in right:
+        if not l[:shift].strip():
+            out.append(l[shift:])
+        elif _MARGIN_BARE.match(l):
+            out.append("")
+        else:
+            out.append(l.lstrip())
+    return out
 
 
 def _linearize(pdf_path: str) -> list[str]:
+    pages = _pages(pdf_path)
+    furniture = _page_furniture(pages)
     out: list[str] = []
-    for page in _pages(pdf_path):
+    for page in pages:
         plines = page.split("\n")
+        body = [i for i, l in enumerate(plines) if l.strip()]
+        if body and furniture:
+            # Only at the edges: the same words in the middle of a page are the text, not the head.
+            for i in (body[0], body[-1]):
+                if _furniture_norm(plines[i]) in furniture:
+                    plines[i] = ""
         g = _gutter(plines)
         if g is None:
             out.extend(plines)
         else:
-            out.extend(l[:g].rstrip() for l in plines)
-            out.extend(l[g:].rstrip() for l in plines)
+            left = [l[:g].rstrip() for l in plines]
+            right = [l[g:].rstrip() for l in plines]
+            out.extend(left)
+            out.extend(_align(left, right))
     return out
 
 
@@ -308,6 +445,32 @@ def _entry_indent(section: list[str]) -> int | None:
     return common[0]
 
 
+def _hanging_block(section: list[str], entry_col: int) -> list[str]:
+    """The section up to where its hanging-indent layout ends.
+
+    Elsevier prints the authors' biographies after the bibliography, under no heading, as justified
+    paragraphs set at the entry column. Read as entries they parsed: one corpus paper carried nine
+    "references" of prose about where its authors studied. A hanging indent never puts a wrapped
+    line at the entry column, so a line there that opens in lowercase and does not open an entry
+    belongs to a paragraph, and the paragraph began after the last indented line. An entry that
+    opens in lowercase and is still an entry ("popular-3k python (2023) ...") passes `_ENTRY_HEAD`
+    and does not end the block; a stray line above the first entry is skipped rather than allowed
+    to empty the section."""
+    for i, line in enumerate(section):
+        s = line.strip()
+        if not s or len(line) - len(line.lstrip()) > entry_col:
+            continue
+        if s[0].islower() and not _ENTRY_HEAD.match(s):
+            j = i
+            while j > 0 and (not section[j - 1].strip()
+                             or len(section[j - 1]) - len(section[j - 1].lstrip()) <= entry_col):
+                j -= 1
+            if j == 0:
+                continue
+            return section[:j]
+    return section
+
+
 def _head_norm(s: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"\d+", "", s)).strip()
 
@@ -348,18 +511,33 @@ def _strip_numeric_label(s: str) -> str:
 
 
 def _dominant_style(section: list[str]) -> str:
+    """Which entry style the section's lines vote for.
+
+    With a hanging indent, only a line at the entry column can open an entry, whatever it looks
+    like: a continuation that opens with digits -- a page range or a URL wrapped onto its own line,
+    "1142. URL: https://doi.org/..." -- is not a numeric label, and a page number with a running
+    title after it is not one either. Two Elsevier bibliographies read as numeric on three such
+    lines apiece and segmented as a single entry. At the entry column an author-first entry needs
+    no year to count, because the Elsevier and Springer journal styles carry it at the end of the
+    author list or inside the venue field, where `_YEAR` never looks; two more bibliographies read
+    as no style at all for that and were never segmented."""
     num = brk = bnum = ay = 0
+    entry_col = _entry_indent(section)
     for line in section:
         s = line.strip()
         if not s:
             continue
+        opens = entry_col is None or len(line) - len(line.lstrip()) <= entry_col
         if _BRACKET.match(s):           # "[Smith 2024]" author-year bracket
             brk += 1
         elif _BRACKET_NUM.match(s):     # "[12]" numeric bracket (maybe lineno-prefixed)
             bnum += 1
         elif _NUM.match(s):             # "12." / "12  ..." (also lineno-prefixed continuations)
-            num += 1
+            if opens:
+                num += 1
         elif _AUTHORYEAR.match(s) and _YEAR.search(s[:300]):
+            ay += 1
+        elif entry_col is not None and opens and _ENTRY_HEAD.match(s):
             ay += 1
     # A plain-numeric bibliography never carries bracketed numeric labels, so a handful of "[N]"
     # entry markers settle the style even when lineno-prefixed continuation lines push the bare
@@ -419,14 +597,25 @@ def _segment(section: list[str], style: str,
         last = 0
     # Only author-year needs the hanging indent; the labelled styles anchor on their own labels.
     entry_col = _entry_indent(section) if style == "author-year" else None
+    if entry_col is not None:
+        section = _hanging_block(section, entry_col)
     body_col = _body_col(section)
     seq = 0    # sequential counter (bracket / author-year)
     for line in section:
         s = line.strip()
-        if not s or "???:" in s or s in repeated:  # blank / anonymized footer / repeated watermark
+        if not s or "???:" in s:                       # blank / anonymized footer
             continue
-        if _head_norm(s) in heads:  # running head / footer
-            continue
+        # Whether this line opens the *next* entry in the sequence, asked before the noise filters
+        # rather than after them. A reference can wear a running head's disguises -- five entries
+        # in one corpus paper read `[N] "CVE-2022-1975,"   https://nvd.nist.gov/...`, where the
+        # justification gap is the wide gap a head keeps and `_head_norm` strips the digits that
+        # are the only thing telling the five apart, so they count as repetitions of each other. A
+        # head cannot fake this test, which asks for the one number the sequence expects next.
+        opens = (_is_new_numeric(s, last) is not None if style == "numeric" else
+                 _is_new_bracket_numeric(s, last) is not None if style == "bracket-numeric" else
+                 False)
+        if not opens and (s in repeated or _head_norm(s) in heads):
+            continue                                   # repeated watermark / running head
         indent = len(line) - len(line.lstrip())
         # Once the hanging indent is known, the entry column is the left edge of the bibliography
         # and `body_col` its right-most; text outside that block belongs to something else -- a
@@ -462,11 +651,14 @@ def _segment(section: list[str], style: str,
                 new_text = _BRACKET.sub("", s, count=1).strip()
         elif style == "author-year":
             # With a hanging indent the column is authoritative: it alone separates an entry from a
-            # continuation that opens with a name, and it admits an entry whose `(year)` wrapped
-            # onto the next line. Without one, fall back to requiring the year on the entry line.
-            starts = (indent <= entry_col if entry_col is not None
-                      else bool(_YEAR.search(s[:300])))
-            if starts and _AUTHORYEAR.match(s):
+            # continuation that opens with a name, and it admits an entry whose year wrapped onto
+            # the next line or sits in its venue field; the pattern then only has to keep furniture
+            # out. Without one, fall back to requiring the year on the entry line.
+            if entry_col is not None:
+                starts = indent <= entry_col and bool(_ENTRY_HEAD.match(s))
+            else:
+                starts = bool(_YEAR.search(s[:300]) and _AUTHORYEAR.match(s))
+            if starts:
                 seq = new_num = seq + 1
                 new_text = s
 
@@ -497,10 +689,44 @@ def _suspect_merges(refs: list[ExtractedRef], style: str) -> list[int]:
     return [r.number for r in refs if len(_YEAR.findall(r.raw_text)) >= 2]
 
 
+# A bracket label opening an entry: distinctive enough to find inside another entry's text,
+# which a bare "30." is not.
+_PRINTED_LABEL = r"\[%d\]\s+[A-Z\u201c\"']"
+
+
+def _missing_numbers(refs: list[ExtractedRef], style: str) -> list[int]:
+    """Entry numbers the bibliography prints that no reference carries.
+
+    The one invariant a numbered bibliography hands us for free: it numbers itself consecutively
+    from 1. A gap means an entry was swallowed by its predecessor or dropped outright, and nothing
+    downstream can tell -- a reference that never arrives cannot be reported as unverified.
+
+    An entry lost from the *front* leaves no hole in the run, which is why it is walked from 1 and
+    not from the lowest number that arrived: one corpus bibliography starts at [2], and nothing
+    else in the pipeline can say so.
+
+    An entry lost from the tail leaves no hole either, so the text that swallowed it is searched
+    for the label it should have opened with -- but only where the style prints a bracket. A plain
+    `30.` is not a label: measured over the 41-paper corpus the bare-number form found one entry,
+    an access date broken across a line ("2026-05- 30. Shamse Tasnim Cynthia..."), and no real
+    swallowed tail at all. A check that is all false positives is worse than the gap it fills, so
+    a numeric bibliography gets the two ends and not the third."""
+    if style not in ("numeric", "bracket-numeric") or not refs:
+        return []
+    numbers = {r.number for r in refs}
+    inside = [n for n in range(1, max(numbers) + 1) if n not in numbers]
+    if style != "bracket-numeric":
+        return inside
+    joined = " ".join(r.raw_text for r in refs)
+    after = [n for n in range(max(numbers) + 1, max(numbers) + 12)
+             if re.search(_PRINTED_LABEL % n, joined)]
+    return inside + after
+
+
 # ── Public API ───────────────────────────────────────────────────────────────
 
 def _parse(extractor, text: str, prev_authors):
-    """Parse one reference. hallucinator's heuristic parser occasionally rejects an
+    """Parse one reference. The parser occasionally rejects an
     otherwise-fine reference because of a long venue/footer tail, so on failure we
     retry on progressively shorter '. '-delimited prefixes (dropping the tail)."""
     r = extractor.parse_reference(text, prev_authors)
@@ -516,7 +742,7 @@ def _parse(extractor, text: str, prev_authors):
 
 def extract_references(pdf_path: str, extractor) -> ExtractionInfo:
     """Extract and parse the bibliography of a PDF. `extractor` is a
-    hallucinator.PdfExtractor used to parse each segmented reference string."""
+    anything exposing `parse_reference`, used on each segmented reference string."""
     lines, lineno_on = _strip_line_numbers(_linearize(pdf_path))
     section = _references_section(lines)
     style = _dominant_style(section) if section else "none"
@@ -532,4 +758,5 @@ def extract_references(pdf_path: str, extractor) -> ExtractionInfo:
 
     return ExtractionInfo(refs=refs, lineno_on=lineno_on,
                           section_found=bool(section), style=style,
-                          suspect_merged=_suspect_merges(refs, style))
+                          suspect_merged=_suspect_merges(refs, style),
+                          missing_numbers=_missing_numbers(refs, style))

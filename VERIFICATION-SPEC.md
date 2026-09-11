@@ -26,8 +26,12 @@ Required behaviour:
 
 - **Title.** Quoted titles win where the style uses them (`A. Author, "Title," in Proc.`); otherwise
   the title is the field between the author list and the venue (`Author. 2023. Title. In Venue`).
-  Both are common in the corpus and neither may be privileged. A soft line-break hyphen inside a
-  word must not become part of the title.
+  Both are common in the corpus and neither may be privileged. A line break inside a word leaves
+  a hyphen behind and it stays in the title: nothing in the string says whether the hyphen is the
+  layout's or the word's own, deleting it is wrong for every real compound, and every comparison
+  downstream has to try both readings anyway (see *Title matching*). A **suspended** hyphen is the
+  one that must not survive as written -- `Player- and Data-Driven` elides the second half of a
+  compound, and closing the gap invents the word `Player-and`.
 - **Authors.** Both orders (`Surname, I.` and `Surname AB`), surname particles (`van den Bergh`,
   `De Lucia`, `d'Amorim`), and hyphenated surnames. Trailing `et al.` is not an author.
 - **Identifiers.** A DOI anywhere in the entry, with or without a `https://doi.org/` prefix; an
@@ -96,14 +100,32 @@ How strictly to apply it depends on the source:
   complaint against an otherwise-confirmed reference traced to a mirror that had dropped authors,
   not to a bad citation.
 
+The record in hand can say so for itself, and where it does that outranks anything known about
+the source. DBLP writes a literal `et al.` row where it truncated a long author list, and it
+credits a collaboration to the group rather than the people -- `OpenAI`, `Qwen Team`, `Llama Team`
+-- which is how the LLM technical reports an SE bibliography now cites constantly are stored. A
+correct citation of one names the individual authors, and none of them is in the record.
+
 This distinction cannot be hard-coded per backend name. It is a property of the data in hand:
-hallucite decides it per run (`_complete_author_dbs`), because a mirror can be repaired, and a
-hard-coded exclusion that outlived its reason let a reference with two invented authors verify
-again.
+hallucite decides it per run and per record, because a mirror can be repaired, and a hard-coded
+exclusion that outlived its reason let a reference with two invented authors verify again.
+
+An unmatched cited name is only ever *absence* of evidence. A name the record **contradicts** --
+it carries that surname, under a different person -- refutes whatever tier the record is in.
+
+A truncated record is still a partial list, and the people it does list are evidence: a citation
+that pairs with **none** of them has had every name it offered come back foreign, and is not
+confirmed. DBLP keeps the first authors when it truncates and a citation names them first, so a
+correct citation of a truncated record pairs at least one. Without this bar the lenient tier was a
+wildcard -- "StarCoder 2" cited under two invented names verified against its 57-person record, and
+a title 922 records share verified any author list at all through the one record carrying an
+`et al.` row. A record that lists no person, only a group, has nothing to pair against and clears on
+the title alone; that is the limit of what a bibliographic database can say about such a work.
 
 ## Title matching
 
 - Compare on a normalised form: case, punctuation, diacritics and internal whitespace removed.
+- An edition suffix on the record ("(2. ed.)", ", 3rd Edition") is not part of its title.
 - Subtitles may be present on one side only.
 - Try both readings of a hyphen — a compound (`Model-Driven`, two tokens) and a line break
   (`Experimen-tation`, one) — because the wrong reading simply finds nothing.
@@ -123,17 +145,29 @@ are what the audit depends on:
 
 ## Coverage, for sizing an implementation
 
-Which backend actually decides a verdict, over 1016 confirmations from a 95-paper corpus:
+Which backend actually decides a verdict, over the 1669 confirmations `characterize.py` records
+across the 41-paper corpus, against a mirror whose accented authors survived its ingest and with an
+authenticated Semantic Scholar:
 
 | source | share |
 |---|---|
-| DBLP (offline) | 84.4% |
-| CrossRef | 8.1% |
-| DOI resolver | 4.4% |
-| Open Library | 1.3% |
-| arXiv, Semantic Scholar, Europe PMC, PubMed, Standards | 1.8% combined |
+| DBLP (offline) | 91.5% |
+| DOI resolver | 2.8% |
+| CrossRef | 2.8% |
+| Semantic Scholar | 1.4% |
+| PubMed | 0.5% |
+| Open Library | 0.5% |
+| Europe PMC | 0.4% |
+| arXiv | 0.1% |
 
-Three sources carry 96.9%, and hallucite already implements its own DBLP path. An implementation
-that covers DBLP, CrossRef and DOI resolution, and reports the rest honestly as unchecked, would
-serve the audit — provided the status vocabulary and the phantom-author rule above are respected,
-since those are what the triage rules and the reports are built on.
+The offline mirror decides nine confirmations in ten, so an implementation's accuracy is mostly
+its DBLP path. No other source is worth more than three percent, so the question for each is
+whether its share is worth a request per unverified reference. Semantic Scholar's 1.4% is only
+reachable with an API key -- anonymous callers share a quota that refuses almost everything -- and
+PubMed, Open Library and Europe PMC decide 1.4% between them, mostly the statistics classics and
+the books an SE bibliography cites without a DOI.
+
+A backend a replacement leaves out has to be reported as unchecked rather than as `no_match`,
+which in practice means leaving its name out of `db_results` rather than inventing a negative for
+it. The status vocabulary and the phantom-author rule above matter more than any of this: they are
+what the triage rules and the reports are built on.

@@ -4,12 +4,12 @@ description: >-
   Detect hallucinated (fabricated) references in academic paper PDF files. Use when the user asks
   to check, audit, or verify the references/bibliography of one or more papers for hallucinated or
   fabricated citations, or names a paper PDF file (or directory of PDF files) to check. Extracts each
-  reference, verifies it against academic databases (offline DBLP plus CrossRef, arXiv, Semantic
-  Scholar, and other open databases) without using an LLM, then triages only the
+  reference, verifies it against academic databases (the offline DBLP mirror, then CrossRef, DOI
+  resolution, arXiv and Semantic Scholar) without using an LLM, then triages only the
   database-unverified residue via web search and writes a report of likely-hallucinated
   references plus per-paper manual-verification sheets.
 license: MIT
-compatibility: Requires Python 3.12, the hallucinator pip package, pdftotext (poppler), and a prebuilt offline DBLP database at ~/hallucite/dblp.db (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
+compatibility: Requires Python 3.10 or newer (standard library only), pdftotext (poppler), and an offline DBLP database at ~/hallucite/dblp.db, built by `mise run build-dblp` (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
   version: "1.21.0"
 ---
@@ -46,9 +46,9 @@ tool output, not to your own reading of a `.bib`/`.bbl`/PDF.
 
 ## Running the pipeline
 
-Always invoke the pipeline through the `run.sh` wrapper. It resolves (or, on first use, provisions)
-a Python 3.12 that can `import hallucinator`, so you never call a bare `python`/`mise`/`uv` that may
-be missing from the plugin's shell. It is the single supported entry point.
+Always invoke the pipeline through the `run.sh` wrapper. It resolves a Python 3.10 or newer, so
+you never call a bare `python`/`mise`/`uv` that may be missing from the plugin's shell. It is the
+single supported entry point.
 
 ```sh
 resolve_hallucite_run() {
@@ -97,55 +97,36 @@ resolve_hallucite_run() {
 RUN="$(resolve_hallucite_run)" || exit $?
 ```
 
-Subcommands: `run.sh check-env` (preflight), `upgrade`, `audit ...`, `triage ...`, `lint ...`,
-`python ...`.
+Subcommands: `run.sh check-env` (preflight), `audit ...`, `triage ...`, `lint ...`, `python ...`.
 On success it is transparent (runs the script, forwards its exit code); on a setup failure it
 prints `HALLUCITE_BOOTSTRAP_FAILED: <reason>` to stderr and exits non-zero -- that sentinel means
 **no audit ran**, so there is nothing to interpret.
 
-First run builds a cached venv at `${XDG_CACHE_HOME:-~/.cache}/hallucite/venv` (needs `uv` or a
-Python 3.12, plus network for `pip install hallucinator`); set `$HALLUCITE_VENV` to relocate it.
-Later runs reuse it and are instant.
-To reuse an environment that already has hallucinator, set `$HALLUCITE_PYTHON` to its interpreter
-and no venv is built. (In a repo clone you can equivalently use the `mise run ...` tasks.)
+There is nothing to install: extraction, parsing, verification and the DBLP ingest are all
+standard library. Set `$HALLUCITE_PYTHON` to pin a particular interpreter. (In a repo clone you
+can equivalently use the `mise run ...` tasks.)
 
 ### Preflight (every session, before any audit)
 
 ```sh
-"$RUN" check-env    # must print `HALLUCITE_OK: <python> (hallucinator <version>)`
+"$RUN" check-env    # must print `HALLUCITE_OK: <python> (Python <version>)`
 ```
 
 If it prints `HALLUCITE_BOOTSTRAP_FAILED:` instead, relay that line to the user and stop -- see the
 stop conditions above.
 
-Two different versions show up around this skill; keep them apart when reporting one. `check-env`
-prints the **`hallucinator` package** version (the extract/verify library inside the venv), which
-is not the **hallucite plugin/skill** version in `metadata.version` above.
-
-### Keeping hallucinator current
-
-The managed venv is reused as soon as it can import hallucinator, so it never upgrades on its own
-and can sit on a months-old release indefinitely. `check-env` compares it against PyPI and warns
-when a newer one exists; act on that warning:
-
-```sh
-"$RUN" upgrade      # -> `HALLUCITE_OK: hallucinator <old> -> <new> at <python>`
-```
-
-It refuses when `$HALLUCITE_PYTHON` is set, since that interpreter is yours and run.sh does not
-modify it -- upgrade it yourself there. Set `$HALLUCITE_NO_VERSION_CHECK` to skip the PyPI lookup
-when offline.
+`check-env` also warns when `pdftotext` is missing or when there is no offline DBLP mirror at
+`$HALLUCITE_DBLP`. Neither is fatal, and both change what an audit can conclude: without the
+mirror, every reference carries a DBLP failure rather than a clean negative.
 
 ## Setup (once)
 
-1. `pip install hallucinator`. It ships CPython 3.12 wheels; on 3.13 pip builds from source, so a
-   3.12 venv is the easy path (`uv venv -p 3.12`).
-2. Build the offline DBLP database with the hallucinator CLI (prebuilt binary from
-   `https://github.com/gianlucasb/hallucinator/releases/latest`, checksum-verified, or
-   `cargo install hallucinator-cli`):
-   `hallucinator-cli update-dblp ~/hallucite/dblp.db` (about 4.6 GB download, 20-30 min, builds
-   a ~2.5 GB SQLite+FTS5 file). Keep it outside protected dirs such as ~/Downloads. To store it
-   elsewhere, set `$HALLUCITE_DBLP` to the target path and pass that path here instead.
+1. Install `pdftotext` (poppler). Nothing else: the pipeline is standard library only.
+2. Build the offline DBLP database. In a repo clone, `mise run fetch-dblp-dump` downloads
+   `dblp.xml.gz` (about 1 GB; it needs a headed browser, because dblp.org fronts the dump with a
+   bot check) and `mise run build-dblp` ingests it into a ~3.5 GB SQLite+FTS5 file in about five
+   minutes. Elsewhere, run `build_dblp.py <dump> --out ~/hallucite/dblp.db` directly. Keep it
+   outside protected dirs such as ~/Downloads; set `$HALLUCITE_DBLP` to store it elsewhere.
 3. Updates: the audit (Stage 1+2 below) checks the database's age at run time and warns when it is
    over 30 days old. Recent papers cite recent work, so rebuild it when that warning appears.
 
@@ -162,9 +143,8 @@ against the directory the user means (ask if ambiguous).
 
 Writes `<outdir>/<paper_id>.json` (every reference, parsed fields plus per-database verification)
 and `<outdir>/summary.json`. The offline DBLP DB defaults to `$HALLUCITE_DBLP` (else
-`~/hallucite/dblp.db`); override it with `--dblp PATH`. Flags: `--offline` (no network: offline
-DBLP plus hallucinator's built-in Standards matcher; a missing DBLP file disables DBLP rather
-than falling back to dblp.org), `--disable-dbs LIST` (disable named backends, comma-separated),
+`~/hallucite/dblp.db`); override it with `--dblp PATH`. Flags: `--offline` (no network; the offline
+DBLP mirror stays live), `--disable-dbs LIST` (disable named backends, comma-separated),
 `--no-verify` (extraction only), `--retry-degraded N` (re-check references a backend failed to
 answer for; default 1), `--no-candidates` (skip the CrossRef lookup that attaches candidate real
 records to unverified references; implied by `--offline`). Extraction is `lineno`- and
@@ -188,7 +168,7 @@ printed `[12]`; an author-year one is named by its citation key (`de Dieu et al.
 nothing is numbered in the paper. A trailing `[#n]` is hallucite's own index, appears nowhere in
 the paper, and is only what `triage record` takes as its `<number>`.
 
-If this exits non-zero -- whether a `HALLUCITE_BOOTSTRAP_FAILED:` line (no Python/hallucinator) or
+If this exits non-zero -- whether a `HALLUCITE_BOOTSTRAP_FAILED:` line (no usable Python) or
 a per-paper error from the audit -- stop and report it; do not infer verdicts by hand (see the stop
 conditions above).
 

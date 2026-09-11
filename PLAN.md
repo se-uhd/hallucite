@@ -22,41 +22,51 @@ Papers are identified by their id, the PDF file name (a file `paper1.pdf` has id
    reports. To fan out across papers, `triage.py worklist --paper <id>` emits one paper's slice by
    exact id match, so a worker reads only its own references.
 
-## Built on hallucinator
+## Extraction, parsing and verification
 
-Per-reference parsing and database verification reuse the
-[`hallucinator`](https://github.com/gianlucasb/hallucinator) package: `PdfExtractor.parse_reference(text)`
-for a single clean reference, and `Validator` / `ValidatorConfig` for concurrent multi-DB
-verification with offline DBLP (`dblp_offline_path`), author-aware fuzzy matching, and retraction
-detection.
+Three modules, all standard library. `pdf_references.py` does the PDF-to-references step:
+`pdftotext -layout`, drop the running head and footer, split two-column pages at the gutter, strip
+margin line numbers, find the References section, auto-detect the entry style (numeric /
+bracket-label / author-year), segment -- the numbered styles on a sequentiality guard, the
+author-first ones on their hanging indent, which is the only mark an Elsevier or Springer journal
+entry carries on its first line -- then hand each clean reference string to
+`reference_parser.parse_reference`, which reliably yields 0 unparsed references. A numbered
+bibliography reports the entry numbers it prints that no reference carries.
 
-hallucinator's built-in `extract()` (which reads the whole PDF file) is not used: many paper PDF
-files use the LaTeX `lineno` margin numbers (and some are two-column), which its MuPDF reader
-interleaves into the text and so mangles titles and DOIs. Instead `pdf_references.py` does the PDF-to-references step: `pdftotext
--layout`, split two-column pages at the gutter, strip margin line numbers, find the References
-section, auto-detect the entry style (numeric / bracket-label / author-year), segment with a
-sequentiality guard, then hand each clean reference string to `parse_reference` (with
-`min_title_words=1` for short book titles and a prefix-trim retry for venue tails), which
-reliably yields 0 unparsed references.
+`verifier.py` then asks five backends, cheapest first, each only about the references the ones
+before it did not match: the offline DBLP mirror through `dblp_check.py`, CrossRef's bibliographic
+search, DOI resolution, arXiv by identifier, and Semantic Scholar where a key is configured.
+Nothing is decided on a similarity score: a backend confirms only when a record's title matches
+after normalisation and its authors match on an initial-and-surname fingerprint. `build_dblp.py`
+builds the mirror from the DBLP dump. `VERIFICATION-SPEC.md` is the contract the parse and check
+halves meet.
 
-Two gaps in hallucinator's offline DBLP backend are closed locally by `dblp_check.py`
-(hallucite-owned, written against the SQLite schema alone -- hallucinator is AGPL and its logic
-sits in a compiled extension, so nothing is vendored or patched): the backend compares a
-reference with a single FTS candidate, so a cited title that several publications share is judged
-against whichever ranks first ("Experimentation in Software Engineering" hits Basili's 1986
-article and the Wohlin book reports `not_found`), and the database's own author rows can be
-truncated. After hallucinator's pass, the audit re-asks the same file over *all* same-title
-candidates -- exact normalized-title equality plus an initials-aware match of every comparable
-author -- and a hit rewrites the verification as `verified` with source `DBLP (hallucite)`. The
-pass only ever clears references; it never flags one. The audit also retries failed references
-with their line-break-join hyphens removed, since the kept-hyphen form defeats FTS phrase
+The head is removed first because it defeats gutter detection: it spans both columns, so the
+column gap is not blank on its line, and a page short enough for that one line to matter loses its
+column split and every reference in the right-hand column with it. A numbered bibliography catches
+such a loss, because it is the one invariant that costs nothing to check: it numbers itself
+consecutively, so extraction reports any printed entry number no reference carries, and the audit
+warns about it. Nothing later in the pipeline can. A reference that never arrives cannot be
+reported as unverified.
+
+`dblp_check.py` answers over *all* records sharing the cited title rather than the one an FTS
+query ranks first: "Experimentation in Software Engineering" is three book editions, a 1986 TSE
+article, a 1997 survey and a 2008 conference paper, and comparing a citation against whichever
+comes back first is how a real work gets reported missing. Retrieval is generous -- both readings
+of a hyphen, both foldings of a stroked letter, a word-wise AND, and a fragment-gluing fallback for
+a word the layout split with no hyphen -- and the decision is strict: exact normalized-title
+equality plus a match of every cited name that reads as a person. The audit also retries a failed
+reference with its line-break-join hyphens removed, since the kept-hyphen form defeats FTS phrase
 matching.
 
 ## DBLP dump
 
-`hallucinator-cli update-dblp` builds the offline DB from DBLP's RDF N-Triples dump (~4.6 GB)
-into a ~2.5 GB SQLite + FTS5 file (8.4 M publications) at `~/hallucite/dblp.db` (or
-`$HALLUCITE_DBLP` if set), outside the repo (not committed). The audit checks the database's age at run time and warns when it is over 30
+`build_dblp.py` builds the offline DB from DBLP's XML dump (~1 GB compressed) into a ~3.5 GB
+SQLite + FTS5 file (8.7 M publications, 4.3 M authors) at `~/hallucite/dblp.db` (or
+`$HALLUCITE_DBLP` if set), outside the repo (not committed). It takes about five minutes and
+resolves the dump's character entities as numeric references, so the authors whose names carry a
+diacritic survive the ingest -- an ingest that drops them makes the mirror disagree with references
+that are cited correctly. The audit checks the database's age at run time and warns when it is over 30
 days old; rebuild with `mise run build-dblp`.
 
 ## Per-paper JSON (the contract between stages)
@@ -80,8 +90,8 @@ days old; rebuild with `mise run build-dblp`.
 
 A reference goes to triage when `db_verification.status` is anything other than `verified`
 (`not_found`, `mismatch`, or `unparsed`); every reference is thus verified, unverified, or pending
-(`--no-verify`), and the audit derives the `unverified` count by negation so that a new
-hallucinator status cannot silently fall through uncounted. Triage verdicts are not written back
+(`--no-verify`), and the audit derives the `unverified` count by negation so that a status added
+later cannot silently fall through uncounted. Triage verdicts are not written back
 into this file: `triage.py record` stores them
 separately in `triage_verdicts.json`, keyed `"<paper_id>:<number>"` (resumable). Each verdict
 carries its category, a one-line finding, and structured fabrication signals (`title_match`,
@@ -106,8 +116,8 @@ so a reviewer sees the discriminating fact without re-investigating.
 `.github/workflows/smoke.yml` on push and pull request, and locally before a release): version and
 Claude/Codex packaging consistency (including that `SKILL.md` drives the pipeline via `run.sh`,
 carries the stop conditions, and documents every runner resolver branch); the `run.sh` bootstrap
-contract (syntax, unknown-command rejection, fail-loud with the sentinel when its Python cannot
-import hallucinator, and subcommand+argument forwarding); logic-contract unit tests on synthetic
+contract (syntax, unknown-command rejection, fail-loud with the sentinel when its Python is
+unusable, and subcommand+argument forwarding); logic-contract unit tests on synthetic
 per-paper records (a `mismatch` reference reaches triage; the title-first record gate; the verdicts
 lock under concurrent writes; per-paper worklist slice isolation, including the `paper6`/`paper66`
 prefix case; and the desk-reject heuristic); an optional isolated Codex CLI
@@ -132,11 +142,9 @@ The skill drives the scripts through `skills/hallucite/scripts/run.sh`, a single
 (`check-env | audit | triage | lint | python`). It resolves the wrapper from a Claude Code plugin
 install, the Codex repo-local skill shim, a direct repo clone, or the Codex plugin cache (preferring
 the `hallucite` marketplace's cached plugin and then any cached `hallucite`, with the highest
-cached version, compared with `sort -V`). The wrapper resolves or, on first use, provisions a
-Python 3.12 that can
-`import hallucinator` (preferring `uv`, else a stdlib `venv` over a 3.12 found on PATH, in common
-install dirs, or via `mise where`), so installed plugins do not depend on a bare
-`python`/`uv`/`mise` being on the shell's PATH. On any setup failure it prints a
-`HALLUCITE_BOOTSTRAP_FAILED:` sentinel and exits non-zero; `$HALLUCITE_PYTHON` reuses an existing
-environment and skips provisioning. This is also the guardrail behind the "never fabricate a
+cached version, compared with `sort -V`). The wrapper resolves a Python 3.10 or newer with
+`sqlite3` (on PATH, in the common install dirs, or via `mise where`), so installed plugins do not
+depend on a bare `python`/`uv`/`mise` being on the shell's PATH. There is nothing to install: the
+pipeline is standard library only. On any setup failure it prints a `HALLUCITE_BOOTSTRAP_FAILED:`
+sentinel and exits non-zero; `$HALLUCITE_PYTHON` pins an interpreter. This is also the guardrail behind the "never fabricate a
 verdict" rule: no script output means no verdict.

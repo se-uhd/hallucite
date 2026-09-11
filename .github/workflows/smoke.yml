@@ -13,12 +13,9 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"   # hallucinator ships CPython 3.12 wheels (see CLAUDE.md)
-      - name: Install pdftotext (poppler) and hallucinator
-        run: |
-          sudo apt-get update && sudo apt-get install -y poppler-utils
-          python -m pip install --upgrade pip
-          pip install hallucinator
+          python-version: "3.12"   # matches the dev clone; the pipeline needs only 3.10 or newer
+      - name: Install pdftotext (poppler)
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
       - name: Pipeline smoke (packaging + logic contract + offline end-to-end)
         run: python skills/hallucite/scripts/tests/run_smoke.py
       - name: Markdown lint

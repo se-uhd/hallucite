@@ -254,7 +254,11 @@ def _matched_records(dv: dict) -> list[dict]:
     is the whole evidence base for the verdict, so it has to travel with the worklist entry."""
     out = []
     for r in dv.get("db_results") or []:
-        if r.get("status") not in (None, "no_match", "skipped", "error", "rate_limited"):
+        # Named positively, because the failure vocabulary is the verifier's and it can grow: an
+        # exclusion list read a `timeout` as a matched record for exactly as long as it took
+        # someone to notice, and the next status added would do it again. These two are the only
+        # ones that mean a candidate record came back.
+        if r.get("status") in ("match", "author_mismatch"):
             out.append({"db": r.get("db"), "status": r.get("status"),
                         "paper_url": r.get("paper_url"),
                         "found_authors": r.get("found_authors") or []})
@@ -264,7 +268,7 @@ def _matched_records(dv: dict) -> list[dict]:
 def needs_triage(ref: dict) -> bool:
     # Needs triage iff the validator checked the reference (db_verification present) but did not
     # confirm it. Defined by negation of "verified" rather than a hard-coded list of failure
-    # statuses, so a status such as hallucinator's "mismatch" can no longer fall through the list
+    # statuses, so a status such as "mismatch" can no longer fall through the list
     # and be silently dropped from the worklist and the report.
     dv = ref.get("db_verification")
     return dv is not None and dv.get("status") != "verified"

@@ -4,7 +4,9 @@ PDF files and verify them against academic databases (offline DBLP + CrossRef/
 arXiv/Semantic Scholar/...), with no LLM involvement.
 
 Reference extraction is `lineno`-aware (see pdf_references.py); each extracted
-reference is parsed and verified with the `hallucinator` package.
+reference is parsed by `reference_parser` and verified by `verifier`, both of which implement
+`VERIFICATION-SPEC.md` against the offline DBLP mirror plus CrossRef, DOI resolution, arXiv
+and Semantic Scholar.
 
 Writes one JSON record per paper to the output directory, plus a corpus-level
 summary.json. References the databases did not confirm (any status other than
@@ -22,10 +24,8 @@ Options:
     --s2-api-key KEY    Semantic Scholar key ($S2_API_KEY). Without one S2 rate-limits,
                         leaving references degraded and the worklist varying between runs
     --offline           No network: disable the online database backends.
-                        Offline DBLP and hallucinator's built-in Standards
-                        matcher stay live; a missing DBLP file disables DBLP
-                        rather than falling back to dblp.org.
-    --disable-dbs LIST  Comma-separated DB names to disable (passed to hallucinator)
+                        The offline DBLP mirror stays live.
+    --disable-dbs LIST  Comma-separated DB names to disable
     --no-verify         Extract only; skip database verification (fast, offline)
 """
 
@@ -46,15 +46,9 @@ import urllib.request
 from difflib import SequenceMatcher
 from pathlib import Path
 
-try:
-    from hallucinator import PdfExtractor, Validator, ValidatorConfig
-except ImportError:
-    sys.exit(
-        "error: the 'hallucinator' package is not installed.\n"
-        "Run setup first:  mise run install   (see README.md / PLAN.md)"
-    )
-
-from dblp_check import record_context, second_opinion
+import reference_parser
+from dblp_check import record_context
+from verifier import Verifier
 from pdf_references import _parse, extract_references
 
 SCHEMA_VERSION = "1.0"
@@ -73,58 +67,16 @@ def _atomic_write(path: Path, text: str) -> None:
     os.replace(tmp, path)
 
 # Online backends to switch off in --offline mode (keeps offline DBLP). These MUST be the exact
-# `db` names hallucinator emits in each db_results entry -- a name that matches no backend is
+# `db` names `verifier` emits in each db_results entry -- a name that matches no backend is
 # silently ignored, so a typo leaves that backend live in --offline mode (this is what let the
 # old "DOI Resolver" entry never disable the real "DOI" backend). The names below are validated
 # at run time against the db names actually seen (see main()); use --disable-dbs to add more.
-DEFAULT_ONLINE_DBS = [
-    "CrossRef", "arXiv", "Semantic Scholar", "ACL Anthology",
-    "Europe PMC", "PubMed", "DOI", "Open Library",
-]
+DEFAULT_ONLINE_DBS = ["CrossRef", "DOI", "arXiv", "Semantic Scholar"]
 
-# Backends expected to stay live in --offline mode because they make no network calls: the offline
-# DBLP database (build_config() disables DBLP entirely when its file is missing, since hallucinator
-# would otherwise fall back to dblp.org), the built-in Standards pattern matcher, and hallucite's
-# own second-opinion pass over the same DBLP file (SECOND_OPINION_DB below). Any other name
-# appearing in --offline db_results means an online backend survived the disable list (the inverse
-# drift direction of the DEFAULT_ONLINE_DBS tripwire in main()), e.g. a backend hallucinator added
-# or renamed upstream.
-SECOND_OPINION_DB = "DBLP (hallucite)"
-KNOWN_LOCAL_DBS = ["DBLP", "Standards", SECOND_OPINION_DB]
-
-# Backends whose `found_authors` is the publication's full author list, so a cited author missing
-# from it is a real absence rather than a gap in the record.
-#
-# DBLP counts only when the local mirror actually kept its accented authors. A mirror built by an
-# ingest that mangles the dump's character entities loses real co-authors -- the Wohlin book keeps
-# 3 of its 6 -- and on a 95-paper corpus every DBLP author complaint against an otherwise-confirmed
-# reference traced to that rather than to a bad citation. So the decision is made per run from the
-# mirror in hand (`_complete_author_dbs`), not fixed here: hard-coding DBLP out survived the mirror
-# being repaired and let a reference with two invented authors verify again.
-#
-# This is an allow-list, so a backend added upstream does not feed the check until someone measures
-# it -- see _author_absence_pass.
-COMPLETE_AUTHOR_DBS = {"CrossRef", "DOI", "Open Library", "PubMed", "Europe PMC",
-                       "Semantic Scholar", "arXiv"}
-
-
-def _complete_author_dbs(dblp_path: Path | None) -> set[str]:
-    """Backends whose author list is complete enough to support an absence claim on this run.
-
-    Measured over the 459 corpus references a repaired mirror can be compared against, adding DBLP
-    flags one (0.22%), a genuine discrepancy; against a mangled mirror it flagged 22, essentially
-    all of them the mirror's own dropped authors."""
-    if dblp_path and dblp_path.exists() and not _dblp_drops_non_ascii_authors(dblp_path):
-        return COMPLETE_AUTHOR_DBS | {"DBLP"}
-    return COMPLETE_AUTHOR_DBS
-
-# Words that mark a parsed "author" as venue or title text the reference parser bled into the
-# author list ("Privacy (SP)", "Evolution (ICSME)"). Comparing those against real names is what
-# turns an author check into noise.
-_NOT_A_NAME = re.compile(
-    r"\b(conference|symposium|workshop|proceedings|journal|transactions|international|ieee|acm|"
-    r"springer|press|arxiv|preprint|reengineering|evolution|engineering|analysis|survey|privacy|"
-    r"security|networking|optimization|maintenance|repositories|reliability)\b", re.I)
+# The only backend that makes no network call, so the only one expected to appear in an --offline
+# run's db_results. Any other name there means an online backend survived the disable list -- the
+# inverse drift direction of the DEFAULT_ONLINE_DBS tripwire in main().
+KNOWN_LOCAL_DBS = ["DBLP"]
 
 
 def now_iso() -> str:
@@ -194,7 +146,7 @@ def parsed_dict(reference) -> dict | None:
 
 def dblp_build_info(dblp_path: Path) -> dict:
     """Best-effort metadata about the offline DBLP DB: file mtime, and the
-    build_date from its metadata table if hallucinator recorded one."""
+    build_date from its metadata table if the ingest recorded one."""
     info: dict = {"path": str(dblp_path), "exists": dblp_path.exists()}
     if not dblp_path.exists():
         return info
@@ -208,7 +160,7 @@ def dblp_build_info(dblp_path: Path) -> dict:
             con.close()
     except sqlite3.Error:
         return info
-    # hallucinator stores the dump's HTTP Last-Modified date and a build epoch.
+    # The ingest stores the dump's HTTP Last-Modified date and a build epoch.
     if meta.get("last_modified"):
         info["dump_last_modified"] = meta["last_modified"]
     if str(meta.get("last_updated", "")).isdigit():
@@ -261,8 +213,8 @@ def _dblp_drops_non_ascii_authors(dblp_path: Path) -> bool:
 def _dblp_publication_count(dblp_path: Path) -> int | None:
     """Publications in the offline mirror, or None if it cannot be read.
 
-    `update-dblp` writes a database and exits 0 even when the download brought back a bot-check
-    HTML page instead of the dump, leaving a valid, empty, useless mirror in place of a good one.
+    A download that brought back a bot-check HTML page instead of the dump still ingests, leaving a
+    valid, empty, useless mirror in place of a good one.
     Nothing downstream distinguishes that from a paper whose references DBLP simply does not
     hold."""
     try:
@@ -294,12 +246,12 @@ def _dblp_age_days(dblp_path: Path) -> float | None:
     return (dt.datetime.now().timestamp() - newest) / 86400.0
 
 
-def build_config(args) -> ValidatorConfig:
-    cfg = ValidatorConfig()
+def build_verifier(args) -> Verifier:
     disabled = list(DEFAULT_ONLINE_DBS) if args.offline else []
     dblp = Path(args.dblp)
+    dblp_path: str | None = None
     if dblp.exists():
-        cfg.dblp_offline_path = str(dblp.resolve())
+        dblp_path = str(dblp.resolve())
         age = _dblp_age_days(dblp)
         if age is not None and age > DBLP_STALE_DAYS:
             print(f"warning: offline DBLP database is {age:.0f} days old (> {DBLP_STALE_DAYS} days); "
@@ -307,48 +259,42 @@ def build_config(args) -> ValidatorConfig:
         n_pubs = _dblp_publication_count(dblp)
         if n_pubs is not None and n_pubs < _DBLP_MIN_AUTHORS:
             print(f"warning: the offline DBLP database at {dblp} holds only {n_pubs} publication(s), "
-                  f"so it is a failed build, not a mirror -- `update-dblp` writes an empty database "
-                  f"and exits 0 when the download returns a bot-check page instead of the dump. "
+                  f"so it is a failed build, not a mirror -- a download that returns a bot-check "
+                  f"page instead of the dump ingests as an empty database. "
                   f"Every DBLP lookup in this run will miss. Rebuild it to a scratch path first and "
                   f"keep the old file until the new one is verified.", file=sys.stderr)
         if _dblp_drops_non_ascii_authors(dblp):
             print(f"warning: the offline DBLP database at {dblp} holds no author name with a "
                   f"non-ASCII character, so its ingest dropped every author whose name carries a "
                   f"diacritic. DBLP is missing those authors from the papers they wrote, and its "
-                  f"author checks will disagree with correctly cited references. Rebuild with a "
-                  f"hallucinator-cli that handles the dump's character entities.", file=sys.stderr)
-    elif args.offline:
-        # Without an offline DB hallucinator's DBLP backend falls back to querying dblp.org, which
-        # would break --offline's no-network promise; disable the backend outright instead.
-        disabled.append("DBLP")
-        print(f"warning: offline DBLP database not found at {args.dblp}; DBLP is disabled for "
-              f"this --offline run (it would otherwise query dblp.org). Build it with: "
-              f"mise run build-dblp", file=sys.stderr)
+                  f"author checks will disagree with correctly cited references. The reference "
+                  f"rule reads that off the mirror and stops holding an absence against a citation, "
+                  f"but the confirmations those authors would have made are still lost -- rebuild "
+                  f"with an ingest that handles the dump's character entities.", file=sys.stderr)
     else:
-        print(f"warning: offline DBLP database not found at {args.dblp}; DBLP will be queried "
-              f"online if available. Build it with: mise run build-dblp", file=sys.stderr)
-    if args.mailto:
-        cfg.crossref_mailto = args.mailto
+        # The mirror decides nine confirmations in ten, so a run without one is an incomplete run.
+        # `Verifier` reports DBLP as a backend failure rather than a clean negative when the file is
+        # missing, which is what keeps a whole corpus from looking cleanly not-found.
+        print(f"warning: offline DBLP database not found at {args.dblp}; every reference in this "
+              f"run will carry a DBLP failure. Build it with: mise run build-dblp",
+              file=sys.stderr)
     # Semantic Scholar rate-limits an unauthenticated caller hard: over twelve audit runs it
     # answered on one, returning `rate_limited` in about 2.4s for three to five references each
     # time. Those references then carry a degraded verification -- not a clean negative -- and the
     # boundary between "verified" and "needs triage" moves by one reference from run to run, which
     # is the whole of the churn observed between otherwise identical audits. A free key removes it.
     s2_key = args.s2_api_key or os.environ.get("S2_API_KEY", "")
-    if s2_key:
-        cfg.s2_api_key = s2_key
-    elif not args.offline:
+    if not s2_key and not args.offline:
         print("note: no Semantic Scholar API key (--s2-api-key or $S2_API_KEY). Unauthenticated "
               "callers are rate-limited, which leaves references degraded and makes the worklist "
               "vary between runs. Free key: https://www.semanticscholar.org/product/api",
               file=sys.stderr)
-    if args.rate_limit_retries is not None:
-        cfg.max_rate_limit_retries = args.rate_limit_retries
     if args.disable_dbs:
         disabled += [d.strip() for d in args.disable_dbs.split(",") if d.strip()]
-    if disabled:
-        cfg.disabled_dbs = disabled
-    return cfg
+    return Verifier(dblp_path=dblp_path, mailto=args.mailto, s2_api_key=s2_key,
+                    rate_limit_retries=(2 if args.rate_limit_retries is None
+                                        else args.rate_limit_retries),
+                    disabled_dbs=tuple(disabled))
 
 
 _YEAR_IN_CITATION = re.compile(r"\(((?:19|20)\d{2}[a-z]?)\)")
@@ -435,7 +381,7 @@ def crossref_candidates(title: str, authors: list, mailto: str = "",
     return [c for c in out[:keep] if c["title_similarity"] >= 0.6]
 
 
-def _retry_degraded(validator: Validator, refs: list, verifications: list[dict | None],
+def _retry_degraded(validator: Verifier, refs: list, verifications: list[dict | None],
                     rounds: int, delay: float) -> int:
     """Re-check references whose verification had a backend failure, and keep the better result.
 
@@ -468,143 +414,22 @@ def _retry_degraded(validator: Validator, refs: list, verifications: list[dict |
     return fixed
 
 
-def _second_opinion_pass(dblp_path: str, entries: list, verifications: list[dict]) -> int:
-    """Confirm still-unverified references directly against the offline DBLP file, over ALL
-    same-title candidates (hallucinator's backend compares a single FTS candidate, so a title
-    that several publications share -- "Experimentation in Software Engineering" -- is judged
-    against whichever ranks first and reports not_found for the right one). Local, read-only,
-    and clear-only: a reference is switched exactly when a strict title+author match confirms
-    it; nothing is ever flagged here."""
-    fixed = 0
-    for i, (e, v) in enumerate(zip(entries, verifications)):
-        if v["status"] == "verified":
-            continue
-        r = e.reference
-        m = second_opinion(dblp_path, r.title or "", list(r.authors or []))
-        if m is None:
-            continue
-        url = f"https://dblp.org/rec/{m.key}"
-        verifications[i] = {
-            **v,
-            "status": "verified",
-            "degraded": False,
-            "source": SECOND_OPINION_DB,
-            "found_authors": m.authors,
-            "paper_url": url,
-            "db_results": (v.get("db_results") or []) + [{
-                "db": SECOND_OPINION_DB, "status": "verified", "elapsed_ms": 0,
-                "found_authors": m.authors, "paper_url": url}],
-        }
-        fixed += 1
-    return fixed
 
 
 # Letters that carry no combining mark to strip, so NFKD leaves them alone: a stroke or bar
 # through the glyph, a ligature, or a letter of its own. Without these, "Przybylek" and
 # "Przybyłek" are different people -- the l-with-stroke survives folding, then falls to the
 # non-ASCII filter and splits the surname into fragments that match nothing.
-_LETTER_FOLD = str.maketrans({
-    "ł": "l", "Ł": "L", "ø": "o", "Ø": "O", "đ": "d", "Đ": "D", "ð": "d", "Ð": "D",
-    "ħ": "h", "Ħ": "H", "ı": "i", "İ": "I", "ŀ": "l", "Ŀ": "L", "ŧ": "t", "Ŧ": "T",
-    "æ": "ae", "Æ": "AE", "œ": "oe", "Œ": "OE", "ß": "ss", "ẞ": "SS", "þ": "th", "Þ": "TH",
-})
 
 
-def _name_tokens(name: str) -> set[str]:
-    """Comparable tokens of a personal name: accents folded, punctuation and initials dropped, so
-    "Marcio"/"Márcio", "Przybylek"/"Przybyłek", "Kolahdouz-Rahimi"/"Kolahdouz Rahimi" and
-    "Dave Binkley"/"Dave W. Binkley" all compare equal.
-
-    DBLP disambiguates homonyms with a trailing number ("Márcio Ribeiro 0001"); digits fall to the
-    letters-only filter, so the suffix never has to be special-cased."""
-    folded = unicodedata.normalize("NFKD", name.translate(_LETTER_FOLD))
-    folded = "".join(c for c in folded if not unicodedata.combining(c))
-    folded = folded.lower().replace("-", " ").replace("'", "").replace("\u2019", "")
-    return {t for t in re.sub(r"[^a-z ]", " ", folded).split() if len(t) > 1}
 
 
-def _person_name(raw: str) -> str | None:
-    """The personal name in a parsed author field, or None when the field is not one.
-
-    Author parsing bleeds the sentence that follows the author list into its last entry
-    ("Christian Bird. Expectations, outcomes...") and picks up venue fragments as whole authors.
-    The sentence is cut at a period that follows a lowercase letter, which leaves a middle initial
-    ("Keila L. Lucas") intact -- cutting there instead truncates the name to "Keila L" and the
-    check then silently skips exactly the kind of author it exists to catch."""
-    n = re.split(r"(?<=[a-z])\.\s+(?=[A-Z])", raw.strip())[0]
-    if any(c.isdigit() for c in n) or "(" in n or ")" in n or _NOT_A_NAME.search(n):
-        return None
-    # A single comparable token is an extraction fragment ("An" from "Anand Ashok Sawant"),
-    # not something to hold a citation to.
-    return n if len(_name_tokens(n)) >= 2 else None
 
 
-def _authors_absent(cited: list[str], found: list[str]) -> list[str]:
-    """Cited authors that no author of the matched publication accounts for. A cited name counts as
-    present when some found author shares a real name token with it, which absorbs swapped
-    given/surname order ("Samuel Binny" / "Binny M. Samuel") and compound surnames
-    ("Marcelo Amorim" / "Marcelo d'Amorim")."""
-    found_tokens = [_name_tokens(a) for a in found]
-    absent = []
-    for raw in cited:
-        name = _person_name(raw)
-        if name is None:
-            continue
-        ct = _name_tokens(name)
-        present = any(ct & ft or any(a.endswith(b) or b.endswith(a)
-                                     for a in ct for b in ft if len(a) > 3 and len(b) > 3)
-                      for ft in found_tokens)
-        if not present:
-            absent.append(raw)
-    return absent
 
 
-def _author_absence_pass(entries: list, verifications: list[dict],
-                         complete_dbs: set[str] | None = None) -> int:
-    """Send a reference back to triage when it names an author the matched publication does not
-    have.
 
-    A backend confirms on the title, so a reference can be cleared as `verified` while carrying an
-    author who did not write the work -- a real title, a real venue, correct volume and pages, and
-    an invented author constellation, which is signal (A) in SKILL.md and the hardest bad citation
-    to notice by eye. A TSE proof cited "Refactoring Test Smells With JUnit 5" under an author list
-    with two people who are not on the paper; CrossRef matched the title and the reference was
-    cleared without a human ever seeing it.
-
-    Precision is the whole design, because every demotion asks a human to judge named authors:
-
-    - only the clearing backend's own authors count as evidence, and only from a backend that
-      returns complete author lists for this run (`_complete_author_dbs`) -- a mirror that dropped
-      its accented authors is why a backend's own `author_mismatch` verdict is not used here;
-    - the two lists must be the same length, so an abbreviated citation is never read as a
-      fabricated one;
-    - fields that are not personal names, and names that survive extraction as a single token, are
-      skipped rather than compared.
-
-    Measured over 1016 database-verified references from a 95-paper corpus, this flags one; over
-    the TSE proof above it flags the reference that prompted it. Demotion only -- the pass never
-    clears anything."""
-    allowed = COMPLETE_AUTHOR_DBS if complete_dbs is None else complete_dbs
-    demoted = 0
-    for e, v in zip(entries, verifications):
-        if v["status"] != "verified" or v.get("source") not in allowed:
-            continue
-        cited = list(getattr(e.reference, "authors", None) or [])
-        found = list(v.get("found_authors") or [])
-        if not cited or len(found) != len(cited):
-            continue
-        absent = _authors_absent(cited, found)
-        if not absent:
-            continue
-        v["status"] = "author_mismatch"
-        # Keep verification_dict's rule true: degraded means backends failed to answer on a
-        # reference that is not verified.
-        v["degraded"] = bool(v.get("failed_dbs"))
-        v["authors_absent"] = absent
-        demoted += 1
-    return demoted
-
-def _retry_dehyphenated(validator: Validator, extractor: PdfExtractor,
+def _retry_dehyphenated(validator: Verifier, extractor,
                         entries: list, verifications: list[dict]) -> int:
     """Re-verify failed references using their dehyphenated variant, and keep a verifying result.
 
@@ -639,7 +464,7 @@ def _retry_dehyphenated(validator: Validator, extractor: PdfExtractor,
     return fixed
 
 
-def audit_pdf(pdf: Path, extractor: PdfExtractor, validator: Validator | None,
+def audit_pdf(pdf: Path, extractor, validator: Verifier | None,
               retry_rounds: int = 1, retry_delay: float = 5.0,
               candidates: bool = False, mailto: str = "",
               dblp_path: str | None = None) -> dict:
@@ -649,12 +474,6 @@ def audit_pdf(pdf: Path, extractor: PdfExtractor, validator: Validator | None,
     parsed_refs = [e.reference for e in parsed_entries]
     results = validator.check(parsed_refs) if (validator and parsed_refs) else []
     verifications = [verification_dict(r) for r in results]
-    # Local second opinion first (free), then the network retries on whatever remains.
-    if validator is not None and dblp_path and verifications:
-        n = _second_opinion_pass(dblp_path, parsed_entries, verifications)
-        if n:
-            print(f"    confirmed {n} reference(s) against offline DBLP (all-candidates "
-                  f"title+author check)")
     if validator is not None and verifications:
         n = _retry_dehyphenated(validator, extractor, parsed_entries, verifications)
         if n:
@@ -664,14 +483,6 @@ def audit_pdf(pdf: Path, extractor: PdfExtractor, validator: Validator | None,
         n = _retry_degraded(validator, parsed_refs, verifications, retry_rounds, retry_delay)
         if n:
             print(f"    recovered {n} degraded verification(s) on retry")
-    # Last, so no clearing pass can undo a demotion.
-    if verifications:
-        n = _author_absence_pass(parsed_entries, verifications,
-                                 _complete_author_dbs(Path(dblp_path) if dblp_path else None))
-        if n:
-            print(f"    sent {n} reference(s) to triage: they name an author the matched "
-                  f"publication does not have", flush=True)
-
     # Evidence for whoever reviews the residue: DBLP's own year, venue, volume/pages and DOI beside
     # the citation. Not a check -- comparing these automatically was measured against the corpus and
     # is far too noisy to demote on (see dblp_check.record_context). This runs after every pass, so
@@ -727,6 +538,7 @@ def audit_pdf(pdf: Path, extractor: PdfExtractor, validator: Validator | None,
             "parsed": len(parsed_refs),
             "unparsed": len(info.refs) - len(parsed_refs),
             "suspect_merged": info.suspect_merged,
+            "missing_numbers": info.missing_numbers,
         },
         "references": references,
     }
@@ -747,7 +559,7 @@ def paper_status_counts(record: dict) -> dict:
             counts["retracted"] += 1
     # Everything the validator checked but did not confirm ("verified") needs triage. Derive this
     # by negation rather than summing a hard-coded list of failure statuses, so an unrecognised
-    # status -- e.g. hallucinator's "mismatch", which an earlier list silently dropped from both
+    # status -- e.g. "mismatch", which an earlier list silently dropped from both
     # the count and the worklist -- is always surfaced.
     counts["unverified"] = checked - counts["verified"]
     counts["degraded"] = sum(1 for ref in record["references"]
@@ -775,7 +587,7 @@ def main() -> int:
                    help="Semantic Scholar API key ($S2_API_KEY). Without one S2 rate-limits and "
                         "its references stay degraded")
     p.add_argument("--rate-limit-retries", type=int, default=None,
-                   help="How often a rate-limited backend is retried (hallucinator default)")
+                   help="How often a rate-limited backend is retried")
     p.add_argument("--offline", action="store_true",
                    help="no network (disable online DBs; offline DBLP + the local Standards "
                         "matcher stay live)")
@@ -797,11 +609,8 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     dblp_file = Path(args.dblp)
 
-    extractor = PdfExtractor()
-    # We segment the bibliography ourselves, so every string handed to
-    # parse_reference is already one real reference; accept short book titles too.
-    extractor.min_title_words = 1
-    validator = None if args.no_verify else Validator(build_config(args))
+    extractor = reference_parser
+    validator = None if args.no_verify else build_verifier(args)
 
     summary_papers = []
     seen_dbs: set[str] = set()
@@ -836,6 +645,12 @@ def main() -> int:
                   f"{'; no References section was found' if not ext['section_found'] else ''}"
                   f" -- this paper contributes nothing to triage; check the PDF/extraction.",
                   file=sys.stderr)
+        if ext.get("missing_numbers"):
+            labels = ", ".join(f"[{n}]" for n in ext["missing_numbers"])
+            print(f"    warning: the bibliography prints entry {labels} but extraction produced "
+                  f"no reference for it. A numbered bibliography numbers itself consecutively, so "
+                  f"each of those is a reference that never reached verification and cannot be "
+                  f"reported as unverified. Check the PDF around it.", file=sys.stderr)
         if ext.get("suspect_merged"):
             labels = ", ".join(f"#{n}" for n in ext["suspect_merged"])
             print(f"    warning: reference(s) {labels} carry two author-year blocks in one entry "
@@ -890,7 +705,7 @@ def main() -> int:
             stale = [db for db in DEFAULT_ONLINE_DBS if db not in seen_dbs]
             if stale:
                 print(f"warning: configured online-backend name(s) {stale} never appeared in any "
-                      f"db_results; hallucinator may have renamed/removed them, so --offline would "
+                      f"db_results; `verifier` may have renamed or removed them, so --offline would "
                       f"not actually disable them. Update DEFAULT_ONLINE_DBS.", file=sys.stderr)
         # The inverse direction: a backend that ran in --offline mode but is not known-local is an
         # online backend the disable list missed (new or renamed upstream), i.e. --offline silently
