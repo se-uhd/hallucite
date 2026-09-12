@@ -162,7 +162,22 @@ No separate plugin repo, no submodule.
   and still caught the real case. Every false demotion asks a human to judge named authors, so
   precision is the constraint. Expect the noise to come from data quality -- truncated author rows,
   venue text parsed as an author, name-form differences -- not from bad citations. Record the
-  measurement in the CHANGELOG entry, including the rules that were measured and rejected.
+  measurement in the CHANGELOG entry, including the rules that were measured and rejected. The DOI,
+  year and venue checks were each measured and rejected as automatic demotions and the table is in
+  CHANGELOG under 1.19.0; do not revisit one without a fresh measurement on a corpus whose verdicts
+  you trust. Choosing among records that have already matched is a different use of those same
+  fields, and is what the locator key does.
+- Widen the corpus by adding a template nobody has tried, not by adding more of what is there.
+  Every extraction fault this repo has found came that way: EMSE and JSS broke five papers on their
+  first run because the unnumbered hanging-indent bibliography both journals use had never been
+  seen. Two things to get right when it grows. Check for a duplicate arXiv id across venue labels
+  before adding -- `2608.27125` arrived twice, as `fse-` and `emse-`, because its comments name
+  both, and one paper under two labels double-counts its references in every measurement. And
+  record each paper in `~/hallucite/corpus/MANIFEST.tsv` (`file`, `venue_note`, `title`) as it is
+  pulled; three ICSE papers sat on disk unrecorded for weeks. At this size one bibliography still
+  moves a measurement, so re-run whatever a change touches over the whole corpus rather than the
+  part that was convenient, and add a synthetic fixture for the new shape
+  (`tests/fixtures/make_corpus_fixtures.py`).
 - Prefer a check the input already supports over one you have to tune. A numbered bibliography
   numbers itself consecutively, so a printed `[N]` that no extracted reference carries is one that
   never reached verification, and nothing downstream can report a reference that never arrived.

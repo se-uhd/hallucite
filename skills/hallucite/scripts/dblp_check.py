@@ -112,13 +112,16 @@ def _subtitle_head(t: str) -> str:
     return letters if head != (t or "") and len(head.split()) >= 2 and len(letters) >= 12 else ""
 
 
-# The edition DBLP appends to a book's title, in the two shapes it uses: "(2. ed.)" and ", 3rd
-# Edition". A citation names the work and the parser already trims the edition it prints
-# (`_TRAILING_PAREN`); the record's has to come off too, or "The mythical man-month" is not the
-# book the mirror holds.
+# The printing DBLP appends to a book's title, in the three shapes it uses: "(2. ed.)", ", 3rd
+# Edition" and "(Reprint)". A citation names the work and the parser already trims the edition it
+# prints (`_TRAILING_PAREN`); the record's has to come off too, or "The mythical man-month" is not
+# the book the mirror holds. Without the third, Boehm's *Software Engineering Economics* cited as
+# the Springer 2002 reprint cannot reach `books/sp/02/Boehm02a` and matches an ICSE 2002 tutorial
+# of the same title instead, which carries Boehm among five authors and so passes the author rule.
 _EDITION_SUFFIX = re.compile(
     r"\s*(?:\(\s*\d+(?:st|nd|rd|th)?\.?\s*ed(?:ition|n)?\.?\s*\)"
-    r"|,\s*(?:\d+(?:st|nd|rd|th)|second|third|fourth|fifth)\s+ed(?:ition|n)?\.?)\s*\.?$", re.I)
+    r"|,\s*(?:\d+(?:st|nd|rd|th)|second|third|fourth|fifth)\s+ed(?:ition|n)?\.?"
+    r"|\(\s*reprint\s*\))\s*\.?$", re.I)
 
 
 def titles_match(cited: str, candidate: str) -> bool:

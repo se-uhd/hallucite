@@ -83,17 +83,22 @@ def main() -> int:
                 GZ,
             )
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dl.value.save_as(dest)
+        # Downloaded beside the destination and swapped in only once it is a gzip, the way
+        # `build-dblp` swaps its database. Saving straight over `dest` spends the dump you already
+        # have before finding out what arrived, and the failure this script exists to catch -- the
+        # challenge page under a .gz name -- is exactly when that matters.
+        scratch = dest.with_name(dest.name + ".part")
+        dl.value.save_as(scratch)
         browser.close()
 
-    with open(dest, "rb") as fh:
+    with open(scratch, "rb") as fh:
         magic = fh.read(2)
     if magic != b"\x1f\x8b":
-        # The challenge page saved under a .gz name is the failure this whole script exists to
-        # avoid; say so rather than leaving HTML to be ingested as zero publications.
-        print(f"{dest} is not gzip ({magic!r}) -- the challenge page was saved instead of the "
-              f"dump. Nothing was ingested.", file=sys.stderr)
+        print(f"{scratch} is not gzip ({magic!r}) -- the challenge page was saved instead of the "
+              f"dump. {dest} is untouched and nothing was ingested.", file=sys.stderr)
+        scratch.unlink(missing_ok=True)
         return 1
+    scratch.replace(dest)
 
     print(f"saved {dest} ({dest.stat().st_size / 1e9:.2f} GB)")
     print(f"now run:  DBLP_XML_GZ={dest} mise run build-dblp")
