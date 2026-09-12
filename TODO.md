@@ -163,16 +163,44 @@ runs.
 - The DOI, year and venue checks were measured and rejected as automatic demotions; the table is
   in CHANGELOG under 1.19.0. Do not revisit without a fresh measurement on a corpus with
   trustworthy verdicts.
-- Where several DBLP records share a title and all carry the cited authors, row order still picks
-  the record shown in two shapes the cited year cannot separate: two records of the same standing
-  that both carry it (a conference paper and its journal version from one year, an ICSE tutorial
-  and the book it presents -- ten corpus references, five of them shown the record the citation
-  does not name), and a title where no record carries it (Fowler's *Refactoring* cited as the 2018
-  second edition, which DBLP does not hold, five times; one online-first year). Only the venue
-  could decide the first group, and venue comparison was measured and rejected under 1.19.0; a
-  publisher list for the second fired on a co-author named Pearson. Each is the cited work under
-  the cited authors, so the cost is the edition or venue the URL lands on. The measurement is in
-  the CHANGELOG entry for the year rule.
+- **Show the record the citation locates, not the one row order returns first.** The cited year
+  picks among records that share a title and all carry the cited authors, and leaves 27 of the
+  corpus's 48 such references to row order. What names the right record in those is the citation's
+  own locator. Measured over all 679 multi-match references: a sort key of `(is_corr, not
+  doi_match, not pages_match, not volume_match, not year_cited)` changes 6, every one of them
+  right and every one among the 27 -- Goodenough and Gerhart's 1975 TSE article, cited with the
+  TSE DOI and pages 156-173 and shown as their Reliable Software paper (twice); "Why Should I
+  Trust You?", cited from SIGKDD and shown as the NAACL demo; Kim's TSE 44(11) 1024-1038 shown as
+  the ICSE paper; Murphy-Hill's TSE 38(1) 5-18, whose printed year is an online-first one no
+  record carries; and Thorup's JCSS 69 330-353 shown as the STOC paper. It settles 22 of the 27.
+  A page range has to match the record's `pages` at both ends; scored against the cited DOI it
+  fires 382 times and disagrees once, on a DBLP duplicate carrying the same range twice. The
+  order against the year is free on this corpus -- both make the same six changes -- and the
+  locator goes first because a DOI or a page range identifies one record where a year identifies
+  a set.
+
+  To implement: `_extra_columns` already reads `volume`, `number` and `pages` off the mirror, but
+  `title_candidates` drops them when it builds `SecondOpinion`, so the dataclass needs the three
+  fields, and the function needs the raw text beside `years` (`_dblp` holds `ref.raw_citation` and
+  `ref.doi`). The tier 5c fixture has no `volume`/`number`/`pages` columns and needs them for a
+  pages guard; the DOI half can be guarded on `ee`, which it has. One mutation entry per key.
+
+  Optional, and a preference rather than a finding: ranking book before article before
+  inproceedings **only where no matching record carries a cited year** moves 6 more, all right --
+  five of them the citations of Fowler's *Refactoring* that name the 2018 edition DBLP does not
+  hold and land on the XP 2002 talk rather than the 1999 book. Six data points, and unrestricted
+  the same ranking was wrong 3 times in 13. Measured and rejected: venue text, wrong once in six
+  because the record venue "Software Engineering" sits inside "European Software Engineering
+  Conference", which is the 1.19.0 finding again; author count, which `et al.` and truncated rows
+  disturb; and non-DOI `ee` URLs, which change nothing. The per-case reading of all 27 and the
+  scoring script are in `~/hallucite/shared-title-investigation.md` and
+  `~/hallucite/shared-title-rules.py`.
+- `titles_match` strips an edition suffix from a record's title (`(2. ed.)`, `, 3rd Edition`) but
+  not a `(Reprint)` one. Boehm's *Software Engineering Economics*, cited as the Springer 2002
+  reprint, therefore cannot match `books/sp/02/Boehm02a` ("Software Engineering Economics
+  (Reprint).") and matches an ICSE 2002 tutorial of the same title instead, which carries Boehm
+  among five authors. One corpus reference. It is a title-matching question rather than a
+  record-choice one, and any widening gets measured on both corruption sets first.
 
 ## Last, once the verifier is replaced
 
