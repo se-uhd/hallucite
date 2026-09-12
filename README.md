@@ -65,12 +65,16 @@ mise run audit -- <pdf-file-or-dir> [options]  # everything after the target is 
 
 Writes `out/<paper_id>.json` (every reference plus per-database verification) and
 `out/summary.json` (status counts plus the DBLP build date). Options: `--dblp PATH`, `--out DIR`,
-`--mailto EMAIL`, `--offline` (no network; the offline DBLP mirror stays live),
-`--disable-dbs LIST` (comma-separated), `--no-verify`. The DBLP path defaults to
+`--mailto EMAIL`, `--s2-api-key KEY`, `--offline` (no network; the offline DBLP mirror stays
+live), `--disable-dbs LIST` (comma-separated), `--no-verify`, `--no-candidates` (skip the CrossRef
+lookup that attaches candidate records; implied by `--offline`), `--rate-limit-retries N`,
+`--retry-degraded N` (re-check what a backend failure left degraded; default 1, 0 disables) and
+`--retry-delay SECONDS` (default 5). The DBLP path defaults to
 `$HALLUCITE_DBLP` (else `~/hallucite/dblp.db`) and the output dir to `out`. A reference the
 backends miss is re-verified once with its line-break hyphens removed before it reaches triage.
 The DBLP backend checks the cited title and authors against every record sharing that title, and
-where several match it reports the published record whose year the citation prints. A
+where several match it reports the published record the citation locates -- the one whose DOI,
+page range or volume it prints, and failing those the one whose year it prints. A
 reference needs triage when its `db_verification.status` is anything other than `verified`
 (`not_found`, `mismatch`, or `unparsed`). Re-running into the same `--out` is idempotent (`triage_verdicts.json` accumulates by `paper_id:number`).
 

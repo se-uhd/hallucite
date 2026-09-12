@@ -47,7 +47,7 @@ check(references[]) -> result[] aligned 1:1 with the input
 
 Each result carries: `status`, `source` (the backend that decided it), `found_authors` (the matched
 record's author list), `paper_url`, `doi_info`, `arxiv_info`, `retraction_info`, `failed_dbs`, and
-`db_results[]` of `{db, status, elapsed_ms, found_authors, paper_url}`.
+`db_results[]` of `{db_name, status, elapsed_ms, found_authors, paper_url}`.
 
 `check` reads `title`, `authors`, `doi` and `arxiv_id` off each reference, and `raw_citation` where
 the reference carries it. The raw text never decides whether a record matches; it only chooses
@@ -103,10 +103,12 @@ How strictly to apply it depends on the source:
 - **A database that stores complete author lists** (CrossRef, arXiv, OpenAlex, and DBLP *when the
   local mirror was built by an ingest that preserves accented names*) — one unmatched cited author
   is enough to flag.
-- **A database whose records may be truncated** — require several unmatched names before flagging,
-  because the absence may be the record's fault. Measured over a 95-paper corpus, every DBLP author
-  complaint against an otherwise-confirmed reference traced to a mirror that had dropped authors,
-  not to a bad citation.
+- **A database whose records may be truncated** — an unmatched cited name is absence of evidence
+  and does not flag, because the absence may be the record's fault. Measured over a 95-paper corpus,
+  every DBLP author complaint against an otherwise-confirmed reference traced to a mirror that had
+  dropped authors, not to a bad citation. The tier still needs a floor: the people such a record
+  does list have to account for at least one cited name, or it clears any author list on any title
+  it shares.
 
 The record in hand can say so for itself, and where it does that outranks anything known about
 the source. DBLP writes a literal `et al.` row where it truncated a long author list, and it
@@ -142,9 +144,10 @@ the title alone; that is the limit of what a bibliographic database can say abou
   conference paper. Comparing against whichever ranks first is how a real work gets reported
   missing.
 - Where several of them match the cited authors too, the one reported is the one a human will be
-  pointed at: a published record before its preprint, and among those the record whose year the
-  citation prints, read off the entry's raw text. A reference handed in without its text gets the
-  published-first order alone. The choice never changes a status.
+  pointed at: a published record before its preprint, and among those the record the citation
+  locates — the record whose DOI, page range or volume it prints, and failing all three the record
+  whose year it prints — each read off the entry's raw text. A reference handed in without its text
+  gets the published-first order alone. The choice never changes a status.
 
 ## Non-goals
 

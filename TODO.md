@@ -71,6 +71,13 @@ replaced covered the 41-paper corpus (2081 references) and had been overtaken by
 committed after it; re-record this one the same way, offline, after the next change that is meant
 to move a verdict, so that a replay reports only what is new.
 
+What it does not answer is which record a verdict points at. `paper_url` is recorded but not
+compared -- a replacement consults other backends, so where a reference *lands* is the only
+question that survives the substitution -- and the replay hands `check` the parsed fields without
+the raw citation, so nothing that reads the entry's text is exercised. A change to the record
+shown is confirmed by an `--offline` audit of `~/hallucite/corpus` before and after, diffed per
+reference, which is how the cited year and the locator were each measured.
+
 `cases-online.json` is the recording of the four online backends: 2857 references, all backends,
 recorded on 2026-09-11 from 17:40 to 19:22 with the parser as of `9f8fd8f`, log in
 `cases-online.log`. 2290 verified (DBLP 2070, CrossRef 175, arXiv 16, Semantic Scholar 16, the DOI
@@ -143,12 +150,12 @@ than the part that was convenient.
 
 ## Rebuild the measurement baseline
 
-`out/` holds 95 papers of verdicts produced against a mirror that was missing 285,000 authors, and
-the PDFs it was built from are gone. It is not a usable baseline for judging a detection rule.
-
 `~/hallucite/corpus` (55 papers: ICSE, FSE, ASE, ESEM, TSE, TOSEM, EMSE and JSS, ACM, IEEE,
-Springer and Elsevier templates, with `MANIFEST.tsv`) replaces the extraction sample. A verdict
-baseline still needs an audit run over it:
+Springer and Elsevier templates, with `MANIFEST.tsv`) is the sample. Its *extraction* baseline now
+lives in the repo as well, as the synthetic fixtures smoke tier 4j drives, so a clone and CI hold
+it too; the old `out/` tree of verdicts, built against a mirror missing 285,000 authors and from
+PDFs that are gone, has been deleted rather than left to look like a baseline. A verdict baseline
+still needs an audit run over the corpus:
 
     S2_API_KEY=... mise run audit -- ~/hallucite/corpus --out out-corpus --mailto <you>
 
@@ -163,38 +170,6 @@ runs.
 - The DOI, year and venue checks were measured and rejected as automatic demotions; the table is
   in CHANGELOG under 1.19.0. Do not revisit without a fresh measurement on a corpus with
   trustworthy verdicts.
-- **Show the record the citation locates, not the one row order returns first.** The cited year
-  picks among records that share a title and all carry the cited authors, and leaves 27 of the
-  corpus's 48 such references to row order. What names the right record in those is the citation's
-  own locator. Measured over all 679 multi-match references: a sort key of `(is_corr, not
-  doi_match, not pages_match, not volume_match, not year_cited)` changes 6, every one of them
-  right and every one among the 27 -- Goodenough and Gerhart's 1975 TSE article, cited with the
-  TSE DOI and pages 156-173 and shown as their Reliable Software paper (twice); "Why Should I
-  Trust You?", cited from SIGKDD and shown as the NAACL demo; Kim's TSE 44(11) 1024-1038 shown as
-  the ICSE paper; Murphy-Hill's TSE 38(1) 5-18, whose printed year is an online-first one no
-  record carries; and Thorup's JCSS 69 330-353 shown as the STOC paper. It settles 22 of the 27.
-  A page range has to match the record's `pages` at both ends; scored against the cited DOI it
-  fires 382 times and disagrees once, on a DBLP duplicate carrying the same range twice. The
-  order against the year is free on this corpus -- both make the same six changes -- and the
-  locator goes first because a DOI or a page range identifies one record where a year identifies
-  a set.
-
-  To implement: `_extra_columns` already reads `volume`, `number` and `pages` off the mirror, but
-  `title_candidates` drops them when it builds `SecondOpinion`, so the dataclass needs the three
-  fields, and the function needs the raw text beside `years` (`_dblp` holds `ref.raw_citation` and
-  `ref.doi`). The tier 5c fixture has no `volume`/`number`/`pages` columns and needs them for a
-  pages guard; the DOI half can be guarded on `ee`, which it has. One mutation entry per key.
-
-  Optional, and a preference rather than a finding: ranking book before article before
-  inproceedings **only where no matching record carries a cited year** moves 6 more, all right --
-  five of them the citations of Fowler's *Refactoring* that name the 2018 edition DBLP does not
-  hold and land on the XP 2002 talk rather than the 1999 book. Six data points, and unrestricted
-  the same ranking was wrong 3 times in 13. Measured and rejected: venue text, wrong once in six
-  because the record venue "Software Engineering" sits inside "European Software Engineering
-  Conference", which is the 1.19.0 finding again; author count, which `et al.` and truncated rows
-  disturb; and non-DOI `ee` URLs, which change nothing. The per-case reading of all 27 and the
-  scoring script are in `~/hallucite/shared-title-investigation.md` and
-  `~/hallucite/shared-title-rules.py`.
 - `titles_match` strips an edition suffix from a record's title (`(2. ed.)`, `, 3rd Edition`) but
   not a `(Reprint)` one. Boehm's *Software Engineering Economics*, cited as the Springer 2002
   reprint, therefore cannot match `books/sp/02/Boehm02a` ("Software Engineering Economics

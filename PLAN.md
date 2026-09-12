@@ -55,8 +55,9 @@ comes back first is how a real work gets reported missing. Retrieval is generous
 of a hyphen, both foldings of a stroked letter, a word-wise AND, and a fragment-gluing fallback for
 a word the layout split with no hyphen -- and the decision is strict: exact normalized-title
 equality plus a match of every cited name that reads as a person. Where several records match,
-the one reported is a published record before its preprint and, among those, the record whose
-year the citation prints. The audit also retries a failed
+the one reported is a published record before its preprint and, among those, the record the
+citation locates: the one whose DOI, page range or volume it prints, and failing those the one
+whose year it prints. The audit also retries a failed
 reference with its line-break-join hyphens removed, since the kept-hyphen form defeats FTS phrase
 matching.
 
@@ -131,8 +132,7 @@ prefix case; and the desk-reject heuristic); an optional isolated Codex CLI
 marketplace-list check when `codex` is installed; and an offline end-to-end audit (driven through
 `run.sh`) against a generated fixture DBLP database and a synthetic fixture PDF. Markdown lint
 runs as a separate CI step (`lint_markdown.py` over the tracked Markdown files; locally,
-`mise run lint-md`). The full DBLP database, the online backends, and `run.sh`'s network
-auto-provision path are not exercised in CI.
+`mise run lint-md`). The full DBLP database and the online backends are not exercised in CI.
 
 ## Packaging
 
@@ -147,9 +147,9 @@ Generated artifacts under `out/` are gitignored. See `README.md` for commands.
 
 The skill drives the scripts through `skills/hallucite/scripts/run.sh`, a single entry point
 (`check-env | audit | triage | lint | python`). It resolves the wrapper from a Claude Code plugin
-install, the Codex repo-local skill shim, a direct repo clone, or the Codex plugin cache (preferring
-the `hallucite` marketplace's cached plugin and then any cached `hallucite`, with the highest
-cached version, compared with `sort -V`). The wrapper resolves a Python 3.10 or newer with
+install, the Codex repo-local skill shim, a direct repo clone, the Claude Code plugin cache, or
+the Codex plugin cache (preferring the `hallucite` marketplace's cached plugin and then any cached
+`hallucite`, with the highest cached version, compared with `sort -V`). The wrapper resolves a Python 3.10 or newer with
 `sqlite3` (on PATH, in the common install dirs, or via `mise where`), so installed plugins do not
 depend on a bare `python`/`uv`/`mise` being on the shell's PATH. There is nothing to install: the
 pipeline is standard library only. On any setup failure it prints a `HALLUCITE_BOOTSTRAP_FAILED:`

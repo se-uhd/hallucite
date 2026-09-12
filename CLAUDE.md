@@ -15,8 +15,8 @@ standard library: `pdf_references.py`, `reference_parser.py`, `verifier.py`, `db
 `characterize.py` holds them to a recording of the external `hallucinator` package they replaced.
 That package is AGPL-3.0-or-later and this repo is MIT; it is no longer a dependency of anything
 the audit runs, and no code was copied across -- the modules were written against a black-box
-recording. `characterize.py record` still needs it to make a *new* recording. Nothing goes upstream
-to it.
+recording. Nothing imports it any more, `characterize.py record` included: a new recording is made
+from hallucite's own modules.
 
 One repo, two roles: it is the runnable project (mise tasks) and an installable plugin for Claude
 Code and Codex CLI. Claude Code uses `.claude-plugin/plugin.json` plus
@@ -30,8 +30,8 @@ No separate plugin repo, no submodule.
 
 - The bundled skill drives the pipeline through `skills/hallucite/scripts/run.sh`, the single
   entry point (`check-env | audit | triage | lint | python`). It resolves the wrapper from a Claude
-  Code plugin install, a Codex repo-local skill shim, a direct repo clone, or the Codex plugin
-  cache. The wrapper resolves a Python 3.10+ with `sqlite3`, never relying on a bare
+  Code plugin install, a Codex repo-local skill shim, a direct repo clone, the Claude Code plugin
+  cache, or the Codex plugin cache. The wrapper resolves a Python 3.10+ with `sqlite3`, never relying on a bare
   `python`/`uv`/`mise` being on the plugin shell's PATH (the failure that made the plugin silently
   un-runnable). There is nothing to install. The wrapper fails loud with a `HALLUCITE_BOOTSTRAP_FAILED:`
   sentinel and a non-zero exit, and its probe reads the interpreter's *output* rather than its exit
@@ -58,7 +58,12 @@ No separate plugin repo, no submodule.
   corruption harness once and scores an implementation against it; `head_to_head.py` scores the
   old and new parser and DBLP check over the recorded cases or the corpus, offline by
   construction; `mutations.py` reverts one fix at a time and requires the suite to fail, and does
-  so in the working tree, so run nothing else against the tree until it finishes. The
+  so in the working tree, which it owns until it finishes: no other measurement, and no edit to any
+  tracked file, Markdown included. The suite reads the CHANGELOG, the manifests and `SKILL.md` as
+  well as the modules reverted, so an edit landing inside a run is read half-written and fails a
+  check indistinguishable from the revert's -- which reports an unguarded fix as guarded. It
+  fingerprints the tracked tree between entries and stops if anything moved; work in a snapshot
+  (`git ls-files -z | xargs -0 tar cf -`) instead. The
   built harness sets live with the other anchors in `~/hallucite/` (`corruptions.json`,
   `corruptions-truncated.json`) and are scored, never rebuilt, because a rebuild on a newer dump
   samples different records. `--scripts DIR` on the scorers imports a snapshot of the modules, so
@@ -203,7 +208,8 @@ No separate plugin repo, no submodule.
   Where a rule has to survive a fixed amount of noise, count the noise.
 - Decide from the data in hand, not from a name. Hard-coding DBLP out of the complete-author set
   because the mirror was broken survived the mirror being repaired, and a reference with two
-  invented authors verified again. `_complete_author_dbs` now decides per run.
+  invented authors verified again. `mirror_authors_complete` and `record_authors_complete` decide
+  per run and per record instead.
 - Plans and READMEs describe only the current approach. Do not narrate dropped or superseded
   ideas, or "out of scope" history. After a scope change, rewrite the doc as if the final
   approach were always the plan.

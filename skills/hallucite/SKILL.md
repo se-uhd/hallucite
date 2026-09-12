@@ -11,7 +11,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.10 or newer (standard library only), pdftotext (poppler), and an offline DBLP database at ~/hallucite/dblp.db, built by `mise run build-dblp` (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
-  version: "1.21.0"
+  version: "2.0.0"
 ---
 
 # hallucite
@@ -149,9 +149,9 @@ DBLP mirror stays live), `--disable-dbs LIST` (disable named backends, comma-sep
 answer for; default 1), `--no-candidates` (skip the CrossRef lookup that attaches candidate real
 records to unverified references; implied by `--offline`). Extraction is `lineno`- and
 two-column-aware and handles numeric, bracket-label, and author-year bibliographies; the target is
-0 unparsed references. References the backends miss get two automatic local recovery passes
-before they land in the worklist: an all-candidates title+author check against the offline DBLP
-file (shown as source `DBLP (hallucite)`), and a re-verification with line-break hyphens removed.
+0 unparsed references. The offline DBLP file is the first backend asked, over every record
+sharing the cited title rather than the one a search ranks first, and a reference the backends miss
+is re-verified once with its line-break hyphens removed before it lands in the worklist.
 
 Read the run's closing warnings. Verification stops at the first backend that matches, so later
 backends are only ever asked about the residue -- the same references that reach triage -- and that
@@ -335,8 +335,8 @@ Then assemble the reports:
 "$RUN" triage report --out <outdir>
 ```
 
-- `<outdir>/reports/reference-check-<paper_id>.md`: per paper, including an **Indistinguishable
-  entries** section (see below).
+- `<outdir>/reports/reference-check-<paper_id>.md`: per paper, including a **Repeated
+  bibliography entries** section (see below).
 - `<outdir>/reports/potential-hallucinations.md`: corpus rollup for human review, led by a
   per-paper severity table and a **Desk-reject candidates** section (references whose cited title
   matches no real publication, compounded by a fabricated author constellation, venue, or DOI).
