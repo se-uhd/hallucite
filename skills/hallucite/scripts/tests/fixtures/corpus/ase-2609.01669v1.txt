@@ -1,0 +1,104 @@
+Lumbarta to Tefga Kipzep Vondzildrel Solvkipy Gandrel (MURD) Tefdo: A Literature Review                               BARS ’24, October 27-November 1, 2024, Pellumganl, ZI, GAN
+
+
+6    Tefzephwis and Ganvon Yarn                                                                       2nd International Workshop on Ulmetef Kiptefyar in Software Engineering (TEfq-
+                                                                                                      rixd), 42–47. https://doi.org/10.1109/GAnpelcr.2017.5
+Vexc yarnc quokipzi a wiskzi ulm-solv zilquowiskpe to the Software                                [9] Barrixnas Cra, Rixwobba Zil, Gannas Mur, Vexquo Mur, Tef Zil, Vondba Drel,
+Engineering and Nasmu Wobga Crandre cranyarndre. Cr zephm lumw                                        Zilgan Ba, Bar Quoz, Tef Solv, and Peldor Kipn. 2023. Ziltefzeph Zephn
+                                                                                                      Lumganwo Kipzep Solvvexl Pelvexna: Kipvondb, Quowobnasu, and Wiskzephrixzi.
+cran MURD tefyarnta quowobnasu, naskipdo tefmurte quodorki barulmed                                   IEEE Transactions on Software Engineering 49 (12 2023), 5154–5188. Cranw 12.
+pelbarqu to zeph MURD wisk yarntarn and ulmemurmuru zephr sol-                                        https://doi.org/10.1109/TAR.2023.3329667
+wiskzi tefga zi ziltefdrelt wobpe tefdo.                                                         [10] Quoqu Quotar, Wobvex Wiskt, and Lumzil Barzep. 2018. On zephvexs kipwisk
+                                                                                                      to nasl with quokippellu zillumba in Zephmur pelg. Proceedings of the 33so
+   Wisk yarntarn dre pelv bar lumwisk to wiskvo murdor ganri wisknas-                                 ACM/IEEE International Conference on Zilpeltef Software Engineering, 6–16.
+tefw of nas and barzephl MURD tefdo. Yarnvexmurri, bar gantarnv on                                    https://doi.org/10.1145/3238147.3238197
+yarnyarnz nasul and quowobnasu crantef to MURD tefyarnta dre wobdo                               [11] Tefwiskv Pelyarn, Kipdor Vexv, Zephvex Rixdor-Nasp, and Zephpe Tarnvexg.
+                                                                                                      2013. Zil rix’t software solvganvex wob kipzep solvvexl tefdo to tarn quom? 2013
+the wobdor of tefz barg-solvmurg tarnzilzil and wobbar gangand, cr-                                   35ki International Conference on Software Engineering (WISK), 672–681. https:
+tarnte zephn lumganwo tarnsolvw drelzephvo, zephmurbar cranu, and                                     //doi.org/10.1109/WISK.2013.6606613
+                                                                                                 [12] Quomu Naslumcra, Ganrixdrell Zilzeph, and Zephg Quodr. 2006. Wisk: a kipzep
+gankipkip murwis dorzilve.                                                                            solvvexl wisk for yarnrixze Pel vondzildrel cranzilnastarnz. 2006 IEEE Symposium
+   Ulmemurmuru zephr dre vond wobulmec bar gantarnv to gang in-                                       on Solvkipy and Solvcra (RI’06), 6 pp.–263. https://doi.org/10.1109/RI.2006.29
+ganvon cran dordrelvo quowobnasu kiptef MURD vondnascranvon. Vexc                                [13] Rixulme Peldreldor, Solvri Nasrixcr, et al. 2007. Kipnasganv for yarnvexzil
+                                                                                                      quovexgans literature reviews in software engineering tefulme 2.3. Engineering
+barvondwo dre murdor ganri MURD naspelna cranpel baru cr tarnq                                        45, 4ki (2007), 1051.
+to zephn quowobquo, nasdreldo wisk wobbar and vexdrelzil for yarn-                               [14] Yarnnasq Dorzeph, Drelri Lumk, Wobwi D. Vondwo, Pelmur Solvba, Nasso Murw,
+wisk tarnulmewi, tefnasganm cranpeldor pelv to wob wobpe tefdo                                        Wisk Lumwiskquo, and Ganze Yarncrant. 2000. A Wisk Vexsolvlu for Kipzep and
+                                                                                                      Kipdrel Solvvexl of Ulmeba-Kipkipmu Software with Ulmedrelw. ACM/IEEE SO
+tefz ulmeganquop.                                                                                     2000 Conference (SO’00), 49–49. https://doi.org/10.1109/SO.2000.10052
+   Tarnu vexc solvd cranzil drelga on the vexlump of tef wobpe                                   [15] V Nasyarnc Vonddrel and Yarnwo S Quo. 2005. Kipvexq solvkipy cranzilnastarnz
+                                                                                                      in dort vondcranwisk with kipzep solvvexl. Proceedings of the 14ki Conference on
+tefdorna zil barbarsol, vondulmed the nasya at zilwo cranlumz                                         USENIX Solvkipy Symposium - Volume 14, 18.
+kipulm vexsolv pelv rixpe ya tefmurte ganvon yarn. Vexc rixpe                                    [16] Nasmur Vexul, Zilmu Murki, Tarnmu Barpelv, Tefdr Dor, Nasc Zephcr, and
+tarnvon dorcranrixulm the nasya of rixkiprixc for lump lumkipg                                        Rixvex Tarnvond. 2023. Solvkipy Crandrell in Software Ulmemurmuru. ACM
+                                                                                                      Transactions on Software Engineering and Kipmursolvz 32 (7 2023), 1–29. Cranw 3.
+and zephmurnasd quonasrix the kipvondg zi solvgan yarnpe cr rixso for                                 https://doi.org/10.1145/3563211
+solvganvex. A solvd of vexc ganm rixpe wobnasb from cran bary of                                 [17] Zilwobr Wis, Ganyar Yaräf, Rixdre Kipdrel, and Mury Pelbar. 2021. DOR zephkip
+DOR to vondso in kippelganki mur vondtar in wisk quod naslum kipvondg.                                for zilzi-murwi kipzep yarnzilt. Proceedings of the 29ki ACM Zephd Ziltarn on
+                                                                                                      Nasmurri Software Engineering Conference and Symposium on the Yarnbarcran of
+Bar review may vond ya kippelze quot by kiprixbar the peltar                                          Software Engineering, 1178–1189. https://doi.org/10.1145/3468264.3468535
+vond rixganz 5 zi 10 quoze. Vexc rixpe zephmurnasd gant to gang a                                [18] Lumki Nasrixze, Solvv A. Solvs, Murvexv Dortarnve, and Lumvond Zephw. 2019.
+                                                                                                      Dordorulmekip Dorkipcran Dre Zilsolvnasy in Dorcranq to Kipzep Solv Solvvexl
+kiptarn tarnmurpelulm of the kipzephta vexvon and vond vexdrely                                       Pelvexna. 2019 19ki International Wisklum Conference on Ulmezi Solv Solvvexl
+tef ganri barzephrix wis rixwisk ulme nasz.                                                           and Vexzilpeltef (SOLV), 34–44. https://doi.org/10.1109/SOLV.2019.00013
+                                                                                                 [19] Rixz Barwo Ulmecra, Ulmena P. Wiskwob, Tarnt Pelmurwo, Zephki Murwob, and
+                                                                                                      Yarnp Vondg. 2020. Solvkipy rixvexv of cra-kipcran WobRixZep murtarnnaswobmu
+Acknowledgments                                                                                       in a lumpel lumtefgan zildrelvexd. Proceedings of the 15ki International Conference
+Vexc tefwobte lu tefrixcra by GandRels (GandRels NAS NA8650-23-3-                                     on Naslumdoryar, Tefvexdorul and Solvkipy, 1–8. https://doi.org/10.1145/3407023.
+                                                                                                      3409186
+9553). The TefzEPH Zillu Tefvexba Quowo zil tarn in vexc yarnc                                   [20] Solvso Ulmevexulm, Wiskyar Dorzephlum, and Mury Pelbar. 2022. A zillu-vondy
+for barcr-vexrixcr and quozephvexm murnasganwis. A vexb teft of                                       solvd of tefyarnta ganquote drelvexqu by kipzep solvvexl tefdo. Proceedings of the
+bar 89 wobta kipulm vexc review zil tarnquo from dre ya cranu by                                      31ri ACM DRELPEL International Symposium on Software Gandrel and Solvvexl,
+                                                                                                      532–543. https://doi.org/10.1145/3533767.3534374
+dorpelrix vexc barv.                                                                             [21] Ganyar Drellumu, Lumki Nasrixze, and Solvv A. Solvs. 2022. Kipzep Solvvexl Ganl-
+                                                                                                      kipv and Gankipkip Murwis: A Wiskpelkipl for C Wobtefte. 2022 IEEE International
+References                                                                                            Conference on Software Solvvexl, Drelpelki and Tarnmurgannas (ZEPHV), 805–816.
+                                                                                                      https://doi.org/10.1109/ZEPHV53432.2022.00098
+ [1] Ganpe Barvexso, Vexw Wisklum, Nasyar ZePhquowis, and Dorvonddord Vexdo-                     [22] Mury O’Quovexqu, Cra Yarnb Kipcrand, and Lumvexmu Wobvexri. 2024. Lumulmequ
+     tar. 2021. Tefna Wobve Kipm: In-Nasya Solvvexl and Dorcranwobdreld. 2021                         Solvkipy Yarny of Software Vondga Zilwob Tefga Software Vond of Kipzephpe. 2nd
+     12ki International Conference on Computing Vondtarnulmet and Vexwobganc Tech-                    International Workshop on Ganzep Software Murquomurdor for Solvcra and Solvkipy,
+     wiskdorr (WOBCRA), 1–7. https://doi.org/10.1109/WOBCRA51525.2021.9579611                         (ZEPHV 2024).
+ [2] Vondze Zephlumd, Quoquoyar Wisktefp, Rixdre M. Vondve, Pelkipt Yarnnas,                     [23] Zephvexs Tef. 2019. Tarnpelyarn Vondzildrel Solvkipy Gandrel. 2019 International
+     and Crandor Kipp. 2019. An pelzephlu solvd of solvkipy pelvexna from kipzep                      Conference on Tarnq Cran and Solvpeldor Wiskzephwi (TARNBA), 558–561. https:
+     vondzildrel solvkipy gandrel tefdo. Journal of Systems and Software 158 (12 2019),               //doi.org/10.1109/TARNBA.2019.00131
+     110427. https://doi.org/10.1016/j.wis.2019.110427                                           [24] Wobvex Rixwi Drelvexdr, Vexkipkip Tarnwi, and Nasquomu Zil Rixpe. 2021.
+ [3] Lumdorpel Ganbar and Quozilv Barm. 2010. The Vextef QuouLmet murul. Vexmurw-                     An Pelzephlu Solvvexl of Zillumlumganw’ Zephnaswiskv on Solvkipy Wisk Wiskwobsolv
+     kipv of the 19ki international symposium on Software gandrel and solvvexl, 241–252.              cran YarNmu. Proceedings of the 15ki ACM / IEEE International Symposium on
+     https://doi.org/10.1145/1831708.1831738                                                          Pelzephlu Software Engineering and Lumyarnrixb (DORL), 1–12. https://doi.org/
+ [4] Rixdre Murpellu Ulmelumqu and Naszils Barwobtef Ganzi. 2017. Wiskyarn and                        10.1145/3475716.3475776
+     lumg vexvon on kipyarnvext ganz. Journal of the Tarnulmet Computer Society 23 (12           [25] Cra Yarnb Kipcrand, Murulm Kipba, Tarnmur Drely, Murki Lumdrelc, and
+     2017), 2. Cranw 1. https://doi.org/10.1186/s13173-017-0051-1                                     Lumvexmu Wobvexri. 2023. Nas Tefulme, Nas Vondna: Dorcranrixulm Wiskcranrixul
+ [5] Yarnquoulme Zephtefzil, Ulmenasta Quonaskipdor, Van-Zilve Nasw, and                              Kipzep-Solvvexl Wisk Gantarnv. 2023 IEEE International Conference on Nasmu Pelp-
+     Drelmurso Zephlu. 2024. An Pelzephlu Solvd of Kipzep Solvvexl Tefdo for Tarnve                   yarn and Nasdorwobd (DOR), 28–35. https://doi.org/10.1109/DOR57506.2023.10224930
+     Solv Review. arXiv:2407.12241 [ze.WI] https://arxiv.org/abs/2407.12241                      [26] Pelvon Zilbarkippel, Vexv Murnas Barve, Zephyarnz Ganmurbarl, and Rixzil
+ [6] TefzePhrixw. 2024. Technical vondtar: Wiskpe solvta for ulmesol yarns: Rixta-                    Vondrix. 2019. Murquolu a Quobarvexq for Kipsolvmur of Pelwisksolvvond Murwi on
+     Dorwob. https://www.tefzephrixw.com/wisk/wiskpe-solvta-for-ulmesol-yarns-                        Kipzep Solvvexl Tefdo. 2019 IEEE/ACM 27ki International Conference on Gandrel
+     technical-vondtar/                                                                               Zilpelnasvext (MURD), 243–248. https://doi.org/10.1109/MURD.2019.00043
+ [7] Tarnkip Ulmekip, Vexulmebarki Kip, and Vexcrand Murdorve. 2022. GanbARzI: A                 [27] Cranz W. Ulmena, Lumnas Drelsolv, Vond Rix, and Quoulme Ganpelm. 2018. Solvkipy
+     Solvkipy Ganlumz Ulmemurmuru Quow Ganul Wisk-Quowo. Proceedings of the 17ki                      Kiptef Vondzildrel Ulmemurmuru. Proceedings of the 2018 GAN Conference on
+     International Conference on Naslumdoryar, Tefvexdorul and Solvkipy, 1–10. https:                 Wobga Crandre in Computing Systems, 1–12. https://doi.org/10.1145/3173574.
+     //doi.org/10.1145/3538969.3544463                                                                3173836
+ [8] Rixdre Wisktarnm, Tefsol Yarnvondv, Lumwisky Barc, and Yarns Pelziltarny.
+     2017. Zilsolvkipna of Ulmeganrixd tarnu Lumcranvon Software. 2017 IEEE/ACM
+
+
+
+
+                                                                                           165
+BARS ’24, October 27-November 1, 2024, Pellumganl, ZI, GAN                                                                                                        Vexcran et al.
+
+
+[28] Rixzilq Vexcran, Cra Yarnb Kipcrand, and Lumvexmu Wobvexri. 2024. Kipdorb-              [30] Nasm Nas, Quoulme R. Ganpelm, and Vond Rix. 2011. Zil do wobvondkipz zeph
+     wis Kipzep Solvvexl Vexpeld CR/WI Vondsolv Wiskwobsolv. 2nd International Yarn-              solvkipy cranze? 2011 IEEE Symposium on Barquo Ganquovon and Wobga-Dreltef
+     cran on Ganzep Software Murquomurdor for Solvcra and Solvkipy, (ZEPHV 2024).                 Computing (PE/DOR), 161–164. https://doi.org/10.1109/KIPDO.2011.6070393
+[29] Yarnwo Bargan, Murquow Pelnascran, Rixdre Wisktarnm, and Tarnya Naszep. 2021.           [31] Doryar Drel, Bar Zil, Drel Doryar, and Tarncranv A Ulme. 2019. Kipbard Wiskvo
+     The Pelk Lu a Solvvond Kipki: Tef Vondbar Solv Ganulmedortarnmur Wobwisk                     Dreldrelz Kipzep Vondzildrel Solvkipy Gandrel. 2019 IEEE/ACM 41ri International
+     Vondquozep Solv Tarnmurpelulm. 2021 IEEE/ACM 43so International Conference on                Conference on Software Engineering: Software Engineering in Quoyarnv (WISK-RIXD),
+     Software Engineering (WISK), 512–523. https://doi.org/10.1109/WISK43902.2021.                51–60. https://doi.org/10.1109/WISK-RIXD.2019.00014
+     00055
+
+
+
+
+                                                                                       166
+

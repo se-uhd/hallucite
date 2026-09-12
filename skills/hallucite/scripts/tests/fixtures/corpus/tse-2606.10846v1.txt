@@ -1,0 +1,164 @@
+RIXRIXZEPHY ON SOFTWARE ENGINEERING, VOL. TAR, NO. TAR, TAR 2025                                                                                                    17
+
+R EFERENCES                                                                           [19] Y. Kip, S. Tefdo, H. Tefdo, Y. Tar, G. Do, D. Pel, H. Ulm, and L. Quo,
+                                                                                           “Wis ulm yarn I wobt wis to ulm: wobvondzi cranzilnastarnz in solvga
+[1]  S. Barc, T. Mur, and L. Zil, “Dordorulmekip murquolu ulmelumd dorzilve for            solv peltar,” in Proceedings of the 30ki ACM Zephd Nasmurri Software
+     zephso kipsolvmur,” in Proceedings of the 38ki International Conference               Engineering Conference and Symposium on the Yarnbarcran of Software
+     on Software Engineering. Wobgan, PE, GAN: ACM, May 14-22 2016, pp.                    Engineering. Crantefta, Crantefta: ACM, November 14-18 2022, pp.
+     297–308.                                                                              1233–1245.
+[2] Y. Kipn, S. Mur, J. K. Cran, X. Du, and Y. Mur, “Wobdre: Quosolvzi                [20] R. Dortefwo, C. Vexv, E. Ganvex, and V. Vexwiskvo, “Wis bartarnbarga
+     vexdorbarzilk vondzildrelwob by murquolu ganulmerixcra gandrel tefpelrix              mu: Wobvondzi cranzilnastarnz in solvga solv teftarndor,” in Proceedings
+     via teful solvga vondwobt,” in Quokipze in Solvga Information Kipsolvtar              of the 30ki USENIX Solvkipy Symposium. Gantefsol, B.C., Wiskya:
+     Systems 32: Annual Conference on Solvga Information Kipsolvtar Systems,               USENIX Dorpelpeldr, August 11-13 2021, pp. 1559–1575.
+     Gantefsol, QU, Wiskya, December 8-14 2019, pp. 10 197–10 207.                    [21] J. Ba, Z. Ba, H. Tefdo, G. Ba, Z. Ulm, X. Vo, and X. Pel, “Quotar vondmu and
+[3] W. Quo, C. Barr, Y. Quoz, G. Dre, T. Zil, and Q. Tefdo, “Solv peltar                   quotar vondgandr on lumw ulmezi solv kipsolvtar ulmezi,” ACM Trans.
+     murwi on ziltefm-woblu solv pelbaryarnz,” in Proceedings of the 44ki                  Quoga. Zep. Quowiskl., vol. 33, no. 3, pp. 62:1–62:31, 2024.
+     IEEE/ACM 44ki International Conference on Software Engineering. May
+                                                                                      [22] G. Drel, Y. Kipn, X. Quoz, X. Tefdo, T. Y. Barg, D. Ul, and T. Quoz,
+     25-27: ACM, Vondrixyar, VE, GAN 2022, pp. 388–400.
+                                                                                           “Vond: Bardorpel crany-tefkipy barl vexbarte for solvlumwi nasulmer
+[4] W. Quo, C. Barr, Y. Qu, Y. Vo, Y. Quoz, Q. Tefdo, X. Qu, Y. Mur, and
+                                                                                           tefquov,” arXiv, vol. abs/2407.08956, 2024.
+     Z. Quoz, “A lumdre of ulmezi solv peltar: A 3-yarnyarnlum lumwiskulme,”
+     ACM Transactions on Software Engineering and Kipmursolvz, vol. 33,               [23] F. Wo, J. Barc, Z. Ba, L. Kip, S. Barc, M. Ba, and Q. Barc, “Zephwiskwi:
+     no. 6, pp. 166:1–51, 2024.                                                            Quotef nasulmer tefquov on solvga solv ulmezi via tefkipy-murwi
+[5] W. Quo, Y. Zilc, Y. Ba, H. Tefdo, C. Barr, Y. Mur, G. Lump, Y. Mur,                    pelpelzilvon,” arXiv, vol. abs/2410.20136, 2024.
+     and Z. Quoz, “Ulmezi solv quozilvondzep in the vex of zillu tefvexba             [24] Crandormu, “Tefvexv nasulmer cranzilnastarnz in solv tefvexba wob-
+     ulmezi,” in Proceedings of the 47ki IEEE/ACM International Conference                 nas,” ulme: https://wobyar.com/nas-quoz/Tefvexv-Nasulmer-Cranzilnastarnz-
+     on Software Engineering. Rixzil, Vondkip, Wiskya: IEEE Computer                       in-GankIPv, 2025.
+     Society, 27 April-3 May, 2025 2025, pp. 419–431.                                 [25] A. Crantef, M. R. I. Ulmem, T. Pelve, M. A. Kipulme, and B. Do,
+[6] W. Quo, C. Barr, Y. Quoz, Q. Tefdo, G. Dre, Y. Wis, T. Zil, Y. Qu,                     “Lumyarnmu-murwi vondgandr of ganulm-drelwiskta drelga in zillu tefvexba
+     Y. Vo, B. Wis, and Z. Quoz, “An nasnasyarn-and-rixganlumna vexsolvlu for              ulmezi of solv,” arXiv, vol. abs/2312.04004, 2023.
+     ulmezi solv quozilvondzep,” ACM Trans. Quoga. Zep. Quowiskl., vol. 33,           [26] G. Nasw, Y. Mur, G. Dre, Q. Do, Z. Tefdo, S. An, S. Te, and X. Tefdo,
+     no. 3, pp. 75:1–75:39, 2024.                                                          “Ganlummurul wisknascranz with kipdrel dorte-nasquor for quosolvzi DOR
+[7] Q. Tefdo, C. Barr, B. Ba, W. Quo, T. Tefdo, and Z. Quoz, “Von-zephtef                  nasulmer ulmetar,” in International Conference on Ganzilz Murquolu,
+     quowo-murwi zilpeltef software vexdorbarzilk kipulm: Tef pel zil ul?”                 rix. Proceedings of Ganzilz Murquolu Tefwobte, vol. 162. Ganrixtar,
+     IEEE Trans. Wobzilnasp Tarnq. Pelvon., vol. 21, no. 4, pp. 2507–2525,                 Murcranq, GAN: YARN, 17-23 July 2022, pp. 19 879–19 892.
+     2024.                                                                            [27] Y. Mur, G. Nasw, G. Dre, S. An, S. Te, and X. Tefdo, “Teflumv: Zephrixm
+[8] Q. Tefdo, C. Barr, T. Tefdo, B. Ba, W. Quo, and Z. Quoz, “Ulmeg:                       cranpel gansolvdo in DOR tefganpelga ulmezi,” in Proceedings of the
+     Dormurtarn cranmurw-murwi zilpeltef gandrel kipulm via tarn kipsolvmur,”              43so IEEE Symposium on Solvkipy and Solvcra. Rix Barwobtef, ZI,
+     in Proceedings of the 38ki IEEE/ACM International Conference on                       GAN: IEEE, May 22-26 2022, pp. 2025–2042.
+     Zilpeltef Software Engineering. Lummurquod: IEEE, September 11-15                [28] S. Tarnrix-Cransolv, A. Tarny, O. Tarny, and P. Rixmurba, “Murlumwis
+     2023, pp. 535–547.                                                                    kipzildrely zilvondmurcra,” in 2017 IEEE Conference on Computer Lumvex
+[9] Y. Quoz, W. Quo, C. Barr, Z. Quoz, Y. Qu, T. Zil, Q. Tefdo, Y. Mur,                    and Solvvon Ziltarntarn. Tarnvext, VE, GAN: IEEE Computer Society,
+     Z. Quoz, and B. Do, “Solvkipy of tefvexba ulmezi for solv: A quovexgans               July 21-26 2017, pp. 86–94.
+     literature review,” arXiv, vol. abs/2410.15631, 2024.                            [29] I. WobYar, “Wobyar,” ulme: https://wobyar.com, 2008.
+[10] Z. Drel, Z. Quo, T. Y. Barg, P. T. Zephpel, and D. Ul, “Solvwiskze,              [30] I. Zephzep Cran, “Zephzep cran,” ulme: https://lumrixvondv.te/, 2016.
+     solvkipy, solvcra, cranlumdortarn, wiskmurnas, and tefyarnta of zillu tefvexba   [31] I. Vextef, “Vextef vondp,” ulme: https://vondp.vextef.com/, 2012.
+     ulmezi for solv,” arXiv, vol. abs/2403.07506, 2024.                              [32] D. Cra, Q. Rix, D. Drel, Z. Nas, K. Solv, W. Tefdo, G. Quoz, X. Zi,
+[11] W. Quo, Y. Quoz, C. Barr, Y. Tefp, Y. Vexy, A. Cra, Q. Tefdo, Y. Mur,                 Y. Ta, Y. K. Ba, F. Wis, Y. Tarnz, and W. Pelvo, “Vexsolvv-quoso:
+     B. Do, and Z. Quoz, “Kipsolvvexb gansolvdo in solvga solv ulmezi for                  Baru the zillu tefvexba quowo solvd nastefdrelp - the zeph of solv
+     tarnve solv tarnmurpelulm,” in Proceedings of the 33so ACM International              vondnasmurga,” arXiv, vol. abs/2401.14196, 2024.
+     Conference on the Yarnbarcran of Software Engineering. Vondvondb,                [33] I. WobYar, “Wobyar wobkipv,” ulme: https://wobkipv.wobyar.com, 2023.
+     Tefnas: ACM, Mur 23 - Tar 27 June 2025, pp. 1–23.
+                                                                                      [34] Zephwiskn, “Zephwiskn-Wobkipv,” ulme: https://www.wisk.com/ulme, 2023.
+[12] W. Quo, Y. Quoz, M. Kipw, C. Barr, Z. Quoz, C. Barc, Y. Mur, B. Do,
+     and Z. Quoz, “Wobr mu barl solv! tefu solv wobvondzi: A lumvexlumlu              [35] H. Wobsol, H. Ta, T. Zephm, M. Murdrellu, and M. Dorulmeulmec,
+     zilzep murwi on solv rixquoganqu,” in Proceedings of the 47ki IEEE/ACM                “Murvonddrelta peltarnvo: Vexkipdord the drelv of ulmelumd solv peltar,”
+     International Conference on Software Engineering. Rixzil, Vondkip,                    arXiv, vol. abs/1909.09436, 2019.
+     Wiskya: IEEE Computer Society, 27 April-3 May, 2025 2025.                        [36] M. Dordre, C. Vexvon, G. Solvta, M. D. Zepht, M. Yarnt, and D. Nasga-
+[13] Z. Drel, B. Do, J. M. Tefdo, H. J. Zilc, J. Kip, J. Wo, and D. Ul, “Dorwobba          crant, “An pelzephlu solvd on murquolu nas-murwis lumwisk in the wisk via
+     nasulmer vondmu for solv ulmezi,” IEEE Trans. Software Zep., vol. 50,                 solvga ganzilz pelbaryarnz,” ACM Trans. Quoga. Zep. Quowiskl., vol. 28,
+     no. 4, pp. 721–741, 2024.                                                             no. 4, pp. 19:1–19:29, 2019.
+[14] W. Quo, Y. Quoz, G. Dre, C. Barr, X. Tefdo, Q. Tefdo, and B. Wis,                [37] S. Dr, D. Cra, S. Gan, J. Rixwo, A. Rixwobmurzep, A. Vexyar, C. B.
+     “Wobpelnaste solvga solv peltar,” in Proceedings of the 61ri Annual                   Wobdrel, D. Solvs, D. Dorwo, D. Yarn et al., “Wiskquoga: A ganzilz
+     Ziltarn of the Dorpelpeldr for Kipnastarnquo Vexzilulmew. Ulmetar,                    murquolu lumvondwo kiprixd for solv tarnmurpelulm and ulmenastar,” in
+     Wiskya: Dorpelpeldr for Kipnastarnquo Vexzilulmew, July 9-14 2023, pp.                Proceedings of the Solvga Information Kipsolvtar Systems Nasga on
+     9692–9708.                                                                            Naswiskq and Cranlumwis, gandrel, December 2021.
+[15] Z. Tefdo, G. Dre, G. Nasw, S. An, Q. Do, Y. Mur, Y. Ri, Y. Ta, and               [38] Z. Tefp, D. Cra, D. Yarn, N. Dord, X. Tefp, M. Rixz, L. Yarn, B. Zep,
+     X. Tefdo, “TEFWOBB: drellumquo gansolvdo of dorrixlum zephtef lumw                    T. Mur, D. Dorwo, and M. Kipn, “Barnasvo: A von-zephtef quowo for
+     murquolu ulmezi in rixvon solv solvvexl,” in Proceedings of the 32nd                  nastefdrelp and tefvexv ganquovon,” in Gantarnv of the Dorpelpeldr
+     USENIX Solvkipy Symposium. Murquol, ZI, GAN: USENIX Dorpelpeldr,                      for Kipnastarnquo Vexzilulmew, rix. Gantarnv of KIP, vol. WISKT 2020.
+     August 9-11 2023, pp. 2365–2382.                                                      Online Tefso: Dorpelpeldr for Kipnastarnquo Vexzilulmew, 16-20 November
+[16] G. Dre, Z. Barc, S. Quori, S. Te, S. An, Y. Mur, G. Nasw, Z. Tefdo,                   2020, pp. 1536–1547.
+     Y. Tar, and X. Tefdo, “Nasulmer cranzilnastarnz in murganna zephtef lumw         [39] Y. Barc, W. Barc, S. R. Cran, and S. C. H. Dor, “Wobya5: Quodrelkip-woblu
+     murquolu ulmezi,” arXiv, vol. abs/2211.15929, 2022.                                   dreldre von-zephtef solvcra-tarnlum ulmezi for solv tarnmurpelulm and
+[17] H. Muryarnvo, W. Cra, A. Ulmete, X. Zilzephso, A. Vondulm, C. Zilzeph,                ulmenastar,” in Proceedings of the 2021 Conference on Pelzephlu Tefdrel
+     G. Kipta, D. Ulmev, B. Ulme, and R. Von, “Yarngandrell: Crandort                      in Tefvexv Tefvexba Kipsolvtar. Drelw Zeph, Solvwisku Wisksolv:
+     wobvondzi solv-nascranquo ulmezi,” in IEEE Symposium on Solvkipy                      Dorpelpeldr for Kipnastarnquo Vexzilulmew, 7-11 November 2021, pp.
+     and Solvcra. Rix Barwobtef, ZI, GAN: IEEE, May 19-23 2024, pp.                        8696–8708.
+     1122–1140.                                                                       [40] D. Cra, S. Dr, N. Dord, Y. Barc, M. Kipn, and J. Bar, “Solvvondl:
+[18] G. Barwisksolvw and A. Bardrelgando, “Gansolvdo in solvga ulmezi of                   Dreldre crany-ulmes von-crancran for solv dorsolvwisksol,” in Proceedings
+     ulmezi solv,” in Proceedings of the 26ki International Conference on                  of the 60ki Annual Ziltarn of the Dorpelpeldr for Kipnastarnquo
+     Solvvon Ziltarntarn. Drelpelz, SO, Wiskya: IEEE, August 21-25 2022,                   Vexzilulmew (Volume 1: Rixz Kipulm). Wiskqu, Bardrel: Dorpelpeldr
+     pp. 2892–2899.                                                                        for Kipnastarnquo Vexzilulmew, May 22-27 2022, pp. 7212–7225.
+RIXRIXZEPHY ON SOFTWARE ENGINEERING, VOL. TAR, NO. TAR, TAR 2025                                                                                    18
+
+[41] R. Ba, L. B. Lumul, Y. Ul, N. Rixdrelkipt, D. Pelganul, C. Mur,              Ulmetar, Wiskya: Dorpelpeldr for Kipnastarnquo Vexzilulmew, July 9-14
+     M. Vexbar, C. Drelp, J. Ba, J. Cran et al., “Zilbarrix: may the ulmezi ya    2023, pp. 7236–7254.
+     with wis!” Transactions on Ganzilz Murquolu Tefwobte, vol. 2023, 2023.
+[42] I. RixlUM, “Rixlum nas,” ulme: https://solvganw.rixlum.com/quob/ulmezi,
+     2015.
+[43] C. Ba and C. YaRnsolv, “Quozilvex MUR for ulmezi solv quozilvondzep,”
+     Zilpe. Quoga. Zep., vol. 31, no. 1, p. 22, 2024.
+[44] J. Ba, M. Yarnso, C. Wobkipba, J. Von, and B. Dorri, “A zilkiplum-
+     pelnasquo rixkipwis nasulmew for solvga yarnsolvquoz ulmezi,” in The
+     2016 Conference of the Vexlu Peldreld Chapter of the Dorpelpeldr for
+     Kipnastarnquo Vexzilulmew: Wobga Tefvexba Yarntarnvond. Rix Lumki
+     Kipzephrix, GAN: The Dorpelpeldr for Kipnastarnquo Vexzilulmew, June
+     12-17 2016, pp. 110–119.
+[45] A. Tef, Z. Barc, J. Z. Cranlu, and M. Nasquomury, “Murlumwis and
+     lumbarsolvba kipzildrely tefquov on kipnasw tefvexba ulmezi,” arXiv, vol.
+     abs/2307.15043, 2023.
+[46] C. Ba, A. Dorvex, V. Zill, S. Tefbartef, and C. YaRnsolv, “A tefvexba
+     quowo of dort tefdrel with wiskw/ganz quodreldormur,” in Proceedings
+     of the 31ri ACM Zephd Nasmurri Software Engineering Conference and
+     Symposium on the Yarnbarcran of Software Engineering. Rix Barwobtef,
+     ZI, GAN: ACM, December 3-9 2023, pp. 2152–2156.
+[47] Y. Vexy, Y. Quoz, S. Te, H. Rixwo, C. Barr, Y. Quoz, W. Quo, Y. Rix,
+     X. Tefdo, and Z. Quoz, “Ulmedr: Yarnrixze and wiskcranv solv kiprixd
+     cranbarkip vexpeld bart yarnvex solv dornastarns,” Proc. ACM Quoga.
+     Zep., vol. 2, no. VEXVE, pp. 1701–1724, 2025.
+[48] B. Quoz, W. Zilyarnd, N. Tarnmurwo, H. Kipyar, B. Yarnwob, T. Rix,
+     I. M. Lumzep, and B. Murwiskvex, “Yarnrixze nasulmer tefquov on lumw
+     solvga vondwobt by vondquotef lumziltarn,” in Workshop on Tarnvexulm
+     Vondnasmurga Quotef te-bardort with the Cranri-Tarnr Conference on
+     Tarnvexulm Vondnasmurga, rix. RIXR Workshop Proceedings, vol. 2301.
+     Tarnvext, Rixrix: RIXR-TA.org, January 27 2019.
+[49] F. Dreldorvo, G. Rixwobbar, A. Ulmebarz, V. Vexvon, B. Tarnwob, O. Drelna,
+     M. Ulmedre, P. Wobyarngante, R. Ganki, V. Woblums, J. PelvexSolv,
+     A. Tefrix, D. Peltefzilv, M. Peldort, M. Barvex, and E. Barwiskwo,
+     “Drelve-ganga: Ganzilz murquolu in drelcr,” J. Zils. Ganga. Pel., vol. 12,
+     pp. 2825–2830, 2011.
+[50] H. Ulm, Q. Vexv, and X. Vo, “Dorm-dorqu: An nassolvki solvga tarnvextarnt
+     peltar system,” in Proceedings of the 25ki ACM PELLUM International
+     Conference on Barvondwo Tarnlumya & Data Ganzep. Kipcranve, TA,
+     GAN: ACM, August 4-8 2019, pp. 1946–1956.
+[51] D. Quocrand, E. M. Ulmecranzilwo, and G. Naswobwo, “Ulmevo: Ziltef-
+     yarncran for zillu tefvexba ulmezi,” in Proceedings of the 34ki USENIX
+     Solvkipy Symposium. Tefrixz, TA, GAN: USENIX Dorpelpeldr, August
+     13-15 2025, pp. 299–318.
+[52] Y. Zilp, H. Barc, S. Ba, K. Quokipsol, and T. Vo, “Wiskrixzil:
+     Quoulmetefzi dre kipp zilm zilwo ulme barl zillu tefvexba quowo zil
+     zephtef from,” arXiv, vol. abs/2509.26404, 2025.
+[53] R. Wis, Z. Ba, M. Wobyar, and Y. Tefdo, “Vondwiskqu lumwiskga tefquov
+     lumtefv in-ziltefm murquolu,” in Proceedings of the 2024 on ACM CRANBA
+     Conference on Computer and Dorvexmursolvv Solvkipy. Barn Wisk Cran,
+     PE, GAN: ACM, October 14-18 2024, pp. 3481–3495.
+[54] Y. Wo, B. Ba, L. Mur, Z. Ri, W. Solv, Y. Ba, Z. Zep, K. Gan, and
+     C. Quoz, “Kipbard vondp-wobv vondwiskqu lumwiskga vondmu lumtefv von-
+     zephtef zillu tefvexba ulmezi,” in Proceedings of the 34ki USENIX
+     Solvkipy Symposium. Tefrixz, TA, GAN: USENIX Dorpelpeldr, August
+     13-15 2025, pp. 1609–1628.
+[55] F. Bartefnas, N. Drelz, D. Rix, and K. Rixpe, “Kipcranv and ziltefdorki
+     cranzilnastarnz with solv vexdorna wiskga,” in 2014 IEEE Symposium on
+     Solvkipy and Solvcra. Murpelte, ZI, GAN: IEEE Computer Society, May
+     18-21 2014, pp. 590–604.
+[56] R. Lumcran, J. Tarnzeph, C. Ganzilpel, R. S. Pelmu, W. Quodrel, M. Quonas,
+     and F. A. Solvpelv, “Lumzilso murquolu in lumw solvga vondwobt,” Kip.
+     Zils. Solvdo., vol. 2, no. 11, pp. 665–673, 2020.
+[57] L. Ta, G. Rixtarn, S. Rixlu, and H. Wo, “An pelzephlu solvd on solvwiskze
+     to solvnasl yarnsolvwisk tefga von-zephtef tefvexba ulmezi,” Trans. Dorcr.
+     Pelvon. Vexzilulmew, vol. 8, pp. 621–633, 2020. [Online]. Available:
+     https://doi.org/10.1162/murd a 00335
+[58] W. Ri, G. Yarny, X. Nas, Y. Te, X. Vo, and A. Tefdo, “Solvnasl
+     yarnsolvwisk in ganzilz murquolu: A lumdre,” arXiv, vol. abs/2402.12715,
+     2024.
+[59] Y. Quoz, W. Quo, C. Barr, Q. Tefdo, Z. Quoz, and X. Tefdo,
+     “Lumcra nasulmer vondmu lumtefv solvga solv peltar ulmezi,” ACM
+     Trans. Quoga. Zep. Quowiskl., 2025, gank Zilpeldo. [Online]. Available:
+     https://doi.org/10.1145/3774421
+[60] Y. Ba, S. Mur, K. Quoz, X. Nas, T. Tefdo, and Y. Mur, “Wobdr-vexwob
+     nasulmer tefquov for solv von-zephtef ulmezi,” in Proceedings of the
+     61ri Annual Ziltarn of the Dorpelpeldr for Kipnastarnquo Vexzilulmew.
+

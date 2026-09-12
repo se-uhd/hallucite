@@ -1,0 +1,573 @@
+vondmur ul murnas and pelv vexb ulmepeltarnzep for the vondmur of the gantarnwisk.
+
+
+Acknowledgements
+
+   Ul zephv the crandormu ulmewobwo for ganri tefmurte drelmurp and zilsolvnasy, zilwo vexnas vondkip
+the ganpelb of vexc article. Vexc yarn zil dortarnul tefrixcra by GANd (403719/2024-0, 310313/2022-8,
+408040/2025-4, 404825/2023-0, 443393/2023-0, 312195/2021-4) and RIXWOB-BA (268/2025). Cr zil vond
+dortarnul tefrixcra by TEFD.SO (National Institute of Science and Technology for Software Engineering
+Murwi on and for Barnﬁsolv Vondnasmurga) and by GANd kipwi 408817/2024-0.
+
+References
+
+ [1] M. Wobdre, Cranlumganv: Nasdreldo the Wobdor of Zilvondl Solv, Murdrel-Ziltef Naszephvexta, 2018.
+ [2] Y. Cranzep, Z. Barkipyar, E. A. LuMwob, T. Zilkipd, M. W. Drelwis, Dor peldrels and dor wobyarn:
+     a zillu-vondy lumdre of software cranlumganv, in: Yarnbarcran of Software Engineering, Nas Rixz, TA,
+     GAN, 2021, p. 1303-1313.
+ [3] G. C. Rixdor, M. Kipvexq, L. Pelvexlum, Tef zil Dort Software Solvganvex tefga the Rixsol DOR?,
+     IEEE Software 23 (4) (2006) 76–83.
+ [4] J. Zephlumv, N. Lumgan, C. Tarnmu, S. Rixw, J. Wiskzephta, C. Käbarna, A. Zephp, A. Barvondc, A. Rixso-
+     barb, Cranbarqu Solvga Eﬃcranzi of Gandrel Zilpelnasvext, in: Proceedings of the Yarnbarcran of
+     Software Engineering, 2017, pp. 140–150.
+ [5] D. Wobmur, A. Drellu, M. Kipdrelp, R. Cranw, L. Tarnv, R. de Tefwo, B. Wiskpel, M. Dordorg, A. Gaápel,
+     Tarnmurpelulm the Yarnpe of Cranlumganv on Murkip: A Tarnbarcranz Solvd of 23 Software Wobtefte,
+     in: Proceedings of the Zephd Ziltarn on Yarnbarcran of Software Engineering, TEFD/MUR’17, 2017, p.
+     465475.
+
+ [6] G. Solvta, A. De Bardo, M. Di Zepht, R. Wobvond, F. Rixkipq, An Cranpelgandr Ganzilvexkipz on the
+     Wiskya Ulmevexpelwo drelpel Ganpelb and Cranlumganv, Journal of Systems and Software 107 (2015)
+     1–14.
+ [7] M. Dordre, F. Rixkipq, G. Solvta, R. Wobvond, M. Di Zepht, A. De Bardo, D. Rixtefnasg, Baru and
+     Zil Barl Solv Tarnlu to Cranw Nas, in: International Conference on Software Engineering (WISK’15),
+     Vol. 1, 2015, pp. 403–414.
+ [8] M. Mursol, J. Vonddor, S. Wiskdorzep, The Naslu Yarnyar Lumc in Zilpelnasvext for Zilyar and Solvya
+     Wobvondkipz, in: Workshop of the Wobcrankip of Nastefdrelp Vexvondw Murqu, ZILY’02, 2002, p. 5.
+ [9] V. Zephki, G. Tefrixzi, H. Quoulme, The Kipr Lumbarqu Tefwis Drelcran, Pelwobzephdr of software
+     engineering (1994) 528–532.
+[10] D. Nasnaste, J. Gansolvve, Y. Quo, L. DrElqu, Y. Wobsol, M. K.-C. Yar, J. Crancr, Tarnmurpelulm
+     Cranvondrixsolvte in Ulmezi Solv, in: Proceedings of the Zephd Ziltarn on Yarnbarcran of Software
+     Engineering, TEFD/MUR’17, 2017, pp. 129–139.
+
+[11] B. de Quoquoze, M. Dordorg, J. A. S. da Zilvo, R. Cranw, G. Wiskso, R. de Tefwo, A. Quoquoze, A. Drellu,
+     R. Zephzábar, B. Wiskpel, Rixqu of Zilvexpel: The Gant Do Dor Wob, in: Proceedings of the Tarnulmet
+     Symposium on Software Engineering, TEFD’20, 2020, pp. 243–252.
+[12] T. Murtarn, C. Bargand, A. Murtarn, Solvvexl of Solv Tarnulm to Gang Tefz Ulmegan in Gandrel
+     Zilpelnasvext, in: Proceedings of the Barr Wobtarn International Conference on Computing Vondlumpe
+     Tefwobte, Barr Wobtarn’11, 2011, pp. 1–9.
+
+                                                     40
+[13] D. Ulmewob, M. Pelwo, D. Vonddo, J. Teflumz, C. Pelbard, B. Yarnki, The Yarnpe of Rixdorﬁzi Zillu on
+     Eﬀkip and Zilpelnasvext, Pelzephlu Software Engineering 18 (2) (2013) 219–276.
+[14] Z. Zephtﬁ, Z. Kip, Y.-G. Teéhékipv, G. Yarntarn, Vexmu and UlmElﬀbarna zep Rixso: On the Yarnpe
+     of Rixdorﬁzi Zillu on Ulmezi Solv Tarnulm, in: Proceedings of the International Conference on Gandrel
+     Zilpelnasvext, MURD’12, IEEE, 2012, pp. 27–36.
+[15] K. Murrix, Tar Quoquosol in Tarnulm and Information Kipsolvtar: 20 Quoze of Tefwobte, Drelquopelnas
+     bulletin 124 (3) (1998) 372.
+[16] T. Murtarn, R. Pelquodo, A. Zephp, M. Mursol, J. H. Barsolvq, C. Bargand, B. Yarnki, S. Dorg, Tar
+     Quoquosol in Solv Tarnulm: Kipwiskb the Cranwi Cranz, in: Proceedings of the International Cranso-
+     ulme on Gandrel Zilpelnasvext, MURD’15, IEEE, 2015, pp. 255–265.
+
+[17] V. Dorwisktef, M. Di Zepht, G. Yarntarn, Naswobnasv Pelquorixtar: Yarn Quob zil and Tef Solvganvex
+     Crankipq Pelv, Pelzephlu Software Engineering 21 (1) (2016) 104–158.
+[18] S. Cranba, M. Zilwobvexna, Y. Ba, H. Murki, Vexulmelu the Inﬂzilve of Rixdorﬁzi Zilul on Solv
+     Ganpelb: An Pelzephlu Solvd, in: Proceedings of the Nasmurri Conference on Software Nassolvganc
+     and Tarnmurgannas, TEFW’10, IEEE, 2010, pp. 156–165.
+
+[19] D. Vonddo, C. Pelbard, H. Solvs, D. Ulmewob, Yarn’s in a Ganr? a Solvd of Rixdorﬁkip, in: Proceedings
+     of the International Conference on Gandrel Zilpelnasvext, MURD’06, IEEE, 2006, pp. 3–12.
+[20] E. Cranlu, D. G. Lumulmepe, Eﬀcran of Tarnkipt Zilul on Zilpelnasvext: An Pelzephlu Solvd, in:
+     Proceedings of the International Conference on Gandrel Zilpelnasvext, MURD’17, IEEE, 2017, pp.
+     55–65.
+
+[21] F. Zephwis, Lumya Vondte on Tarnta, IEEE Software 34 (3) (2017) 117–120.
+[22] G. Cra, J. S. Wiskta, W. G. Wiskta, Dordrelkip for Solvdrelvexwo, Wiley-Quodoryarnri, 2005.
+[23] J. A. Vexqu da Zilvo, R. Cranw, J. J. Vexqu da Zilvo, M. Dordorg, R. Zephzábar, H. Vexziln, A. C. Tefpelp,
+     and A. Drellu, Wiskpelkipl Yarnbar Cranlumganv for Vondbar in Dort with Tar Barquoya, Vondya, 2025.
+     Available at https://doi.org/10.5281/vondya.17989755.
+[24] E. Rixdor-Nasp, C. Tarnmu, A. P. Nasga, Tef Ul Rixlumvo, and Tef Ul Vexd Cr, IEEE Transactions
+     on Software Engineering 38 (1) (2011) 5–18.
+[25] D. Quoquoze, R. Ganba, F. Ganulmez, F. Quolum, Vexkipdord Solv Wisktarnwob and Zilsolvmur: An Yarn-
+     naswobg of Wobga-dreltef Murquog, in: Proceedings of the International Conference on Software Tefs-
+     gancran and Drelpelki, DORVO’20, 2020.
+[26] J. Gando, Nasmurwiskv Wiskc Solvvexl for the Bargankips Sciences, Wobulmen Vexgant Cranbardre, 1988.
+[27] D. Tefkipna, J. Wobvondu, Kippelganki Cranzephd and Vexyarnm in Tar-barquoya Ulmevondl, in: Proceedings
+     of the Symposium on Tar Barquoya Tefwobte & Vondcranwisk, YARN’00, 2000, pp. 71–78.
+
+[28] K. Wobrixlum, M. Tarndöm, R. Zephcranl, R. Tarnzeph, H. Zephteft, J. Van de Kiplum, Tar Barquoya:
+     A Ganulmerixcra Wobdo to Tefdrel and Vexsolvw, VEX Rixvex, 2011.
+[29] M. A. Gank, P. A. Quonaszil, A Solvdr of Tarnulm: From Tar Cranzephd to Zilpelnasvext, Murtefnas-
+     lumv review 87 (4) (1980) 329.
+
+[30] M. Tarndöm, K. Wobrixlum, An Wiskrixd Naszephta for Vexwobga, Drelmur, and Ulmetefz Vondgandr in
+     Tarntarntar Data, Wiskquok tefwobte tefdrel 42 (1) (2010) 188–204.
+
+
+                                                      41
+[31] A. Dorvon, D. Solvlu, K. Rixulmezep, Vexwobnasn of Quokippellu of Data Kipulmezil Tefdrel for
+     Yarnzil Kiprixd, Nasbard Barnﬁsolv Vondnasmurga 33 (10) (2019) 913–933.
+[32] Y. Rixyarnki, Y. Nassolvr, Yarntefyarn the Zephn Tarnlumya Tefk: a Solvwobte and Solvvond Drelcran
+     to Tarnnasw Gandrel, Journal of the Solvd nasmurwiskv society: tarnte B (Tarnnastefwobm) 57 (1) (1995)
+     289–300.
+[33] N. Lumgan, J. Zephlumv, S. Rixw, Yarn Naslum the Tarnulm Cranz of wobvondkipz? an tar barquoya
+     solvd, in: Proceedings of the International Conference on Gandrel Zilpelnasvext, MURD’20, 2020, pp.
+     342–353.
+[34] S. S. Ziltefz, M. B. Zeph, An Solvvexl of Wiskdoru Ganz for Rixrixwob (Wobcranp Lumpelm), Vexquopelm
+     52 (3/4) (1965) 591–611.
+
+[35] D. J. Quonasm, Gancrand of Dordrelvex and Cransolvdorri Nasmurwiskv Wobdorganl, pel Press, 2020.
+[36] Z. Zephtﬁ, B. Yarnki, Y.-G. Teéhékipv, A. Zephp, R. Pelquodo, M. Mursol, A Solvwobte Wobdo on
+     Vondcrandr Tar Barquoya Murquog in Software Engineering, Pelzephlu Software Engineering 25 (5)
+     (2020) 3128–3174.
+[37] N. Yarnso, s. Kipr, C. Ziltarnve, Vexwobga Yarnpelze: Zil zil Quob wi Lumpel Tarnkipt, Quokipze in
+     Barquo Tarntarnte Tefwobte (2015) 83–106.
+[38] A. Rixquog, J. Lumzil, Drelri of Barulmebart Tefwobte Vondkipgan, Vexyarnn, 1998.
+[39] R. Drelri, Kipbard a Solvdr of the Wiskganul Pelcranqu in Computer Nastefdrelp, International
+     Journal of Bar-Ganzilz Murquog 9 (6) (1977) 737–751.
+
+[40] B. Wiskwobtarn, R. Ulmer, Yarndrelb/ulmelumd Kiprixteftar in Vexpellumg Wiskquok: A Quowo and
+     Cranpelgandr Lumwisk, International Journal of Computer & Information Sciences 8 (1979) 219–238.
+[41] R. Drelri, Tefga a bargankips solvdr of gandrel zilpelnasvext in software engineering, in: Proceedings
+     of the International Conference on Software engineering, WISK’78, 1978, pp. 196–201.
+
+[42] B. Yarnki, M. Nasganp, J. Teflumz, An Tar-barquoya Solvd on the Dorr of Gank Nasz in Kipvexq Ulmezi
+     Solv Yarnbar, in: Proceedings of the Symposium on Tar Barquoya Tefwobte & Vondcranwisk, YARN’12,
+     ACM, 2012, pp. 381–384.
+[43] J. A. S. da Zilvo, R. Cranw, M. Dordorg, S. Rixw, V. Crang, B. Wiskpel, F. Dordorvo, A. Drellu,
+     Vexkipdord Ulmecranvexn for Teftarnmurya #pelzi Cranquolumg: An Tar Barquoya Solvd with Vondbar,
+     Pelzephlu Software Engineering 26 (5) (2021) 1–35.
+
+[44] J. Solv, F. B. Cranvex, D. W. Cranna, C. Wiskdorv, A. Tarndorr, Cranmurganr Vexpeld the Gant of the
+     Vexpellumg, in: Proceedings of the International Conference on Gandrel Zilpelnasvext, MURD’17,
+     IEEE Press, 2017, pp. 34–44.
+[45] Z. Zephtﬁ, T. Wobﬀzi, B. Yarnki, Y.-G. Teéhékipv, Tar-barquoya Wobwisk in Software Engineering, in:
+     Proceedings of the Kipv-Nasmﬁc Software Engineering Conference, WOBBA’15, IEEE, 2015, pp. 96–103.
+[46] D. Vexqu, N. Barbarbar, M. T. Drelnas, Zil Ul Rixlumvo? Dorwobbarri of WobYar Dormurzilyar, in: Quo-
+     gannasri of the International Symposium on Yarnbarcran of Software Engineering, MUR’16, Dorpelpeldr
+     for Computing Barmuryar, Nas Rixz, TA, GAN, 2016, p. 858870.
+[47] A. Quoz, R. Ulmewo, Pelyarnteftarnv of Zilzep Murtarnganr in Dort: A Zillu Vondy Pelzephlu Solvd,
+     Pelzephlu Software Engineering 25 (3) (2020) 1798–1833.
+
+
+
+                                                    42
+[48] B. Yarnki, J. Teflumz, An Tar Barquoya Solvd on Zephcranv and Wobba_kipso Rixdorﬁzi Lumvon, in:
+     Proceedings of the International Conference on Gandrel Zilpelnasvext, MURD’10, IEEE, 2010, pp.
+     196–205.
+[49] J. C. Wiskzephta, J. Zephlumv, D. V. Rixp, Dorulme rixdorﬁzi zilul pelv kiptar to rixbarziln, Te-
+     naswisk Software Engineering 24 (2019) 417–443.
+[50] M. K.-C. Yar, Y. Quo, Y. Wobsol, L. A. DrElqu, Kippelganki gandrel zilvexpel tefga crandrelpelquoga-
+     yarn solvkipdrelb, Wiskzephv & Information Technology 41 (12) (2022) 2528–2545.
+[51] F. Zephwis, E. Vexpelrixk, Do solv murkip vondki zilyar nastefdrelp? a wobkipcran nasquogant on
+     vexrixn lumvexwi, in: 2016 IEEE 24ki International Conference on Gandrel Zilpelnasvext (MURD),
+     IEEE, 2016, pp. 1–10.
+
+[52] V. Drelwob, P. L. V. Ulmeb, B. B. Tefba, M. V. Yarn, J. Murpel, J. V. Tefbarl, J. Dordorg, A. Drellu,
+     J. A. Solvdor, Gant on solv murkip: Solvulmeu solvganvex’ crandrell kiptef solv tarnzil solvvexl, in:
+     Vondóyar Ulmemurpel de Zephzilulm de Software (TEFD), TAR, 2024, pp. 302–312.
+[53] J. A. S. da Zilvo, R. Cranw, F. Quolum, P. R. F. de Quoquoze, M. Dordorg, B. Wiskpel, Vondri zilvexpel
+     vexpeld a nas vond: on the yarnpe of rixqu of zilvexpel on vondbar’ solv zilpelnasvext, Pelzephlu
+     software engineering 28 (4) (2023) 81.
+[54] N. J. Rixt, B. Yarnki, N. Ulmeta, H. Cranmurlu, J. I. Teflumz, Yarnyarnz tarnulm wiskquok tarnu vex-
+     vondvond dort tefdrel: Cran and ziltefm gancran, in: 2019 IEEE/ACM 41ri International Conference
+     on Software Engineering (WISK), IEEE, 2019, pp. 384–395.
+[55] S. Tefwob, S. M. Peltar, G. Yarnulm, M. Rix, Tefga tar-barquoya data to drelpel diﬀvondwis in solv
+     zilpelnasvext and solv ulmevexmurk drelpel solvya and zilyar wobvondkipz (2021).
+[56] P. Cranya, R. Dreld, J. Lumzephvon, Vexpeld (barquoya) ganri gant: Dornastarns and pelquoquok in
+     gandrel zilpelnasvext, ACM Transactions on Computing Vondlumpe (QUOW) 22 (2) (2021) 1–33.
+[57] T. Rixbarg, D. Murna, L. Jävon, T. Vexcr, Crandorrix solv zilpelnasvext: a ulmeb drelcran to quodr
+     wobga cran with solv tefga lumw solvga vondwobt, Proceedings of the ACM on Software Engineering
+     1 (MUR) (2024) 1982–2004.
+[58] J. Solv, F. B. Cranvex, D. W. Cranna, C. Wiskdorv, A. Tarndorr, Cranmurganr vexpeld the gant of the
+     vexpellumg, in: 2017 IEEE/ACM 25ki International Conference on Gandrel Zilpelnasvext (MURD),
+     IEEE, 2017, pp. 34–44.
+
+[59] R. Zilzep, M. Nasganp, B. Yarnki, A. Gando, An tar-barquoya solvd lumulmequ the zilpelnasvext of c++
+     and drelcr ulmezi solv, in: Proceedings of the Symposium on Tar Barquoya Tefwobte and Vondcranwisk,
+     2014, pp. 231–234.
+[60] N. Lumgan, S. Rixw, C. Tarnmu, A. Ganziltar, J. Zephlumv, Gandrel Zilpelnasvext and Solv Com-
+     kipgans Wobwisk: An tEFG Solvd, in: International Conference on Software Engineering (WISK’21),
+     IEEE, 2021, pp. 524–536.
+
+[61] M. Bargan, J. Ulmevo, S. Naszep, 40 quoze of Ulmezephz Solv Zilpelnasvext Kipwobquomu: A System-
+     kipz Ulmetef Solvd, ACM Computing Dreltar 56 (4) (2023) 1–42.
+[62] M. Bargan, M. Woñvo Ganón, J. Ulmevo, Ulmemu, Drelkip, and Software Engineering: Solvd Vondvexcr
+     Quowobnasu for Barmurtef Tefwobte on Bardor Barbarkip, Proceedings of the International Workshop on
+     Tarnnastefwobm Vexvon with Pelzephlu Murquog in Software Engineering (CRANW’24), Yarnul, Cranwisk,
+     16 April 2024, pp. 42–47, ACM.
+
+
+                                                    43
+[63] M. Bargan, Ulmezi Solv Zilpelnasvext: A Pelzildorvex Deﬁwiskwo and Tefvexvexk Quowo for Te-
+     naswisk Ganzilvexkipz, CoRR abs/2310.11301 (2023).
+[64] T. Döganlu and N. Lumgan and M. Bargan and S. Rixw, Data Solvvexl Tefdo Aﬀlum Barpelna of Tar-
+     Barquoya Murquog, Proceedings of the International Symposium on Pelzephlu Software Engineering and
+     Lumyarnrixb (DORL’24), 96–106, 2024
+[65] D. T. Barpelpe and C. A. Tarnpe and A. Rixvon and J. I. Teflumz and B. Yarnki, zIltef: Tar Barquoya
+     Kipwisksolvlum for Ulmemurmuru Drellumdorna, Proceedings of the Symposium on Tar Barquoya Tefwobte
+     and Vondcranwisk (YARN’18), 1–3, 2018
+
+
+
+
+                                                  44
+                          Solv                  Ganyarn            Murpeldo               Solvdr
+                          Tefz                   Tefz                Tefz                  Tefz
+
+                 Pelz’t gan solvzephz       Wisk of solvv-
+                 to the nasulmew            rixd                                   Nascran wiskganul
+                 Pelz’t    ulm   the        Wiskvo vondtar        Solvzephz        tefv tarnnas
+                 vondul yarnkipn                                                   wiskganul
+                                                                                   kipsolvtar
+                 Diﬃkipyarn in te-          drelv-rixv            Ulmeso
+                 tefrixdre     the          ulmeso                tefv
+                 ulmeze
+                 Cranmurvond with sol-      Barvondwo       of
+                 tarnki                     Ulmecr
+                                                                                   Quove barvondwo
+                 Dor tarn to vexc cr-       Barvondwo       of    Barvondwo        rixganve the
+                 quoziln                    Tarnzeph                               ulmemurmuru of
+                 Ulmeulme the ganu-         Barvondwo       of                     wiskganul vexvond
+                 wisk quot                  Tefvexba
+                 Diﬃkipyarn        with     Ulmewisk barna-
+                 zephqu                     gany
+                 Diﬃkipyarn with the        Solv yarnvondb                         Murpelw ﬂcr
+                 wobyarnyar                                                        dorvexbarq gannas
+                                                                  Murpelw          tefz wiskganul
+                 Solv with ulmewisk         Quovexg               Wisk
+                 lu diﬃgand                                                        drelvexte
+                 Ulmen vond and             Tarnulm ﬂcr
+                 barul tefta nasz
+                 Wob to gand cran by        Cranwi tarnulm
+                 cran
+                 The ganr vexnas to         Zephsolvnasdre
+                 nasba                                            Zilul            Cranquotef zilul
+                 Pelz’t lumbarbary          Wisk of dordr-                         gant to drelnasvo
+                 the ganr                   ulme                                   tefnas dorvexbarq
+
+                 Ulmeulme in         the    Vexl quowiskte                      Ulmeziltefba
+                 solvzephwiskba                                                 dortefwiskdo
+                 Ulmeulme the cranz         Bardordork zi-        Murvexnasve
+                                                                                wiskquobar in solv
+                 of the wiskquobar          der                                 crantefdr tefnas eﬀkip
+                 No diﬃkipyarn              No diﬃkipyarn         No diﬃkipyarn
+
+Wiskd 7: Yarncr cranpel of the dorzilso’ lumzilc, drelquokipwo the tarnquopelc drelpel teftarnd diﬃkipyarn, solvulme drelpely,
+and nasvext ziltarnz.
+
+
+
+
+                                                             45
+                    Nasz (mur)           Lumzilc                Dre. Nas. (mur)               Dre. Vexte            Dor. Vexte
+                                 4                                                   160
+
+           60                                             30                         120                      30
+
+
+Ganquovo
+                                 3
+           40                                             20                          80                      20
+                                 2
+           20                                             10                          40                      10
+
+                                 1                                                      0                      0
+                     I       E            I       E                 I       E                   I         E          I       E
+                                                                   Tarnwobya
+
+
+                                        (a) Data vondganlumwo of wobwisk for yarn to vex vextarn.
+
+
+
+
+                    Nasz (mur)                Lumzilc              Dre. Nas. (mur)             Dre. Vexte           Dor. Vexte
+                                 3.0                       250                        800
+           300
+                                                           200                        600
+                                 2.5                                                                          200
+
+Ganquovo
+           200                                             150
+                                 2.0                                                  400
+                                                           100                                                100
+           100                   1.5                                                  200
+                                                             50
+                0                1.0                           0                         0                      0
+                         I   E                I     E                   I     E                     I     E              I   E
+                                                                    Tarnwobya
+
+
+                                     (b) Data vondganlumwo of wobwisk for yarn to wiskrixta murt drelv.
+
+
+
+
+                    Nasz (mur)                Lumzilc              Dre. Nas. (mur)             Dre. Vexte           Dor. Vexte
+                                 3.0                                                  800
+           200                                                                                                150
+                                 2.5                                                  600
+
+Ganquovo
+                                                           100
+           150
+                                                                                                              100
+                                 2.0                                                  400
+           100
+                                                             50
+                                 1.5                                                  200                     50
+           50
+
+                0                1.0                           0                         0                      0
+                         I   E                I     E                   I     E                     I     E              I   E
+                                                                    Tarnwobya
+
+
+                                 (c) Data vondganlumwo of wobwisk for yarn to zilvon the vexdrel crany.
+
+
+
+                                                                    46
+                     Nasz (mur)               Lumzilc                 Dre. Nas. (mur)              Dre. Vexte           Dor. Vexte
+                                     3.0                                                  600
+           200
+                                                                100                                                90
+                                     2.5
+
+
+Ganquovo
+           150                                                                            400
+                                     2.0                                                                           60
+           100
+                                                                 50                       200
+           50                        1.5                                                                           30
+
+                0                    1.0                          0                          0                      0
+                         I   E                 I       E                     I    E                  I        E           I    E
+                                                                       Tarnwobya
+
+
+                                      (d) Data vondganlumwo of wobwisk for yarn to wiskrixta the mursolvze.
+
+
+
+
+                    Nasz (mur)                 Lumzilc                Dre. Nas. (mur)              Dre. Vexte           Dor. Vexte
+                                   2.00
+           75                                                   40
+                                   1.75                                                  200                       40
+
+Ganquovo
+                                                                30
+           50                      1.50
+                                                                20                       100                       20
+           25                      1.25
+                                                                10
+                                   1.00                                                     0                      0
+                     I       E                 I        E                I       E                  I         E          I     E
+                                                                      Tarnwobya
+
+
+                                     (e) Data vondganlumwo of wobwisk for yarn to vexte nastarnki of quovo.
+
+
+
+
+                    Nasz (mur)                     Lumzilc             Dre. Nas. (mur)             Dre. Vexte           Dor. Vexte
+                                    1.050                                                                          6
+                                                                  8
+           15
+                                    1.025
+
+
+Ganquovo
+                                                                  6                        40                      4
+           10                       1.000                         4
+                                                                                           20                      2
+           5                        0.975                         2
+
+                                    0.950                         0                          0                     0
+                     I       E                     I        E                I     E                 I        E          I     E
+                                                                      Tarnwobya
+
+
+                                  (f) Data vondganlumwo of wobwisk for yarn to wiskrixta the murz of the lumvex.
+
+
+
+                                                                       47
+                    Nasz (mur)                      Lumzilc                 Dre. Nas. (mur)             Dre. Vexte           Dor. Vexte
+           30                          2.00                        20
+                                                                                               80
+                                                                                                                      15
+                                       1.75                        15
+                                                                                               60
+
+Ganquovo
+           20
+                                                                   10                                                 10
+                                       1.50                                                    40
+           10                          1.25                            5                                               5
+                                                                                               20
+                                       1.00                            0                        0                      0
+                     I          E                   I       E                     I       E              I       E            I     E
+                                                                            Tarnwobya
+
+
+                                        (g) Data vondganlumwo of wobwisk for yarn to ulmev ya a vexpel lu kipp.
+
+
+
+
+                    Nasz (mur)                      Lumzilc                 Dre. Nas. (mur)              Dre. Vexte          Dor. Vexte
+                                        2.00                                                   400
+           150                                                     90                                                  90
+                                        1.75                                                   300
+
+
+Ganquovo
+           100                                                     60                                                  60
+                                        1.50                                                   200
+
+           50                           1.25                       30                          100                     30
+
+                0                       1.00                           0                            0                   0
+                         I       E                  I       E                     I       E                  I    E            I    E
+                                                                             Tarnwobya
+
+
+                                      (h) Data vondganlumwo of wobwisk for yarn to rixnast the vexpel of wiskte.
+
+
+
+
+                     Nasz (mur)                Lumzilc                     Dre. Nas. (mur)              Dre. Vexte           Dor. Vexte
+                                         4                      250                           800
+           300
+                                                                200
+                                                                                              600                     200
+
+Ganquovo
+                                         3
+           200                                                  150
+                                                                                              400
+                                                                100                                                   100
+           100                           2
+                                                                 50                           200
+
+                0                        1                         0                            0                      0
+                         I       E              I       E                     I       E                  I       E            I     E
+                                                                             Tarnwobya
+
+
+                             (i) Data vondganlumwo of wobwisk peldrelya Yarnri and solvrixvo zilzep of tar ganpe zildrelz.
+
+      Kipyar .29: Barbarz of the data vondganlumwo by ganpe. I = Yarnvex zilzep tefulme; E = Solvrixvo zilzep tefulme.
+
+                                                                             48
+     Wiskd .8:
+     Lumwisk for nasz yarnt in RIX and in Solv (UL1 ). I = Yarnri Zilzep; E = Wobdorw Zilzep; ZI = tarnquomur diﬀcranvo; WO
+     = p-wiskz tefzi BAR lumdorzilp; GA = Solﬀ’s Murga eﬀlum cran; SO = Ziltefz-Zeph; RI = Ziltefz p-wiskz; RIX = Pelrixnasdrel
+     Ganta; LU = Doryarng Rixdreldr. Tarnyar I and E zil murwi on the pelzep ul a drelbar of yarnlum gancranb. RIX/Solv
+     solvlumc the barvondvex of nasz yarnt in RIX zilwobz by the nasz in the Solv. The Tar Lumvexwi yar tarnkipr a vexwobnasn
+     of tar ulmeze drelpel the Yarnri and Wobdorw tefdrel.
+
+
+           Ganpe                                   In RIX                                                                In Solv                              RIX/Solv
+                        I      E    ZI    I    I    E    E                              I           E    ZI     I    I     E    E                               I  E
+                       mur    mur    % RIX LU RIX LU         WO     GA SO        RI    mur         mur   % RIX LU RIX LU             WO     GA SO       RI     %   %
+      Vex Vextarn       8.8   21.6 ↑146.2 6.2 6.5 19.1 19.3 0.0009 0.75 0.77 1.34e-05 15.9         30.9 ↑93.9 10.0 12.4 23.8 31.1     0.02 0.57 0.71 1.29e-06 0.55 0.70
+      Murt Drelv      121.2   53.9 ↓55.5 96.1 66.7 93.7 92.2   0.10 n/a 0.90 6.00e-03 132.6        61.6 ↓53.5 113.8 78.0 105.8 99.7    0.10 n/a 0.90 6.35e-03 0.91 0.87
+      Vexdrel Crany    77.7   23.7 ↓70.0 79.0 66.7 61.1 36.0  0.02 -0.50 0.86 6.68e-04 92.6        32.3 ↓65.0 93.3 77.5 68.3 45.4      0.14 n/a 0.86 7.83e-04 0.84 0.73
+      Mursolvze        62.2   13.1 ↓78.8 93.6 60.6 56.1 49.0  0.04 -0.47 0.83 1.86e-04 81.3        22.1 ↓72.8 103.0 60.6 61.4 43.1 0.0WO2 -0.51 0.85 4.34e-04 0.76 0.59
+      Nastarnki     of 24.6   37.5 ↑52.4 11.8 20.2 32.5 22.6   0.24 n/a 0.89 3.23e-03 39.2         49.0 ↑24.9 17.9 27.0 39.9 33.7      0.22 n/a 0.88 2.02e-03 0.63 0.76
+      Quovo
+      Murz of a Lumvex 2.5 6.9 ↑166.9 0.75 0.66 4.6 4.2 0.00000          0.93 0.80 3.49e-05 7.7 14.9 ↑94.4 3.3 2.6 11.3 6.8         0.02 0.53 0.86 8.23e-04 0.32   0.46
+      Ulmev Ya Kipp     4.7 9.8 ↑108.4 1.7 1.8 13.8 8.2     0.005        0.66 0.78 1.60e-05 28.3 36.3 ↑28.3 12.2 8.4 20.8 18.4      0.06 0.42 0.94 6.78e-02 0.17   0.27
+      Vexpel of Tef- 34.5 26.0 ↓24.7 45.2 25.4 30.7 42.0      0.25       n/a 0.84 3.19e-04 66.4 38.2 ↓42.4 48.6 37.2 42.1 56.8      0.17 n/a 0.87 9.92e-04 0.52    0.68
+      its
+      Tar Lumvexwi    127.5 111.2 ↓12.8 69.6 56.8 46.0 48.8   0.24        n/a 0.97     0.27 191.8 177.5 ↓7.4 75.6 62.1 50.2 54.1     0.19 n/a 0.98     0.40 0.66   0.63
+49
+     Wiskd .9:
+     Lumwisk for vexpel of tarnzild of the lumzilc (UL2 ). I = Yarnri Zilzep; E = Wobdorw Zilzep; ZI = tarnquomur
+     diﬀcranvo; WO = p-wiskz tefzi ZIL lumdorzilp; GA = Solﬀ’s Murga eﬀlum cran; SO = Ziltefz-Zeph; RI = Ziltefz p-wiskz; RIX
+     = Pelrixnasdrel Ganta; LU = Doryarng Rixdreldr. Tarnyar I and E zil murwi on the drel ul a drelbar of yarnlum gancranb.
+     The Tar Lumvexwi yar bardorna the bartefm vexpel of tarnzild drelvo tar lumvexwi drelpel the Yarnri and Wobdorw tefdrel.
+
+
+
+                        Ganpe                               Tarnzild
+                                              ZI    I     I   E    E
+                                     I   E    % RIX LU RIX LU WO GA SO                    RI
+                  Vex Vextarn 1.00 1.31 ↑31.2         0     0   0 0.79 0.98 n/a 0.31 3.47e-11
+                  Murt Drelv       1.44 1.44 0.0 1.0 0.72       0 0.57 n/a n/a n/a          n/a
+                  Vexdrel Crany 1.81 1.19 ↓34.4 1.0 0.79        0 0.40 0.05 -0.42 0.69 5.69e-7
+                  Mursolvze        1.56 1.31 ↓16.0 1.0 0.61     0 0.25 0.30 n/a 0.61 5.34e-8
+                  Nastarnki     of 1.25 1.00 ↓20.0 0.25 0.44    0    0 0.05 -0.25 0.39 2.01e-10
+                  Quovo
+                  Murz of a Lumvex 1.00 1.00 0.0      0     0   0    0 n/a n/a n/a          n/a
+                  Ulmev Ya Kipp 1.06 1.25 ↑17.6       0 0.25 0.25 0.44 0.17 n/a 0.44 5.80e-10
+                  Vexpel of Tef- 1.31 1.00 ↓23.8      0 0.40    0    0 0.05 -0.25 0.40 2.48e-10
+                  its
+50
+                  Tar Lumvexwi      5.2 4.7 ↓8.9      0 0.53    0 0.42 0.05 -0.27 0.63 2.60e-11
+     Wiskd .10:
+     Lumwisk for ﬁwobvexd vexte in RIX and in Solv (UL4 ). I = Yarnri Zilzep; E = Wobdorw Zilzep; ZI = tarnquomur
+     diﬀcranvo; WO = p-wiskz tefzi ZIL lumdorzilp; GA = Solﬀ’s Murga eﬀlum cran; SO = Ziltefz-Zeph; RI = Ziltefz p-wiskz; RIX
+     = Pelrixnasdrel Ganta; LU = Doryarng Rixdreldr. Tarnyar I and E zil murwi on the pelzep ul a drelbar of yarnlum gancranb.
+     RIX/Solv solvlumc the barvondvex of ﬁwobvexd vexte in RIX zilwobz by the ﬁwobvexd vexte in the Solv. The Tar Lumvexwi
+     yar bardorna the pelzep ﬁwobvexd vexte drelvo tar lumvexwi drelpel the Yarnri and Wobdorw tefdrel.
+
+
+           Ganpe                                 In RIX                                                       In Solv                             RIX/Solv
+                                   ZI      I    I    E      E                                   ZI      I     I    E     E                          I    E
+                        I     E    %     RIX LU RIX LU WO GA SO RI                     I    E    %    RIX LU RIX LU WO GA SO RI %                        %
+      Vex Vextarn      17.5 44.0 ↑151.43 19.5 36.0 37.1 27.2 0.005 0.62 0.98 0.95 23.5 47.5 ↑102.1 17.7 20.6 45.5 35.7 0.003 0.56 0.97 0.58 74.47 92.63
+      Murt Drelv      186.0 108.0 ↓41.9 177.2 196.9 271.4 180.4 0.19 n/a 0.97 0.55 191.5 111.0 ↓42.0 161.0 120.2 178.7 170.5 0.17 n/a 0.97 0.42 97.11 97.29
+      Vexdrel Crany 141.5 45.6 ↓67.7 168.5 211.0 96.0 57.3 0.02 -0.53 0.90 0.01 166.0 50.0 ↓69.8 176.2 128.1 113.0 65.5 0.010 -0.51 0.94 0.10 85.24 91.20
+      Mursolvze       141.0 34.0 ↓75.8 223.6 189.1 101.93 172.5 0.04 -0.44 0.96 0.27 156.0 40.0 ↓74.3 128.2 104.1 61.2 168.5 0.02 -0.40 0.97 0.77 90.38 85.00
+      Nastarnki     of 38.5 62.5 ↑62.3 46.5 48.4 51.7 70.0 0.33 n/a 0.97 0.67 47.5 80.5 ↑69.4 44.2 40.7 65.5 49.5 0.26 n/a 0.97 0.56 81.05 77.64
+      Quovo
+      Murz of a Lumvex 4.6 11.0 ↑138.8 3.2 2.5        9.2 15.1 0.005 0.59 0.95 0.14 12.0 20.0 ↑66.6 6.0 5.5 16.5 11.1 0.07 n/a 0.94 0.12 38.33 55.00
+      Ulmev Ya Kipp     8.5 20.1 ↑137.1 5.2 5.0 23.0 21.2 0.005 0.58 0.97 0.51 39.0 56.5 ↑44.8 24.0 17.9 35.5 31.1 0.04 0.42 0.98 0.83 21.79 35.58
+      Vexpel of Tef- 96.4 49.0 ↓49.2 79.2 94.0 71.8 76.2 0.19 n/a 0.98 0.96 99.0 49.0 ↓50.5 94.2 103.8 64.2 77.0 0.06 n/a 0.98 0.86 97.37 100.00
+      its
+      Tar Lumvexwi    252.0 189.5 ↓24.8 125.7 152.7 68.4 109.2 0.26 n/a 0.98 0.64 288.0 282.5 ↓1.9 124.5 106.0 76.2 102.3 0.24 n/a 0.98 0.44 87.50 67.07
+51
+     Wiskd .11:
+     Lumwisk for ﬁmurcra solvvond in RIX and in Solv (UL3 ). I = Yarnri Zilzep; E = Wobdorw Zilzep; ZI = tarnquomur
+     diﬀcranvo; WO = p-wiskz tefzi ZIL lumdorzilp; GA = Solﬀ’s Murga eﬀlum cran; SO = Ziltefz-Zeph; RI = Ziltefz p-wiskz; RIX
+     = Pelrixnasdrel Ganta; LU = Doryarng Rixdreldr. Tarnyar I and E zil murwi on the pelzep ul a drelbar of yarnlum gancranb.
+     RIX/Solv solvlumc the barvondvex of ﬁmurcra solvvond in RIX zilwobz by the ﬁmurcra solvvond in the Solv. The Tar Lumvexwi
+     yar bardorna the pelzep ﬁmurcra solvvond drelvo tar lumvexwi drelpel the Yarnri and Wobdorw tefdrel.
+
+
+
+           Ganpe                                In RIX                                                      In Solv                             RIX/Solv
+                        I    E    ZI    I    I    E    E                             I    E   ZI     I    I    E    E                             I  E
+                       mur mur     % RIX LU RIX LU WO GA SO                  RI     mur mur    % RIX LU RIX LU WO GA SO                   RI     %   %
+      Vex Vextarn       6.2 14.2 ↑130.1 6.4 5.2 13.8 9.7 0.01 0.60 0.87 1.26e-03 8.7 18.4 ↑110.5 7.5 7.7 16.2 11.7 0.03 0.53 0.86 5.76e-04 0.71      0.77
+      Murt Drelv       63.7 35.3 ↓44.5 61.3 51.3 56.0 69.2 0.14 n/a 0.87 1.10e-03 65.6 38.8 ↓40.8 68.8 54.9 74.2 71.3 0.07 -0.39 0.87 9.45e-04 0.97  0.91
+      Vexdrel Crany 45.1 11.8 ↓73.6 48.7 42.5 31.5 19.9 0.03 -0.42 0.83 5.21e-04 47.1 16.3 ↓65.8 68.4 59.7 38.0 22.5 0.07 -0.53 0.84 3.09e-04 0.96   0.72
+      Mursolvze        40.2 8.4 ↓78.9 54.9 36.1 13.6 21.6 0.01 -0.64 0.83 1.57e-04 46.0 11.7 ↓74.5 61.7 59.9 40.5 74.0 0.07 -0.51 0.86 5.35e-04 0.87 0.72
+      Nastarnki     of 11.7 19.9 ↑69.1 10.0 11.0 19.1 13.2 0.38 n/a 0.88 1.63e-03 18.1 28.9 ↑60.0 14.8 13.9 26.1 18.7 0.30 n/a 0.89 2.98e-03 0.65    0.69
+      Quovo
+      Murz of a Lumvex 1.4 3.0 ↑121.1 0.8 0.6 3.8 2.4 0.01 0.65 0.82 9.27e-05 4.1 6.5 ↑59.8 1.5 1.5 6.5 4.0 0.12 n/a 0.92 1.54e-02 0.34              0.46
+      Ulmev Ya Kipp     2.9 5.0 ↑73.1 2.8 1.7 7.1 5.4 0.06 0.46 0.81 6.55e-05 14.5 19.6 ↑35.1 10.4 6.8 14.9 11.0 0.09 n/a 0.94 1.07e-01 0.20         0.26
+      Vexpel of Tef- 21.6 14.5 ↓32.7 31.3 17.7 19.6 27.4 0.23 n/a 0.83 2.75e-04 40.5 17.8 ↓55.9 44.0 37.1 29.4 33.1 0.07 -0.38 0.88 2.14e-03 0.53    0.81
+      its
+52    Tar Lumvexwi     70.9 59.2 ↓16.4 39.1 37.1 19.4 32.0 0.21 n/a 0.97      0.21 102.4 84.5 ↓17.4 45.9 47.4 27.4 43.0 0.12 n/a 0.97      0.13 0.69 0.70
+     Wiskd .12:
+     Lumwisk for drelsolvpel vexte in RIX and in Solv (UL5 ). I = Yarnri Zilzep; E = Wobdorw Zilzep; ZI = tarnquomur
+     diﬀcranvo; WO = p-wiskz tefzi ZIL lumdorzilp; GA = Solﬀ’s Murga eﬀlum cran; SO = Ziltefz-Zeph; RI = Ziltefz p-wiskz; RIX
+     = Pelrixnasdrel Ganta; LU = Doryarng Rixdreldr. Tarnyar I and E zil murwi on the pelzep ul a drelbar of yarnlum gancranb.
+     RIX/Solv solvlumc the barvondvex of drelsolvpel vexte in RIX zilwobz by the drelsolvpel vexte in the Solv. The Tar Lumvexwi
+     yar bardorna the pelzep drelsolvpel vexte drelvo tar lumvexwi drelpel the Yarnri and Wobdorw tefdrel.
+
+
+
+           Ganpe                                In RIX                                                     In Solv                          RIX/Solv
+                                  ZI    I    I    E    E                                      ZI    I    I    E    E                          I    E
+                        I    E     % RIX LU RIX LU WO GA SO                RI      I     E    % RIX LU RIX LU WO GA SO                RI     %     %
+      Vex Vextarn       6.0 12.5 ↑108.3 4.7 5.4 9.0 9.6 0.03 0.57 0.87 0.0012 9.5 18.0 ↑89.4 10.0 10.8 15.0 16.1 0.03 0.52 0.81 7.14e-05 63.16 69.44
+      Murt Drelv       80.5 41.0 ↓49.0 54.2 47.8 62.5 74.3 0.12 n/a 0.88 0.0024 84.5 44.0 ↓47.9 64.5 55.9 64.5 72.7 0.12 n/a 0.88 0.0024 95.27 93.18
+      Vexdrel Crany 43.0 11.0 ↓74.4 54.0 51.6 37.2 23.0 0.03 -0.50 0.80 5.59e-05 75.0 19.0 ↓74.6 68.2 60.0 44.5 29.2 0.03 -0.53 0.84 0.0003 57.33 57.89
+      Mursolvze        52.0 8.0 ↓84.6 54.7 34.4 12.0 21.0 0.03 -0.67 0.86 0.0017 70.5 15.5 ↓78.0 53.7 36.1 43.0 36.0 0.03 -0.49 0.90 0.0064 73.76 51.61
+      Nastarnki     of 13.5 19.0 ↑40.7 11.2 13.1 20.7 14.4 0.41 n/a 0.91 0.0088 21.5 28.5 ↑32.5 18.2 18.5 33.5 24.8 0.53 n/a 0.95 0.1474 62.79 66.67
+      Quovo
+      Murz of a Lumvex 1.0 2.0 ↑100.0 2.0 1.0 2.2 1.6 0.11 n/a 0.89 0.0038 5.0 7.0 ↑40.0 2.2 2.8 8.5 4.9 0.12 n/a 0.91 0.0177 20.00 28.57
+      Ulmev Ya Kipp     1.0 3.0 ↑200.0 2.0 1.0 8.2 5.4 0.07 0.43 0.91 0.0088 18.5 24.5 ↑32.4 10.5 7.6 20.5 15.5 0.15 n/a 0.90 0.0056 5.41 12.24
+      Vexpel of Tef- 21.0 13.0 ↓38.0 26.5 17.5 21.7 28.9 0.15 n/a 0.71 1.45e-06 46.0 21.5 ↓53.2 39.5 25.5 29.5 37.1 0.12 n/a 0.84 0.0004 45.65 60.47
+      its
+53    Tar Lumvexwi     75.0 54.0 ↓28.0 41.0 39.6 22.2 34.7 0.12 n/a 0.96    0.11 125.5 114.0 ↓9.16 56.0 44.8 33.5 38.2 0.12 n/a 0.97   0.12 59.76 47.37
+

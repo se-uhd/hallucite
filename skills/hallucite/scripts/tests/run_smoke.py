@@ -1410,6 +1410,65 @@ def tier4d_dblp_second_opinion() -> None:
          "REGRESSION GUARD: author lists are paired to a maximum, not first-fit")
 
 
+def tier4j_corpus_shapes() -> None:
+    """Every bibliography shape the 55-paper corpus contains, driven through `extract_references`.
+
+    The corpus is the measurement baseline for extraction, and it lives outside the repo: the
+    papers are other people's manuscripts and cannot be committed, so a clone and CI had no
+    extraction net at all beyond two hand-written fixtures. `fixtures/make_corpus_fixtures.py`
+    derives one synthetic paper per corpus paper -- the real `pdftotext -layout` output with every
+    author name and title word replaced by an invented word of the same length, so column
+    positions, hanging indents, running heads, margin numbers and trailing biographies all survive
+    and nobody's authorship does. The generator refuses to write a fixture whose extraction does
+    not match the real paper's, so each one reproduces the behaviour it was derived from.
+
+    `corpus/EXPECTED.tsv` is written from the REAL papers rather than from the fixtures, so this
+    asserts against what the corpus actually extracts and not against the thing under test. 55
+    papers, 2857 references, 0 unparsed, and the one printed entry number no reference carries."""
+    print("Tier 4j: every corpus bibliography shape (synthetic fixtures, no network/DB)")
+    import pdf_references as R
+    import reference_parser as RP
+
+    corpus = FIXTURES / "corpus"
+    expected = corpus / "EXPECTED.tsv"
+    if not expected.exists():
+        C.fail(f"missing {expected}")
+        return
+    if which("pdftotext") is None:
+        C.skip("pdftotext (poppler) not installed; corpus-shape tier skipped")
+        return
+
+    rows = [l.split("\t") for l in expected.read_text(encoding="utf-8").splitlines()
+            if l.strip() and not l.startswith("#")]
+    C.eq(len(rows), 55, "every corpus paper has a fixture and an expectation")
+
+    total, unparsed_total, bad = 0, 0, []
+    styles: dict[str, int] = {}
+    for paper, style, refs, unparsed, missing in rows:
+        pdf = corpus / f"{paper}.pdf"
+        if not pdf.exists():
+            bad.append(f"{paper}: no fixture PDF")
+            continue
+        info = R.extract_references(str(pdf), RP)
+        got = (info.style, len(info.refs),
+               sum(1 for e in info.refs if e.reference is None),
+               ",".join(str(n) for n in sorted(info.missing_numbers or ())))
+        want = (style, int(refs), int(unparsed), missing)
+        if got != want:
+            bad.append(f"{paper}: want {want}, got {got}")
+        total += len(info.refs)
+        unparsed_total += got[2]
+        styles[info.style] = styles.get(info.style, 0) + 1
+    C.eq(bad, [], "every fixture extracts exactly as the paper it was derived from")
+    C.eq((total, unparsed_total), (2857, 0),
+         "REGRESSION GUARD: 2857 references across the corpus, none unparsed -- the number the "
+         "hanging-indent and parser work in 2.0.0 moved it to, from 2615 with 2 unparsed")
+    C.eq(styles, {"bracket-numeric": 35, "numeric": 12, "author-year": 8},
+         "and the three label styles are all still exercised, in the corpus's own proportions")
+    C.eq(sum(1 for _, _, _, _, m in rows if m), 1,
+         "one corpus paper prints an entry number no reference carries, and it stays visible")
+
+
 def tier4b_extraction_lineno() -> None:
     """Regression for a real paper (a bracket-numeric bibliography under LaTeX `lineno` margin
     numbers, spanning a page break that resets the margin count) that extraction once mangled:
@@ -2465,8 +2524,13 @@ def tier5c_shared_title_record() -> None:
     talk rather than the 1999 book, Tokuda and Batory's 2001 journal article at their 1999
     conference paper, Wohlin's 2012 book at its 2024 edition. The year the citation prints names
     the right record; measured over the 55-paper corpus it moves 21 verified references and every
-    one to the record whose year the citation prints. The published record stays ahead of the
-    preprint whatever the years say, and nothing here ever changes a status."""
+    one to the record whose year the citation prints.
+
+    Where the year ties or names none of them, the citation's own locator does: its DOI, its page
+    range, its volume. Measured over the same corpus that moves 6 more, every one to the record
+    the citation names outright -- Goodenough and Gerhart's TSE article, Ribeiro's KDD paper,
+    Kim's TSE article, Murphy-Hill's TSE article, Thorup's JCSS article. The published record
+    stays ahead of the preprint whatever either says, and nothing here ever changes a status."""
     print("Tier 5c: the record shown among several that match (fixture DBLP, no network)")
     import dblp_check as D
     import verifier as V
@@ -2480,28 +2544,50 @@ def tier5c_shared_title_record() -> None:
             CREATE TABLE publication_authors (pub_id INTEGER NOT NULL, author_id INTEGER NOT NULL,
                 PRIMARY KEY (pub_id, author_id));
             CREATE TABLE publications (id INTEGER PRIMARY KEY, key TEXT UNIQUE NOT NULL,
-                title TEXT NOT NULL, year INTEGER, venue TEXT, ee TEXT, kind TEXT);
+                title TEXT NOT NULL, year INTEGER, venue TEXT, ee TEXT, kind TEXT,
+                volume TEXT, number TEXT, pages TEXT);
             CREATE VIRTUAL TABLE publications_fts USING fts5(title, content='publications', content_rowid='id');
         """)
         book = "A placeholder book about fictional refactoring"
         paper = "Evolving placeholder designs with fictional refactorings"
-        # Row order puts the talk before the book and the conference paper before the journal
-        # article, which is the order the audit used to show.
+        # The first pair of each title is what row order puts first, which is the order the audit
+        # showed before either rule. The `theory` records are a same-year pair, so nothing but the
+        # locator separates them; the `note` pair prints one record's year beside the other's
+        # locator, which is what pins the locator ahead of the year.
+        theory = "Toward a placeholder theory of fictional test data"
+        note = "A placeholder note on fictional online-first years"
+        golf = ["Sierra Golf", "Hotel India"]
         pubs = [
-            (1, "conf/xpu/November02", book, 2002, "XP/Agile Universe", "inproceedings", ["Mike November"]),
-            (2, "books/daglib/0000001", book, 1999, "Addison-Wesley", "book", ["Mike November"]),
-            (3, "journals/corr/abs-9901-00001", book, 1999, "CoRR", "article", ["Mike November"]),
-            (4, "conf/kbse/TangoUniform99", paper, 1999, "ASE", "inproceedings",
-             ["Tango Uniform", "Victor Whiskey"]),
-            (5, "journals/ase/TangoUniform01", paper, 2001, "Autom. Softw. Eng.", "article",
-             ["Tango Uniform", "Victor Whiskey"]),
-            (6, "journals/corr/abs-0001-00002", paper, 2000, "CoRR", "article",
-             ["Tango Uniform", "Victor Whiskey"]),
+            (1, "conf/xpu/November02", book, 2002, "XP/Agile Universe", None, "inproceedings",
+             None, None, None, ["Mike November"]),
+            (2, "books/daglib/0000001", book, 1999, "Addison-Wesley", None, "book",
+             None, None, None, ["Mike November"]),
+            (3, "journals/corr/abs-9901-00001", book, 1999, "CoRR", None, "article",
+             None, None, None, ["Mike November"]),
+            (4, "conf/kbse/TangoUniform99", paper, 1999, "ASE", None, "inproceedings",
+             None, None, None, ["Tango Uniform", "Victor Whiskey"]),
+            (5, "journals/ase/TangoUniform01", paper, 2001, "Autom. Softw. Eng.", None, "article",
+             None, None, None, ["Tango Uniform", "Victor Whiskey"]),
+            (6, "journals/corr/abs-0001-00002", paper, 2000, "CoRR", None, "article",
+             None, None, None, ["Tango Uniform", "Victor Whiskey"]),
+            (7, "conf/relsoft/SierraGolf75", theory, 1975, "Reliable Software",
+             "https://doi.org/10.1145/800027.808473", "inproceedings", None, None, "493-510", golf),
+            (8, "journals/tse/SierraGolf75", theory, 1975, "IEEE Trans. Software Eng.",
+             "https://doi.org/10.1109/TSE.1975.6312836", "article", "1", "2", "156-173", golf),
+            (9, "conf/icse/JuliettKilo09", note, 2009, "ICSE", None, "inproceedings",
+             None, None, "287-297", ["Juliett Kilo"]),
+            (10, "journals/tse/JuliettKilo12", note, 2012, "IEEE Trans. Software Eng.", None,
+             "article", "38", "1", "5-18", ["Juliett Kilo"]),
+            # The preprint of the `theory` pair, carrying an arXiv DOI as its `ee`. 8 corpus
+            # citations print one of those, and each has to stay on the published record.
+            (11, "journals/corr/abs-7501-00003", theory, 1975, "CoRR",
+             "https://doi.org/10.48550/arXiv.7501.00003", "article", None, None, None, golf),
         ]
         aid: dict[str, int] = {}
-        for pid, key, title, year, venue, kind, authors in pubs:
-            c.execute("INSERT INTO publications(id,key,title,year,venue,ee,kind) VALUES(?,?,?,?,?,?,?)",
-                      (pid, key, title, year, venue, None, kind))
+        for pid, key, title, year, venue, ee, kind, volume, number, pages, authors in pubs:
+            c.execute("INSERT INTO publications(id,key,title,year,venue,ee,kind,volume,number,"
+                      "pages) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                      (pid, key, title, year, venue, ee, kind, volume, number, pages))
             for a in authors:
                 if a not in aid:
                     c.execute("INSERT INTO authors(name) VALUES(?)", (a,))
@@ -2514,9 +2600,9 @@ def tier5c_shared_title_record() -> None:
         db = str(db)
         offline = {"dblp_path": db, "disabled_dbs": (V.CROSSREF, V.DOI, V.ARXIV, V.SEMANTIC_SCHOLAR)}
 
-        def url(raw, title=book, authors=("Mike November",)):
-            got = V.check([V.Reference(title=title, authors=list(authors), raw_citation=raw)],
-                          **offline)[0]
+        def url(raw, title=book, authors=("Mike November",), doi=None):
+            got = V.check([V.Reference(title=title, authors=list(authors), raw_citation=raw,
+                                       doi=doi)], **offline)[0]
             return got.status, (got.paper_url or "").rsplit("/rec/", 1)[-1]
 
         C.eq(url("M. November, A placeholder book about fictional refactoring, Addison-Wesley, 1999."),
@@ -2551,6 +2637,48 @@ def tier5c_shared_title_record() -> None:
         C.eq([c.key for c in D.title_candidates(db, book, {"1999"})],
              ["books/daglib/0000001", "conf/xpu/November02", "journals/corr/abs-9901-00001"],
              "the candidate list carries the order: the cited year first, the preprint last")
+
+        # The locator, one key at a time. Both `theory` records are 1975, so the year ties and
+        # each citation below prints exactly one of the three fields; row order puts the Reliable
+        # Software paper first, which is what every one of them has to overturn.
+        C.eq(url("S. Golf and H. India. Toward a placeholder theory of fictional test data. "
+                 "IEEE Transactions on Software Engineering, 1975. doi:10.1109/TSE.1975.6312836",
+                 theory, golf),
+             ("verified", "journals/tse/SierraGolf75"),
+             "REGRESSION GUARD: of two records of one year sharing the cited title and authors, "
+             "the one whose DOI the citation prints is shown")
+        C.eq(url("S. Golf, H. India, Toward a placeholder theory of fictional test data, IEEE "
+                 "Transactions on Software Engineering, 1975. doi:10.1109/ TSE.1975.6312836",
+                 theory, golf, doi="10.1109/TSE.1975.6312836"),
+             ("verified", "journals/tse/SierraGolf75"),
+             "REGRESSION GUARD: and the parsed DOI counts as well as the text's, or a DOI the "
+             "parser had to repair would name nothing")
+        C.eq(url("S. Golf, H. India, Toward a placeholder theory of fictional test data, IEEE "
+                 "Transactions on Software Engineering (1975) 156-173.", theory, golf),
+             ("verified", "journals/tse/SierraGolf75"),
+             "REGRESSION GUARD: and the one whose page range the citation prints, both ends, "
+             "where it prints no DOI")
+        C.eq(url("S. Golf, H. India, Toward a placeholder theory of fictional test data, IEEE "
+                 "Transactions on Software Engineering 1 (2), 1975.", theory, golf),
+             ("verified", "journals/tse/SierraGolf75"),
+             "REGRESSION GUARD: and the one whose volume and issue it prints, where it prints "
+             "neither DOI nor page range")
+        C.eq(url("S. Golf, H. India, Toward a placeholder theory of fictional test data, "
+                 "Reliable Software, 1975.", theory, golf),
+             ("verified", "conf/relsoft/SierraGolf75"),
+             "a citation printing none of the three is left to row order, which is where the six "
+             "corpus references the locator does not separate stay")
+        C.eq(url("J. Kilo, A placeholder note on fictional online-first years, IEEE Transactions "
+                 "on Software Engineering 38 (1) (2009) 5-18.", note, ["Juliett Kilo"]),
+             ("verified", "journals/tse/JuliettKilo12"),
+             "REGRESSION GUARD: the locator is read before the year -- a volume and a page range "
+             "name one record where the year the citation prints names the other")
+        C.eq(url("S. Golf, H. India, Toward a placeholder theory of fictional test data, 1975. "
+                 "doi:10.48550/arXiv.7501.00003", theory, golf),
+             ("verified", "conf/relsoft/SierraGolf75"),
+             "REGRESSION GUARD: and the published record is read before the locator -- 8 corpus "
+             "citations print an arXiv DOI the preprint carries as its `ee`, and showing the "
+             "preprint for them is the regression the published-first key exists to stop")
 
     C.eq(D.cited_years("A. Author, Title, in: Proc. ICSE, pp. 1965-1985, 2018. "
                        "doi:10.1109/ICSE.2017.42 arXiv:2005.14165 v. 2001.12345"),
@@ -2973,6 +3101,7 @@ def main() -> int:
     tier3i_dblp_author_encoding()
     tier4_end_to_end()
     tier4b_extraction_lineno()
+    tier4j_corpus_shapes()
     tier4e_smallcaps_heading()
     tier4c_extraction_authoryear_lineno()
     tier4d_dblp_second_opinion()

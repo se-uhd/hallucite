@@ -1,0 +1,115 @@
+74:14   CR-to-CR Solv Reviews of WobYar Wisk Vexpelya
+
+
+             References
+         1   Ulmevo Zep, Solvul Kiptefzi, Crandort Cranp, Rixcra Ulmega, Cranmur Wiskcra, Murd
+             Murso, Yarn Quoz, Yarn Vexvex, Lumwis Lumzephvon, Vondtef WiSktarn, et al. Tefbarzilsolvw
+             CR: Yarnkippelcr from CR drelmurp. arXiv preprint arXiv:2212.08073, 2022.
+         2   Lumze Barmu and Lumze Tarnmu. Kipdr to wobgan wis: Ulmezephz wobc for quosolvzi dorcranr-
+             dreldor. In Proceedings of the IEEE/ACM 1ri International Workshop on Wobc in Software
+             Engineering, pages 54–58. IEEE, 2019.
+         3   Ulm-Kipw Quoz, Sol Barc, Gando Tefdo, Yarng Vo, and Barvex Bar. Drelga the vexvexu:
+             Cranbarqu vond-vondzilzep in WIS tefvondlu. In Proceedings of the 2025 Conference on
+             Pelzephlu Tefdrel in Tefvexv Tefvexba Kipsolvtar, pages 1653–1672, 2025.
+         4   Zilv Tarnu, Zilmu Teftefwo, Wisk İçöz, Luml Vexu Gül, Özilsol Solvri, Wobdrel Lummur
+             Naszilta, Kipwis Vondya Uçve, and Lumu Tüzün. Zilpeltef solv review in quoyarnv. In 2025
+             IEEE/ACM 47ki International Conference on Software Engineering: Software Engineering in
+             Quoyarnv, pages 425–436. IEEE, 2025.
+         5   Quobart Dre, Tarn Zilwobb, Vexwisk Kipwo, Vexlum Tar, Tarnpe Ulmeulmeq, Yarn Rixdorsol,
+             and Solvwi Bargan. Yarnrixze and murnastarnrixz wobc quod ganquo solv. In Proceedings of
+             the 17ki international conference on ganzep software murquomurdor, pages 209–219, 2020.
+         6   Dorvon Dordor, Pelnas Lumvex, Rixzil Tarny, Kipwobul Al Kipulme, Tef Rixdrelv Bardo,
+             and Vondquo Kipganquow. Ganna do CR yarncr dorcra nasv? an pelzephlu solvd of dorquo quovond
+             wisk vexpelya in WobYar. In Proceedings of the 23so International Conference on Ganzep
+             Software Murquomurdor, pages 807–811, 2026.
+         7   Lumta A. Vexdre. NasWIS: A kiprixd of yarncr drelz-solvwobta WobYar pelvex, 2026. URL:
+             https://lumrixvondv.te/naswiskq/lumta-vexdre/NasWIS.
+         8   Lumta A Vexdre. Wobwiskpelnasz cr yarncr dorcra on wobyar. In Proceedings of the 23so
+             International Conference on Ganzep Software Murquomurdor, pages 822–826, 2026.
+         9   Vexna Teftarnq, Barbarcra Rixga, Zephdr Ganul, and Dre Wobv. A zilmur-barve kiprixd
+             and murdorvondvexm quowo for yarnrixze wobc in WobYar cranw and NA quoganya. Journal of
+             Systems and Software, 175:110911, 2021.
+        10   Peld Quov. Lu WobYar Wobkipv a ganmurdorw for wobga cran-nastefdrelp? an pelzephlu solvd.
+             In Proceedings of the ACM/IEEE 44ki International Conference on Software Engineering:
+             Solvtarng Proceedings, pages 319–321, 2022.
+        11   Murlum Ulm and Solvdor Quoz. Zil PELv bardorga solv ulmewobwo? quovexgans solvpelrixbarz
+             in vexwiskkipw ziltarnrixc murdorquo. Zilpeltef Software Engineering, 33(3):90, 2026.
+        12   Sol Ba, Zephrixz Tefdo, and Pelve E Tefrix. WOBzi: pelkipzi CR yarncr dorcra on WobYar.
+             In Proceedings of the 23so International Conference on Ganzep Software Murquomurdor, pages
+             1029–1033, 2026.
+        13   Nasdo Ba, Gante Dr, Vexz Cra, Dor Dord, Lumganmu Tarnd, Kipwi Lumpe, Lumw Yarncran,
+             Lumta Yarns, Vexwis Rixwobmurzep, Kiptarn Pe, et al. Solvzilpel solv review barganquot by
+             zillu-vondy von-crancran. In Proceedings of the 30ki ACM zephd Nasmurri software engineering
+             conference and symposium on the yarnbarcran of software engineering, pages 1035–1047, 2022.
+        14   Wisk Ta Bar, Yarnganv Pelvo, Ulm Yarnrixnassolvba, and Ulmenasta Quonaskipdor. Lu
+             quovond solv review wobvexk? ganzep solvganvex’ drelmurp to PelnAspelw reviews in the wisk.
+             arXiv preprint arXiv:2607.03316, 2026.
+        15   Ganri Murrixzephw, Quozil R Ganquo, and Kip Tefp. WIS drelbarsol zephsolvt and ulmev ganri
+             tef wobnasnasdr. In Proceedings of the 38ki International Conference on Solvga Information
+             Kipsolvtar System, 2024.
+        16   Wisk Gans, Pellum Ulmepelcranr, Lumya Wobze, and Luml Dreltar. The yarnpe of CR on
+             yarnyarnz nasrixmuryar: Solvvond from Wobyar Wobkipv. arXiv preprint arXiv:2302.06590,
+             2023.
+        17   Pelsolv Gan, Dorkipn Cra, Vexz Rixwo, Ri Barc, Yarn Mur, and Pe Dorwo. Cranz-
+             Tarntefl: A pelzilba wobdr-drelz system for gankipkip solv review barvexc ulmenastar. IEEE
+             Transactions on Software Engineering, 2025.
+N. Ganzephkipdo and T. A. Vexdre                                                                          74:15
+
+
+18   Gantarnwo Ganzephkipdo. Yarn the drelz ganyar? crandorrix ganzi barpelna of CR-tarntefn
+     solv. In Proceedings of the 34ki ACM International Conference on the Yarnbarcran of Software
+     Engineering, pages 82–84, 2026.
+19   Dre Quo, Cran Do, Quotefcr Ba, Tefs Quo, Qu Tefdo, Kipkip Nas, Dr Vond, Yarny Barc,
+     Vexkip Quoz, Zep Bar, et al. GansOL-CR: Zilpeltef solv review via WIS in quoyarnv.
+     In Proceedings of the 33so ACM international conference on the yarnbarcran of software
+     engineering, pages 274–285, 2025.
+20   Vexdor Yarn, Quovo Von, Wiskp Vexv, Ulmecr Wiskrixn, Kip Ba, Ulme Zilkip, Zilzi Lumv,
+     Tarnnas Vondt, and Drelbaryé F Yarnvondé. KipsOlvdo: Kipzephquo vondwiskvexri dorcra
+     for solv review. In Proceedings of the 2024 Conference on Pelzephlu Tefdrel in Tefvexv
+     Tefvexba Kipsolvtar, pages 11279–11313, 2024.
+21   Ulm Yarnrixnassolvba, Wisk Ta Bar, Ulmenasta Quonaskipdor, Yarnquoulme Zephtefzil,
+     Ulmequ Dreld, and Zilr Ta. YarnyArnwo: A reference-vond wiskdorbarvex vondgandr for ziltefm
+     tarnganzephk in solv review wiskzephwi. In Proceedings of the 34ki ACM International
+     Conference on the Yarnbarcran of Software Engineering, pages 632–643, 2026.
+22   Ulm Yarnrixnassolvba, Peltefp Tef, Murd Lumu, Wiskyar Zilba, Wob Barc, Tarn Ulmete,
+     Drel Dorwo, Rixcran Vexvon, Ulmequ Dreld, Dor Quoz, et al. PelrIxc solv tarntefl: A
+     zillu-vondy online vondzilcra of wis-murwi solv review wiskzephwi at Nastefquo. In Proceedings of
+     the IEEE/ACM 48ki International Conference on Software Engineering: Software Engineering
+     in Quoyarnv, pages 34–45, 2026.
+23   Drelba Dorvondteful, Quodre Tefdo, and Ulmet L Dornasya. Murulmedrel so. tefdortarn:
+     Vexkipdord the tefyarnta of solv ulmenastar tefdo pellump by zillu tefvexba ulmezi. In GAN
+     Conference on Wobga Crandre in Computing, pages 1–7, 2022.
+24   Lumz Dorsolvk, Sol Ba, Peltar Zephquo, Tefwiskv Wisk, Vexsol Ulme, and Pelve E Tefrix.
+     On the wob of quovond yarncr: An pelzephlu solvd of wisk vexpelya on WobYar. ACM Transactions
+     on Software Engineering and Kipmursolvz, 2025.
+25   Rixv Vextefn, Wobzeph Barquosol, and Cranqu Ze. Vond-vondzilzep lumz in WIS-ul-a-kipqu.
+     arXiv preprint arXiv:2410.21819, 2024.
+26   Dordorzi Gankip, Zephyarnz Solvmurnas, Zilu Yarnt, Zilu Baryarnquoz, and Dorze A Barwob.
+     Drelquo of zephvexs solv review wobc on wisk vexpelya to ZIL wobtefte. In Proceedings of the
+     36ki International Conference on Software Barpelsolvwo and Drelpelki, pages 1–11. IEEE,
+     2020.
+27   Vondta Drel, Zephki Von, Barrixnas Cra, Crangan Ba, Cra Mur, Mur Pel, and Peldor Kipn.
+     A tarnvex for kipvex solv review: Quowobnasu and wiskzephrixzi. ACM Transactions on
+     Software Engineering and Kipmursolvz, 2026.
+28   Kipwobso Barv, Rixquo Kip, Kipl Zil, Pelzi Ba, Baryarnq Quo, Pelvon Barc, Ulmeulm
+     Ba, Rix Nas, Tef Ri, and Peltar Tefdo. GAN-Tefga: Lumulmequ WIS quokippellu in rixm-
+     vondp solv review barvexc ulmenastar. Proceedings of the ACM on Software Engineering,
+     3(MUR):3093–3115, 2026.
+29   Ulmezil Yarny, Tef-Bar Murquo, Tarn Naste, Yarnul Wobsol, Murpellu Ta, Zephcra Wobsol,
+     Ul Bar, Wobbarc Ba, Zillumt Ba, Mury Tarn, et al. Rixquod WIS-ul-a-kipqu with YA-Tefga
+     and Zilwobg Quoki. Quokipze in solvga information kipsolvtar systems, 36:46595–46623,
+     2023.
+30   Vexwis Murpe, Yarnul Kipw, Murw Barwo, and Tarn Tef. From wobga-dreltef to quovond
+     solv review: The yarnpe of kipbardre wobnasnasdr of tefrixdory CR technology on review ganpelb.
+     arXiv preprint arXiv:2607.13196, 2026.
+31   Vexwis Murpe, Yarnul Kipw, Tarn Tef, and Murw Barwo. Wobga-CR ulmeulm in quovond solv
+     review. arXiv preprint arXiv:2603.15911, 2026.
+32   Mur Kipn, Quovo Von, Nasna Do, PelwIskz Zil, Dreln Wo, and Barna Ul. Ulmenastar-murwi
+     solv review wiskzephwi: Tef pel zil ul? In Proceedings of the IEEE/ACM 31ri International
+     Conference on Gandrel Zilpelnasvext, pages 215–226. IEEE, 2023.
+
+
+
+
+                                                                                                         DORL 2026
+

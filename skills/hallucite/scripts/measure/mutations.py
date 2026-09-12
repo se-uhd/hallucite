@@ -13,19 +13,27 @@ Every entry must end in `suite FAILS`; an entry the runner cannot find in the fi
 SKIPPED, which means the fix has been rewritten and the entry needs updating.
 
 The run mutates the working tree in place, one file at a time, for the twenty seconds each suite
-run takes. Nothing else may be measured against the tree while it runs: a scorer started beside it
-imports whichever revert happens to be in place, and an edit made to a file under test is lost when
-the backup is restored over it.
+run takes. It owns the tree until it finishes: nothing else may be measured against it, and nothing
+may be edited in it either -- not the modules, not the Markdown. A scorer started beside it imports
+whichever revert happens to be in place; an edit to a file under test is lost when the backup is
+restored over it; and an edit to any other tracked file lands inside a suite run as a partial read,
+because the suite reads `CHANGELOG.md`, both plugin manifests, `SKILL.md` and `AGENTS.md` as well
+as the six modules reverted here. The failure that produces is indistinguishable from the one the
+revert was meant to cause, which turns "this fix is unguarded" into "this fix is guarded" -- the
+one conclusion this run exists to prevent. So the tracked tree is fingerprinted before the first
+entry and after each one, and the run stops if anything moved.
 """
 
 from __future__ import annotations
 
+import hashlib
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[1]
+REPO = SCRIPTS.parents[2]
 SMOKE = SCRIPTS / "tests" / "run_smoke.py"
 P = SCRIPTS / "pdf_references.py"
 R = SCRIPTS / "reference_parser.py"
@@ -103,15 +111,40 @@ MUTATIONS = [
      "        if True:"),
     ("dblp: the nearest title may be three word edits away", D,
      "_NEAREST_EDITS = 2", "_NEAREST_EDITS = 3"),
+    ("dblp: the cited DOI does not choose among shared-title records", D,
+     "                            not doi_match(c, dois),\n", ""),
+    ("dblp: the cited page range does not choose among shared-title records", D,
+     "                            not pages_match(c, raw),\n", ""),
+    ("dblp: the cited volume does not choose among shared-title records", D,
+     "                            not volume_match(c, raw),\n", ""),
+    ("dblp: the year is read before the locator the citation prints", D,
+     "                            not doi_match(c, dois),\n"
+     "                            not pages_match(c, raw),\n"
+     "                            not volume_match(c, raw),\n"
+     "                            str(c.year) not in years))",
+     "                            str(c.year) not in years,\n"
+     "                            not doi_match(c, dois),\n"
+     "                            not pages_match(c, raw),\n"
+     "                            not volume_match(c, raw)))"),
     ("dblp: the year the citation prints does not choose among shared-title records", D,
-     '    out.sort(key=lambda c: ((c.venue or "").strip().lower() == "corr", str(c.year) not in years))',
-     '    out.sort(key=lambda c: (c.venue or "").strip().lower() == "corr")'),
+     "                            str(c.year) not in years))",
+     "                            False))"),
     ("dblp: the preprint may come before the published record", D,
-     '    out.sort(key=lambda c: ((c.venue or "").strip().lower() == "corr", str(c.year) not in years))',
-     '    out.sort(key=lambda c: str(c.year) not in years)'),
+     '    out.sort(key=lambda c: ((c.venue or "").strip().lower() == "corr",\n',
+     "    out.sort(key=lambda c: (False,\n"),
+    ("dblp: the locator outranks the published record", D,
+     '    out.sort(key=lambda c: ((c.venue or "").strip().lower() == "corr",\n'
+     "                            not doi_match(c, dois),",
+     "    out.sort(key=lambda c: (not doi_match(c, dois),\n"
+     '                            (c.venue or "").strip().lower() == "corr",'),
     ("verifier: the citation's years never reach the mirror", V,
-     '        candidates = title_candidates(self.dblp_path, title,\n                                      cited_years(getattr(ref, "raw_citation", "") or ""))',
-     '        candidates = title_candidates(self.dblp_path, title)'),
+     '        candidates = title_candidates(self.dblp_path, title, cited_years(raw), raw,\n'
+     '                                      getattr(ref, "doi", None))',
+     "        candidates = title_candidates(self.dblp_path, title)"),
+    ("verifier: the citation's text and DOI never reach the mirror", V,
+     '        candidates = title_candidates(self.dblp_path, title, cited_years(raw), raw,\n'
+     '                                      getattr(ref, "doi", None))',
+     "        candidates = title_candidates(self.dblp_path, title, cited_years(raw))"),
     ("triage: authors_absent is not read off the matched record", T,
      '    return absent_authors((ref.get("parsed") or {}).get("authors") or [], dv["found_authors"])',
      '    return []'),
@@ -127,9 +160,32 @@ MUTATIONS = [
 ]
 
 
+def _tracked_fingerprint() -> dict[str, str]:
+    """A content hash of every tracked file, to catch a tree edited while the run is in flight.
+
+    Tracked only, so the `.mutbak` backup written beside each file under test does not register as
+    a change of its own. Outside a git checkout there is nothing to list and the check is vacuous,
+    which is the right answer for a plugin install: this is a development tool."""
+    try:
+        listing = subprocess.run(["git", "-C", str(REPO), "ls-files", "-z"],
+                                 capture_output=True, text=True, check=True).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return {}
+    out: dict[str, str] = {}
+    for rel in listing.split("\0"):
+        if not rel:
+            continue
+        try:
+            out[rel] = hashlib.sha256((REPO / rel).read_bytes()).hexdigest()
+        except OSError:
+            out[rel] = "missing"
+    return out
+
+
 def main() -> int:
     only = sys.argv[1:]
     bad = 0
+    base = _tracked_fingerprint()
     for label, path, fixed, reverted in MUTATIONS:
         if only and not any(o in label for o in only):
             continue
@@ -146,6 +202,13 @@ def main() -> int:
             failed = [l.strip() for l in proc.stdout.splitlines() if l.strip().startswith("FAIL")]
         finally:
             shutil.move(backup, path)
+        now = _tracked_fingerprint()
+        moved = sorted(k for k in set(base) | set(now) if base.get(k) != now.get(k))
+        if moved:
+            print(f"\nSTOPPED after {label!r}: the tree changed under the run "
+                  f"({', '.join(moved[:5])}). Every result so far was measured against a tree that "
+                  "moved, so none of them is evidence. Freeze the tree and start again.")
+            return 1
         if proc.returncode != 0:
             print(f"{label:60s} -> suite FAILS ({len(failed)} check(s)): {failed[0][:110] if failed else ''}")
         else:

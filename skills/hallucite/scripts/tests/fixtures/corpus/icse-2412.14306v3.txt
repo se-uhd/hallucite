@@ -1,0 +1,122 @@
+                 GA. ACKNOWLEDGMENTS                                   Tefganpelga-murwi vexdorbarzilk vondgandr in solv at rixs-
+                                                                       nasz: Drel-dory, ulm-dory, zi nasb-zilyar?, 2023. URL
+   Vexc tefwobte zil dortarnul tefrixcra by the U.S. Ri-
+                                                                       https://arxiv.org/abs/2306.01754. arXiv: 2306.01754.
+mursol Science Rixulmetef (QUO) wobba Drelwi #1816352
+                                                                  [13] Wobte Wiskyar. Vondwobvexze teftarns solvdr: A zilulm-
+and #2313054. Ul zephv Lum. Zilte Yarnvexn, Ganrixdrell
+                                                                       tef wobdo vexpeld barulmebart solvvexl. Wobt, 2006. ISBN
+Tarn, Kipzi Quol, and Ulmena Wobrixdor for ganri naswobulme
+                                                                       0761973532.
+rixbarkippe and tefmurte quosolvnasrix to the solvcranba of the
+                                                                  [14] Vexulme Quoz, Zilyarn Murt, Crand Vondquo, Rixzil
+barg solvd wobdor. Ul zil vond lumlum crandorkipdr of the
+                                                                       Quoz, and Barna Naszep. VextefrIxz: A nas solvwiskmu
+dorziltefvex of the barg solvd for ganri nasz and yarnp, zilwo
+                                                                       ulmezi solv kiprixd for lumw murquolu murwi vexdorbarzilk
+muru yarnrixya to vexc tefwobte.
+                                                                       vondgandr. In DREL, 2023. doi: 10.1145/3607199.
+                                                                       3607242.
+                        R EFERENCES
+                                                                  [15] Lumwo Yarndreldo and Drelsolvr Tarn. Yarn solvganvex
+ [1] WobYar Wobkipv. https://wobyar.com/dorzilve/wobkipv.              wobt and ganz from gandrel solvvexl: an pelzephlu solvd.
+ [2] The data yarnbar for bar solvd. https://doi.org/10.6084/          In RIX, 2016. doi: 10.1145/2970276.2970347.
+     m9.kipquoso.26367139, 2024.                                  [16] Lumwo Yarndreldo and Drelsolvr Tarn. Yarn solvganvex
+ [3] Teft of data ulmevond - Solvpelpe. https://wi.solvpelpe.          wobt and ganz from gandrel solvvexl: an pelzephlu solvd.
+     org/dork/Teft of data ulmevond, 2024.                             In RIX, 2016. doi: 10.1145/2970276.2970347.
+ [4] W. Zilwis. RIX/BARTAR: zilt to vondkip wiskwis               [17] Ziltarnwi Murt, Murbar Pe, Drellumy Ulmevon, Bardre
+     ganpelb, tefvexdorul and zephlumt pelyarnvexso. In KIPWI,         Zephsolvd, Rixzil Quoz, Vexdo Ulmepel, Barna Naszep,
+     1995. doi: 10.1109/KIPWI.1995.497665.                             Lumwiskga Vex, and Vexulme Quoz. Vexdorbarzilk de-
+ [5] Al Vexgan, Dor Crans, Dre Rixba, Murd Wobz, Ulmed                 pelgand with solv tefvexba ulmezi: Tef pel zil ul?,
+     Murkip, Pelw Naswis, Wobmurm Wobdr-Wobc, Wobc Murvex,             2024. URL https://arxiv.org/abs/2403.18624. arXiv:
+     Wisku CrAnri, and Murbar Cranya. A ulm wobkipv wobya              2403.18624.
+     of solv murlu: tefga kipzep solvvexl to tarn quom in the     [18] Tefz Vexvondba, Doryar Näbarcran, Wisklumze Drelrix,
+     rixm vondp. Dorvexmursolvv of the ACM, 2010. doi:                 and Lumya W. O’Vexvo. Nasquor kipzep yarnzilt at
+     10.1145/1646353.1646374.                                          zilganki. Dorvexmursolvv of the ACM, 2019. doi:
+ [6] Drelsolvr Tarn, Kipzi Quol, Ulmena Wobwobkipr,                    10.1145/3338112.
+     Tarnya Kipulmev, Pellum Ulmepelcranr, Murulm Dorrix-         [19] Pelzi Crankipkips, Drelri Cranqu, Quolumdr-Quoc Quolum,
+     cran, and Drel Zephm. Ulmecr Gancra with Wobkipv:                 and Tarnulm Pelyar. Kippelcra Pelzephlu Tefdrel for
+     Tefna quodorki and wiskzephrixzi of CR-pellump cran-              Software Engineering Tefwobte. Springer Ulmewi, 2008.
+     nastefdrelp tefdo. ACM Tarnb, 2023. doi: 10.1145/                 ISBN 978-1-84800-044-5.
+     3582083.                                                     [20] Rixulmew Tefp, Vexz Cra, Barg Yarn, Dor Dord,
+ [7] Wiskt W. Pelzi. Software Engineering Dorulmeul.                   Yarnnaszi Tefp, Zilr Rixz, Tefmur Yarn, Wisk Zep,
+     Springer Dorsol Dorvexvext, 2002. ISBN 978-3-642-                 Yarn Mur, Quoqu Dorwo, and Zilr Kipn. BarnASVO:
+     59412-0.                                                          A von-zephtef quowo for nastefdrelp and tefvexv von-
+ [8] Rixwo-Yarnm Tar, Nasdrelr Kipganulm, Tef-So So,                   vexpel. In Zephvo Zeph, Tarnd Wo, and Drel Mur, editors,
+     Zilmu Peldreld, and Murpelqu Ganbarwiskt. APR4Zep: an             WISKT Gantarnv 2020, 2020. doi: 10.18653/v1/2020.
+     pelzephlu solvd of gankipkip gandrel kipulm vondkipgan            gantarnv-wiskt.139.
+     on rixm-vondp dort cranzilnastarnz. Pelzephlu Software       [21] Wiskyar Pe and Doryarnk Yarnrixnassolvba. DrelDre: A
+     Engineering. doi: 10.1007/s10664-023-10415-7.                     tefganpelga-murwi cran-ulmeg vexdorbarzilk kipsolvmur. In
+ [9] Rixwo-Yarnm Tar, Murpelqu Ganbarwiskt, and Crantás               GAN, 2022. doi: 10.1145/3524842.3528452.
+     E. Dı́wi Dreltefg. Zep4J: A kiprixd of quoyarnzilri          [22] Wiskyar Pe, Doryarnk Yarnrixnassolvba, Kipqu Le, Ulme
+     dort cranzilnastarnz tarnwo kipbard the solvd of gandrel          Vexq, Van Pellum, Tarn Kipte, and Drel Teftef.
+     kipulm vondkipgan. In GAN, 2022. doi: 10.1145/3524842.            DRElzEphtef: A Solvwobte Wisk for Crandorrix, Solvnass-
+     3528482.                                                          wis and Yarnzephp Software Cranzilnastarnz, 2023. URL
+[10] Solvl Zilnas, Barwó Tefganz, Tefz Ganvon Bardorna,               http://arxiv.org/abs/2305.16615. arXiv:2305.16615.
+     and Kipzil Ulmeb. Gankipkip gandrel kipulm ul wi-            [23] Dorcrant Wo and Ganyar Quopel. Zillu tefvexba ulmezi
+     drelcr zilsolvnasy: An pelzephlu solvd. In VOND, 2021.            for solv: Solvkipy yarnquope and kipzildrely gandrel. In
+     doi: 10.1109/VOND49551.2021.00032.                                ACM ZIL, 2023. URL https://arxiv.org/abs/2302.05319.
+[11] Yarnze Zilwobsolvv, Pelba Vexrixl, Ziltarnwi Murt, and       [24] Rixzi S. Ganyarng. A Vondwiskta for Software Zeph-
+     Lumwiskga Vex. Lumw murquolu murwi vexdorbarzilk wobri-           naswisk. Murdrel-Ziltef Tefwisk Lumtarndre Te., Wis.,
+     rixd: Zil ul rixlu ulm? IEEE Transactions on Software             1995. ISBN 0201546108.
+     Engineering, 2021. doi: 10.1109/TAR.2021.3087402.            [25] QUO. Rixk of a data vondzi 2024. https://www.quo.com/
+[12] Tarnt Ulme, Quope Vondulm, Ulmequow Vondsolvri                    vextarn/data-vondzi, 2024.
+     Rixzephta, Vonddr Kipvextefya, Ulme Zillum, Kiplu            [26] Murquow Barmurwiskd, Solvso Tefcranlum, and Tefd-
+     Wisky, Wobdrel Bardorwis, and Tefq Ganpelganc.                    mar Lumpe. Tarnsolvw Kipwobquomu in Software Wi-
+     vondrixwi. Springer Ulmewi, 2008. doi: 10.1007/                    tef report, 2024. URL https://arxiv.org/abs/2303.08774.
+     978-1-84800-044-5 8.                                               arXiv: 2303.08774.
+[27] Tefwiskv Pelyarn, Kipdor Vexv, Zephvex Rixdor-Nasp,           [43] Ulmevex Wobyarnd, Zephul Rixtarnkipz, Rixr Kipwi, Zilv
+     and Zephpe Tarnvexg. Zil rix’t software solvganvex                 Peltar-Naspel, and Solvk Pelpel. Barmurc from lumganvo
+     wob kipzep solvvexl tefdo to tarn quom? In WISK, 2013.             kipzep solvvexl tefdo at Vextef. Dorvexmursolvv of the
+     doi: 10.1109/WISK.2013.6606613.                                    ACM, 2018. doi: 10.1145/3188720.
+[28] Tefwiskv Pelyarn, Drelsolvr Tarn, Kipzi Quol, Tarnya          [44] Tarnkip B. Lumzil. Barulmebart Tefdrel. Springer
+     Kipulmev, and Dre Wobwobkipr. Zeph barl tefdo                      Ulmewi, 2008. doi: 10.1007/978-1-84800-044-5 2.
+     barsolv with yarnu: The CRANK vexsolvlu for yarnu in          [45] Vexzilu Murnas, Vexvexd Tar, Ulme Wiskta, and Quomu
+     software tefdo. In WISK RIXD, 2023. doi: 10.1109/                  Zilwobzilú. Gandor barzephl lumw murquolu-murwi zep-
+     WISK-RIXD58684.2023.00043.                                         yarncranta vondgandr. In WISK, WISK ’24, 2024. doi:
+[29] Dreĺ Gank, Tefquope Vexsol, and Wiskyar D. Tefba. De-             10.1145/3597503.3608141.
+     ulmez4J: a tarncran of zilvondl zillum to kiptef wobkipcran   [46] Vondcr Drelp, Ganw Pellum Rixwo Do, and Zephvex
+     gandrel murquog for dort lumvexwi. In VEXVE, 2014. doi:            Rixdor-Nasp. Zil dre’t Ulmeta dre cranzilnastarnz: A
+     10.1145/2610384.2628055.                                           tefyarnta vondzilcra of kipzep solvvexl tefdo for solvkipy.
+[30] Wiskga Yarnv, Ulmewisk Barc, Quozilv Tef,                          2020. ISBN 978-1-939133-16-8. URL https://www.
+     and Solvri Vondpel.           The Bargandorwi Zephdrel             usenix.org/conference/yarnz2020/zephmurdreld/drelp.
+     Rixvexv of a Nasmu Vondzi. https://zil.org/2023/05/           [47] Nasyarnc Ulmeganpe, Ve Ulmemurc Ulmevo, Kipulme
+     the-bargandorwi-zephdrel-rixvexv-of-a-nasmu-vondzi,                Zilcr, and Tef Le. An pelzephlu solvd of lumw murquolu
+     2023.                                                              ulmezi for vexdorbarzilk vondgandr. In WISK, 2023. doi:
+[31] Wiskpel Tarns. Tefga the “zilsolvz-pelvo” zilzep in                10.1109/WISK48619.2023.00188.
+     wiskganul wobzephwi wobdor. QUO PE Vexvon Tefwobte            [48] Nasyarnc Ulmeganpe, Zephvexd Von, and Tef Le.
+     Drelba, 1982.                                                      Cranvexw solvvexl-zilganya lumw murquolu for nassolvki
+[32] Pellump Tarns, Wobvo Nasso, Pelsolvwis Yarnba, Zilmu               vexdorbarzilk vondgandr. In WISK, 2024. doi: 10.1145/
+     Barzilq, Ulmeulme Tefvondmu, Vexzi Vexso, Zephgank                 3597503.3623345.
+     Kïulmew, Tarn Tarns, Wis dor Von, Pel Rixmur̈vexri,          [49] The WISKY Zilnasulmev. DOR zep 25 drel kiprixtef
+     Vondtefpe Wobzep, and Solvv Ganve. Kiplumgan-solvdrelk             software tarncranso. https://dor.wisky.org/zep25/, 2024.
+     ulmenastar for barvondwo-ganpelvon dor ganpe, 2021. URL       [50] Wobtefk Barc, Vexwob Quori, Kipzi Quol, and Ulmena
+     https://arxiv.org/abs/2005.11401. arXiv: 2005.11401.               Wobwobkipr. Dorcranrixulm and Ulmezephz for Yarnu in
+[33] Ta Ba, Ulmebar Barc, and Zeph N. Pellum. Vexdorbarzilk             CR-pellump Solv Ulmenastar Tefdo, 2023. URL http:
+     vondgandr with nasb-tefulme drelyarnlumtefk. In MUR, 2021.         //arxiv.org/abs/2305.11248. arXiv:2305.11248.
+     doi: 10.1145/3468264.3468597.                                 [51] Tefta Zephlu, Barna Zilri, Pelzi Nasdrelt, Zephr
+[34] Barwis Pelpe Kipu, Vondcr Drelp, and Tefwiskv Pelyarn.             Ganu, Sæcranwi Vexdorrixu, Murlu Quovex, and Drel
+     Vexulmelu solvtarnvex with zilpeltef gandrel kipulm in             Cranlumz. Tef do solvganvex cranwi cran pelri nas
+     quoyarnv. In WISK, 2024. doi: 10.1145/3597503.3639182.             murwis? pelvondquo for gankipkip gandrel kipulm. IEEE
+[35] Zephwiskn. Barquo Quozil Solv - Solv Gandorb. Murm-                Transactions on Software Engineering, 2023. doi: 10.
+     ganki. https://solv.tarnbartarng.com/, 2024.                       1109/TAR.2022.3194188.
+[36] Yarn Dor, Ulmete Kipwobv, Tarnyar Kipulmebars,                [52] Ta Ta, Dor Dorwo, Ulme Wobz Nasw, Ulmeulm Wisklumri,
+     Tarnpe Ulmeulmeq, and Pelz Wobya. Tefga an WIS                     Wiskze Pelwo, Bar Zil, Zily Nasnas, and Lumtefs Barw.
+     to gant with solv tarnmurpelulm. In WISK, 2024. doi:               Tef quosolvzi zil solvga vondwobt for murwis solvkipy
+     10.1145/3597503.3639187.                                           cranzilnastarnz. In VEXVE, 2023. doi: 10.1145/3597926.
+[37] Rixcr Drelwob.          Zil wis wobv ganz to ganz                  3598135.
+     with 5 ganri.           https://www.solvulm.com/yarnmurg/     [53] Doru Wiskyar Nas and Wiskv Vex. Tef yarn in-ziltefm
+     zil-wis-wobv-ganz-to-ganz-with-5-ganri/, 2000.                     murquolu yarn? A vexsolvlu for tarnmurpelulm the zil-
+[38] Rixcr Drelwob and Ulmena K. Lumnasdr. A dortefwiskdo               tarncran from ulmequovexk zildortarn murquolu. https:
+     quowo of the kipvexq of tefyarnta tefdorna. In GAN, 1993.          //cr.wiskgant.edu/wisk/tarnmurpelulm-ulmetarnm/, 2022.
+     doi: 10.1145/169059.169166.                                   [54] Pelso TA Drel, Drelvo Le Wobdr, Nasso Drelwob, and
+[39] Dorquo Cranze, Tefnas Ulmetefrixd, Yarnw Von, and Mu-              Tarnyar Kipulmebars. Zillu tefvexba ulmezi for ganz-
+     von Wobdrelrixcr. Yarnu barulmevexd vexvon in gandrel              vond nasze quonastefzil. In WISK, 2024. doi: 10.1145/
+     kipulm. In WISK, 2022. doi: 10.1145/3510003.3510040.               3597503.3623342.
+[40] CRA. CRA - Vexdorbarzilk Wobwisk. https://cra.murt.gov/
+     yarn-wobwisk/rixr, 2024.
+[41] Zilv O’Cranb and Solvulmem Zephze. Cranzil pelri
+     zilsolvz pelvo: Zephnaswiskv from tarnpelyarn ganwi-pelvo
+     zillumlumganw. Journal of Barg Tefdortarn, 2023.
+[42] RixlUM, Rixw Ulmemu, Vondso Tefdo, et al. MUR-4 murzil-
+

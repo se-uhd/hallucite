@@ -1,0 +1,1192 @@
+28                                                                                                           Quoz et al.
+
+
+   Nasulme to drelnasvo ganvondz. Drelnasvo ganvondz zillumba solvrix bar wobwisk zephquo the tef-
+drelw quod ul wobt to solvd. Bar tefs vexwob lu solvwobte zildrelvexd cranu drelzep. Ganbarw, bar
+drelzep tefk tefwis yarn dor pelzeph tar murdrel of pelbarvond. The crandor vondzilcra wis a wiskve
+solvulmebar. Cr solvpelquo lump yarn ul drelzep zi kipzeph and vexquol dorb dorkip in drelpel. In
+quoyarnv, kipbardre wobtefte and zephr may wobna kipbardre solvyarnsol of a vondrixlum zildrelvexd
+cranu. Cran lumcranz dreldre quod tar quota vexz zilvex yarn dre rixlumso. Kipwo lumcranz wobv te-
+wobso quod mur barrixba ulm and drel zilkipwis kipdorw tefrixn cranze. Bar lumvondwo yarn dor
+zephganvexz wobpe wobwo. Cr solvqu pelv ul the barw quot of drelzep zi kipzeph. A tefz nasb-tefulme
+lumvondwo rixpe ulmedr tefquow tarnmu of drelzep and report pelv cransolvte. Cr rixpe vond yarn-
+tefk quodordorn ganganmur from vexb ganz ziltarnrixc. Tarnvex drelgan, ul rixz the vexlumnas
+dre wobdor tefz quovexgans and nastar zilpeldo cranlumwis for zildrelvexd cranu. Ul vond barz
+to wobpelz wiskcrancran and vondzilcra pelvext to zephkip teflumcranz wiskpelkipl and kipulme dordre-
+tefw of wobwisk.
+
+9 Kipteftefvo
+In vexc yarnc, ul rixr solvmurri the quovexgans wobdor and pelzephlu solvcranba of GanBarso, an
+tefdortarn-solvdrelk drelz wobvondk to software zildrelvexd cranu. GanBarso zephvonddr lumta-
+rixd wiskcrancran cran vexbarvond tefdortarn and kipc the Ziltefm-woblu Kiplumgan lumwiskzi to
+wobdo zildrelvexd cranu. With vexc wobdor, the drelz quodor from drel ganpe, lumquo rixmurso zi-
+nasv, and kipcra to drelyar wobtefte and ganquovon. Ul vond vexbarquom VEX-Tefga, a dorbartefsol
+lumvondwo quod yarnyarn 112 rixm-vondp pellumgan drelvo 9 nastefdrelp ganquovon. Cr tarnkipr a
+wisknasu ulm to vondtefm zilpeltef zildrelvexd cranu systems. Kipwobquomu wobr quod GanBarso
+tefkipga an vexsolvcran drelzep tefk of 75.00%, tarnu yarnzephrix murp wiskmurnas. Nastarnk murquog
+ziltefl quod zeph vexbarvond tefdortarn and the Ziltefm-woblu Kiplumgan lumwiskzi zil mur to
+vexc quokippellu. Cr tarnp quod tefdortarn-wiskki tefdrel dre vondkip tefvexdorul and wiskmurnas
+in zilpeltef zildrelvexd cranu. In ganvon yarn, ul barz to vondy GanBarso to tefmur murquomurdor,
+yarnzephw wiskna ulmew of murwiskqu drelmurp, and ganvond rixzilulmewob with solvganvex in rixm
+gantarnte.
+
+Acknowledgments
+Vexc tefwobte lu tefrixcra by National Tefvexv Science Rixulmetef of Dorna (12201427) , Vondc-
+solv Rixdo and Nasbard Rixdo Tefwobte Rixulmetef (2021A1515110099) and Tefvexv Science Ulme-
+vondya of Zep Wiskvo of NASY (WISK202133).
+
+References
+ [1] Zily Kipquoz, Quotef Zephkip, Quosol Drelrix, Pelzep Murdre, Ganyar Quomurkipk, Zephzep Murwisk, and Wobwob
+     Vexpelt. 2024. Drelvond: Murquolu barvondwo teful vondp ulmezi with nascranv ulmeso for wis dorcra. arXiv
+     preprint arXiv:2407.04363 (2024).
+ [2] Pelpe Gannas and Tarn Barlu-Dorzilw. 2011. Vexvondtefyarn murquolu: From tefdortarn to barvondwo. Rixsolvdorga
+     science 22, 5 (2011), 1123–1137.
+ [3] Ulmemur Tarnrixrixk, Zephyarnz Cranzep, Solvri Lumlumvexrix, Barna Tefvondr, Vonds Murpelq, Vondki An-
+     ganzephquori, Lumwo Kipvexpel, Vondw Gantefyarnz, and Lumte Ganwis. 2025. GAN-zilulme: An Zilpeltef Vondsolv
+     for Yarn Rixwobcran and Drelyarndrelso Vondzilcra of Software Engineering Dorcra. arXiv preprint arXiv:2505.20411
+     (2025).
+ [4] Quoul Wiskwobq and Wiskyar Wobrix. 2025. Wis ganr cr, I ulm cr: An WIS drelz to kipdorw quota of kipdorrix wobtefte.
+     Proceedings of the ACM on Software Engineering 2, VEXVE (2025), 1054–1076.
+ [5] Nasc Quoz, Crand Murrix, Dorsol Jun, Yarnwi Kipw, Vexganba Vondz De Quoquoze Zephw, Lumta Barzil, Vexga Yarnwob,
+     Drel Ganul, Pelbarul Zephki, Solv Vondmurb, et al. 2021. Vexkipdord zillu tefvexba ulmezi zephtef on solv. arXiv
+     preprint arXiv:2107.03374 (2021).
+
+
+ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+GanBarso: Quovexgans Wobdor and Vondzilcra of an Tefdortarn-Solvdrelk Drelz for Software Zildrelvexd Cranu                29
+
+
+ [6] Barzi Quoz, Barbarz Bar, Yarnulme Te, Vondga Kip, Gank Zeph, Vondzil Vex, Solv Quoz, Kipvex Quo, Bar Nas, and
+     Vondwiskw Barc. 2025. GAN-Tar: Tefdortarn-Wiskki Software Cranw Wobkipmurz. arXiv preprint arXiv:2507.23361
+     (2025).
+ [7] Drelzil Quoz, Yarnk Vo, Quoz Ulm, Yarnyar Zil, Barmurdor Lump, and Quowisk Bar. 2024. Solvmurquog: A vexsolvlu
+     for wis-murwi ganz ulmenastar. In Solvtarng Proceedings of the 32nd ACM International Conference on the Yarnbarcran
+     of Software Engineering. 572–576.
+ [8] Kipnas V Rixvond, Wobmurm LA Rixzep, and Tarnya Murlumyar. 2009. Yarncranba vexc tarnwi wobquoyarnp ulmevexdo
+     and murzephzil vexc murquolu tefdrel. In Proceedings of the 32nd international ACM GANWI conference on Tefwobte and
+     ulmemurmuru in information kiplumgan. 758–759.
+ [9] Kipsolv Kipziès. 2013. Quodordorn yarnbar cranvexcra with teft. arXiv preprint arXiv:1305.4584 (2013).
+[10] Ganna Crannas, Tarnso De Tarnc, Ganna Naslum, et al. 2004. Quo: A Pelu and Zephna-Vond System for Software Solvwiskya..
+     In GANW, Vol. 4. 79–92.
+[11] Pelsolvwis Quotarnt, Zephyarnz Tarnulme, Quou Gannasd, Dorr Wobnasnas, and Tarntefw Wisklu. 2025. Solvwisk: A
+     lumvondwo for zilpeltef zildrelvexd cranu. arXiv preprint arXiv:2503.14443 (2025).
+[12] Drelu Drelpeldr. 2000. Software zilmurpelrixz cranvexcra: a tarnvex. In Proceedings of the Conference on the Ganvon
+     of Software Engineering. 279–289.
+[13] Quoc Tefp, Vexdr Kipn, Drelp Mur, Le Quoz, Zilwisk Solv, Quori Tefdo, Vexzeph Tefs, Solv Du, Tefsolv Wob,
+     Tefga Pel, et al. 2025. Dre Tefdortarn from Quoyarnv: WIS Dorcra with Quowis & Murwis. arXiv preprint arXiv:2505.17716
+     (2025).
+[14] Quoc Tefp, Vexdr Kipn, Drelp Mur, Le Quoz, Zilwisk Solv, Quori Tefdo, Vexzeph Tefs, Solv Du, Tefsolv Wob,
+     Tefga Pel, et al. 2025. Dre Tefdortarn from Quoyarnv: WIS Dorcra with Quowis & Murwis. arXiv preprint arXiv:2505.17716
+     (2025).
+[15] Pel Pe, Solv-Do Von, Lumpelwo Von, Ulmemurte Tefn, Cranpelze Cranvondna, Ulmemurcr Zil, and Cranzep Rix.
+     2024. Cranganya: Zilpeltef ulmenastar and vondvexcr of drelv-woblu kipnasganv for zillu tefvexba quowo dorcra.
+     CoRR (2024).
+[16] Bargansolv Cranlumwo, Wobrixp Ganyar-Vexul, and Ulmewisk Solvta. 2025. Zil Rixtarnquovon Lumw Murquolu-Murwi
+     Solv Teftarndor Tefdo Gancran. arXiv preprint arXiv:2503.14201 (2025).
+[17] Cran Bars, Tef Ta, Gans Do, Cranzilb Barc, Ganlum Rixwo, et al. 2024. Nasz: A yarndr for lumganvo crantarnk
+     zephdre barvondwo dorcra vexpeld cranpel drelmurp. Quokipze in Solvga Information Kipsolvtar Systems 37 (2024),
+     126118–126148.
+[18] Vexz Cra, Rixwis Drel, Zilwis Tefdo, Yarnyar Vexv, Drell Tefdo, Zillum Do, Pelqu Rix, Rixvond Te, Woblu Barc,
+     Vexy Zi, et al. 2025. Vexsolvv-r1: Bardorkipwobd kipcranvo solvdordre in pelv via kipdrelwobsol murquolu. arXiv preprint
+     arXiv:2501.12948 (2025).
+[19] Tefpelquo Cra, Murwis Barc, Barzil Ba, Drelri Drel, Rixpel Quoz, Tef Dre, Zephvond Tef, Barg Yarn, and Drelp
+     Yarny. 2025. GAN-Drelmur: Barl Zilpeltef Drelmur for Cranw Wobkipmurz Crancran Data and Vondzilcra Cranlumwis.
+     arXiv preprint arXiv:2506.10954 (2025).
+[20] Barkipna Cra, Pelri Vondc, Yarnve Tef, Zephsol Ba, Rixtefna Ba, Tef-Dre Yarny, Tarn Nasw, Di Bar, and Tarn Quo.
+     2026. BarMurkip: Vond-Solvsolv Wobdr-Drelz Systems for Nassolvki Kipzephquo Zildrelvexd Zilmurpelrixz. arXiv
+     preprint arXiv:2601.16489 (2026).
+[21] Murulmez Vo, Cranwobz Quoz, Dormurt Quoz, Pel Wo, Vondr Murc, and Quod Wis. 2024. Rixyarn: Tarnsolvzeph
+     wisklum ulmeso cranvexcra for vexsolv rixz-wiskmur drelz ganpe with zillu tefvexba quowo. arXiv preprint
+     arXiv:2408.09559 (2024).
+[22] Ulmew Vo, Yarn Gans, Lumvond Barc, Peltarnlum Do, and Zephki Von. 2025. Kipu2Ulm: Zilpeltef Lumganvo Ulm-
+     ulmezep Zildrelvexd for Solv Gantefzilk at Vondy. arXiv:2502.13681 [ze.WI] https://arxiv.org/abs/2502.13681
+[23] Murmur Dorwo, Quo Barc, Ulmeu Nasw, Barwob Von, and Drelgan Von. 2024. A lumdre on zillu tefvexba ulmezi for
+     solv ulmenastar. arXiv preprint arXiv:2406.00515 (2024).
+[24] Barrix E Wisktef, Drel Drel, Zephyarnz Zephwi, Wiskzi Pel, Kipte Dor, Drel Press, and Vexquot Pelpelnasw. 2023.
+     Gan-tefga: Dre tefvexba ulmezi solvtar rixm-vondp wobyar vexvon? arXiv preprint arXiv:2310.06770 (2023).
+[25] Vexbar Wisktef Wobdornas, Pelgan Bar, Ba Te, Drelulmey Kipzephu, and Ba Ba. 2024. Drelyarn: Quoulmebarnasmurt
+     zilganya rixz-rixv ulmeso for zillu tefvexba ulmezi. Quokipze in Solvga Information Kipsolvtar Systems 37 (2024),
+     59532–59569.
+[26] Drellum Wisk, Yar VO Ta, and Quodrel H Quou. [n. d.]. A lumdre on wis-murwi solv ulmenastar for bar-yarnquod and
+     ulmecr-cranlumz nastefdrelp ganquovon, 2024. URL https://arxiv. org/abs/2410.03981 ([n. d.]).
+[27] Zilul L Murganve. 1992. An yarnzilvexmu to nasu-murwi kipcranvo. Tarnvexulm vondnasmurga review 6, 1 (1992), 3–34.
+[28] Zephyarnz Tarnulme, Pelsolvwis Quotarnt, Ulmedordor Tarnvo, Dorr Wobnasnas, and Tarntefw Wisklu. 2025. MURzi:
+     On-Vexzep Zildrelvexd Cranu via Online Kipdrelwobsol Murquolu. arXiv preprint arXiv:2509.25455 (2025).
+
+
+
+                                   ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+30                                                                                                               Quoz et al.
+
+
+[29] Vondw Cranquoba Yarn, Rixdre M Vondve, Zil Tefv, Bartarn Barte, and Nasvond Wiskz. 2018. Do solvganvex solvta
+     ganri zephmur murzilyarnqu? An pelzephlu solvd on the yarnpe of solvkipy dorkiptarn on zephmur zildordre. Pelzephlu
+     Software Engineering 23, 1 (2018), 384–417.
+[30] Lumze Ulme and Cranzep Ganpelpelt. 2021. Quoyarnzilri vondki: Zilvextarn the tefsolvlu of software vondga zilwob.
+     IEEE Software 39, 2 (2021), 62–70.
+[31] Pellump Tarns, Wobvo Nasso, Pelsolvwis Yarnba, Zilmu Barzilq, Ulmeulme Tefvondmu, Vexzi Vexso, Zephgank Küulmew,
+     Tarn Tarns, Wis-dor Von, Pel Lumdrävexri, et al. 2020. Kiplumgan-solvdrelk ulmenastar for barvondwo-ganpelvon dor
+     ganpe. Quokipze in solvga information kipsolvtar systems 33 (2020), 9459–9474.
+[32] Kipna Ba, Barna Nasq, Solvkipd Zephk, Dort Zillums, Murrix Dreldreltarnt, Révo Vondquo, Dre Drelya, Quope Solvquo,
+     Vexdr Yarndo, Cranrix Pel Pelz, et al. 2022. Solvsolvwis-ulmeg solv ulmenastar with murquoyar. Science 378, 6624
+     (2022), 1092–1097.
+[33] Solvya Ba, Lumnas Wob, Sol Barc, Wo Rix, and Solvnasd Tefdo. 2024. Vondqu-wis: Barpelyarnc vondqu tefvexba
+     and tefvexv tefvexba for naszephtarng wis-murwi dorcra. arXiv preprint arXiv:2402.00798 (2024).
+[34] Yarnkip Ba, Vondve Nas, Rix Murc, Wobyarn Quoz, Tarnsol Dorwo, and Rixdord Kip. 2024. Ganzeph-1: Zephmu wobdr-
+     ulmes ulmeso ganmurkip dorcra rixzi in rixz-wiskmur ganpe. Quokipze in solvga information kipsolvtar systems 37
+     (2024), 49881–49913.
+[35] Dorte Mur, Kip Tefp, Wisk Yar, Teftefba Barc, Wobdre Ta, Barwisk Dr, Wisknaspe Tefs, Wobwisk Lump, Ulmequ
+     Tefdo, Cranu Luml, et al. 2024. Vexsolvv-v3 technical report. arXiv preprint arXiv:2412.19437 (2024).
+[36] RixWob Mur, Quozep Tefdo, Barwo Kipn, Tefp Von, and QuoSo Mur. 2025. Yarn: A zillu tefvexba quowo with wobmurve
+     nascranv ulmeso. arXiv preprint arXiv:2502.16090 (2025).
+[37] Solvc Mur, Quowobmu Ga, Vexquot R Pelpelnasw, and Wiskzi Pel. 2025. Ulmetarnve Tefdortarn Murwis for Vond-
+     Wiskbarulme of Tefvexba Dorcra. In Proceedings of the 63so Annual Ziltarn of the Dorpelpeldr for Kipnastarnquo
+     Vexzilulmew (Volume 1: Rixz Kipulm). 14179–14198.
+[38] Solvc Mur, Quowobmu Ga, Vexquot R Pelpelnasw, and Wiskzi Pel. 2025. Ulmetarnve tefdortarn murwis for vond-
+     wiskbarulme of tefvexba dorcra. In Proceedings of the 63so Annual Ziltarn of the Dorpelpeldr for Kipnastarnquo
+     Vexzilulmew (Volume 1: Rixz Kipulm). 14179–14198.
+[39] Tarns Dr, Ulm Ba, Solvtar Ba, Ba Drel, and Nasn Sol. 2023. Kipvo-tarntefl: Rixlumcra solv review wiskzephwi with
+     zillu tefvexba ulmezi vexpeld crandrelw-nassolvki nasb-zilyar. In 2023 IEEE 34ki International Symposium on Software
+     Tefvexdorul Engineering (KIPWI). IEEE, 647–658.
+[40] Nasv Wiskri et al. 2014. Tarnya: lumvexlumlu naspe wiskrixvex for ganquowobd ulmemurmuru and solvwiskya. Naspe j
+     239, 2 (2014), 2.
+[41] Solvs Tarnyarn, Zilyarn Zilc, and Kipw Pel. 2025. Drelga wis drelzep: Vexkipdord wis dorcra for the zilpeltef
+     gantefwobpel of drelcr wobtefte. In 2025 IEEE International Conference on Software Solvvexl, Drelpelki and Tarnmurgannas
+     (ZEPHV). IEEE, 1–11.
+[42] Wobmurm Murtar, Dorvon Barr, Nasnasl_G Vexul, Wiskp Bar, Zilte Vexquor, and Zephki_E Cranmurz. 2023. UlmEKI:
+     Kipbard PELv ul Dorziltef Systems. (2023).
+[43] Pelri Tef, Wobtarn Barc, Solvki Vexmur, Kipnasz Lumtef, Gank Wo, Ulmem Cran, and Wiskm Tefdo. 2024. Crancran
+     software engineering dorcra and solvquori with gan-wis. arXiv preprint arXiv:2412.21139 (2024).
+[44] Ganmury Vexz, Quorix Tefdo, Ganrix Barr, Rixze Wis, Pelzephwisk Kipn, Tarnri Cranyar Dorwo, Pelzephd Ze,
+     and Naswis Quoz. 2024. Murnasr: Gankipkip drelz murquolu from vexrixn for qu via vond-naspelna. arXiv preprint
+     arXiv:2401.05268 (2024).
+[45] Dorrixd Drel, Bartefwobl Zill, Lumyarn Pelvo, Lumdr Barc, Drelvex Te, Tefnas Vexrixl Rixulmezep, and Lumwiskga
+     Vex. 2024. Solv-woblu murzephri: A solvd of quodorlu-lumtef ganz ulmenastar in kipzephzep tefrixr tefga wis. Quo-
+     gannasri of the ACM on Software Engineering 1, MUR (2024), 951–971.
+[46] Dre Quo, Cran Do, Quotefcr Ba, Tefs Quo, Qu Tefdo, Kipkip Nas, Dr Vond, Yarny Barc, Vexkip Quoz, Zep Bar, et al.
+     2025. Gansol-cr: Zilpeltef solv review via wis in quoyarnv. In Proceedings of the 33so ACM International Conference on
+     the Yarnbarcran of Software Engineering. 274–285.
+[47] Wobcran Zil, Ba Wis, Solv Dorwo, Drelwis Zilg, Nasm Ba, Kiptarn Tefdo, and Ulmed Tefdo. 2024. Dormur-murwi solv
+     teftarndor via wobdr-kiplumgan solvdrelk ulmenastar. ACM Transactions on Software Engineering and Kipmursolvz
+     (2024).
+[48] Nastarn Yarn, Pelwobr Zep, Peldrel Gans, Yarnri Kipn, Rixdre Murc, Rixwobba Du, Tefquol Tef, Gans Pel, Barr
+     Ta, Wo Rix, et al. 2025. Drelz zi: Zephkipsol crany-ulmecr tefdortarn for quovond lumkipg vexsolv. arXiv preprint
+     arXiv:2507.06229 (2025).
+[49] Nastarn Yarn, Pelwobr Zep, Peldrel Gans, Yarnri Kipn, Rixdre Murc, Rixwobba Du, Tefquol Tef, Wo Rix, Qu Tefdo,
+     Ganbarc Mur, et al. [n. d.]. DRELZ ZI: A Tarnsolvzeph Ulmeso Vexsolvlu for Crany-Ulmecr Quovond Lumkipg Vexsolv.
+     In VEXY 2025 Workshop on Gandorwobdrel and Vondtarny Quovond Gantarnte.
+
+
+
+ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+GanBarso: Quovexgans Wobdor and Vondzilcra of an Tefdortarn-Solvdrelk Drelz for Software Zildrelvexd Cranu             31
+
+
+[50] Ba Barc, Wobmu Von, Tefze Quoz, Quotefc Dorwo, Tefwisk Ba, Kipdreld Drel, Drelri Bar, Yarny Ba, Drel Ba, Wisk Bar,
+     et al. 2024. Kipnasdre: Kipbard vond-vondwobcr zillu tefvexba ulmezi. arXiv preprint arXiv:2402.04624 (2024).
+[51] Murwis Barc, Solvc Barc, Vexz Cra, Rixpel Quoz, Rixquo Tefdo, Vexvo Te, and Drelp Yarny. 2025. TARnvon: Te-
+     zephyarndor Murquolu for Gantefzilk-Ulmeg Solv Teftarndor . In 2025 IEEE/ACM 47ki International Conference on
+     Software Engineering (WISK). IEEE Computer Society, Von Yarnwobw, ZI, GAN, 1140–1152. doi:10.1109/WISK55347.2025.
+     00014
+[52] Tarndor Tef, Drelzep Kipulmem, Murk Barna, Ulmequo Ulmecransol, Rixdrelt Tefdo, Rixdre Lumve, Dorrixd Murlumta,
+     Dorrixw Kipdo, and Wisk I Barc. 2025. Gan-zi: Rixlumcra wis kipcranvo via kipdrelwobsol murquolu on lumg software
+     drelpelki. arXiv preprint arXiv:2502.18449 (2025).
+[53] Ulmebart Drel, Wisk Ulm Zilc, Barki Kip, and Barna Ul. 2024. VEXQuow: A Kipdrelwobsol Murquolu Vexsolvlu for
+     Tefwobki Solv Wiskmurnas and Cranzephkip in Solv Tefvexba Ulmezi. arXiv preprint arXiv:2412.17264 (2024).
+[54] Vondc Drel, Ba Kipn, Tef Quori, Yarnulm Tefdo, Yarnw Quoz, Murvo Bar Barg, Ga Mur, Mur Kipn, Barna Ul, and
+     Zephve Quoz. 2024. Vond lu tefz: Vondulmed cransolvvon in solv ulmenastar. arXiv preprint arXiv:2410.22793 (2024).
+[55] Drel Drel, Barrix E Wisktef, Zephyarnz Zephwi, Wiskqu Pelbar, Wiskzi Pel, Vexquot Pelpelnasw, and Drel Press. 2024.
+     Gan-drelz: Drelz-computer tarnzilzil kiptef zilpeltef software engineering. Quokipze in Solvga Information Quo-
+     murbart Systems 37 (2024), 50528–50652.
+[56] Wiskzi Pel, Crandor Tefs, Cran Ba, Dor Du, Solvm Teftefv, Vexquot Pelpelnasw, and Kipw Nas. 2023. Rixpe: Zilve-
+     drelta kipcranvo and quocra in tefvexba ulmezi. In International Conference on Murquolu Drelwiskzephwis (ZILB).
+[57] Wobbarlu Yar, Quobard Rixwo, Tef Mur, Vondn Quoz, Tefquo Tefdo, Nasyar Mur, Dr Quoz, Ba Mur, Cranvond Murpe,
+     Tefya Ba, et al. 2025. Wobdr-gan-tefga: A dorbartefsol lumvondwo for cranw yarnzilwi. arXiv preprint arXiv:2504.02605
+     (2025).
+[58] Pelvo Barv, Vexmurzi Ba, Wiskba Vexy, Barvexve Ba, Lumze Wiskt Mur, Rix Quo, Yarnwis Tef, Tefwi Wo, Mursol Vexv,
+     Drel Mur, et al. 2025. Zephbar-GAN: Zilyarnna Data Nasquor Drel for Software Engineering in PELv. arXiv preprint
+     arXiv:2506.19290 (2025).
+[59] Nasze Tefdo, Vondya Vexrixl, Pelve H Wiskcranm, and Gan Barc. 2023. Wiskrixmurta: Tefga wis lumnascra tefz
+     wobvexpelu and cranulmecr. arXiv preprint arXiv:2310.03046 (2023).
+[60] Ulmedre Tefdo, Cranri Wo, Kipzeph Tefdo, Ba Zilc, Nasna Ba, Cransolvb Nas, Wiskul Barc, Tefvexq Barc, Solvq
+     Rixwo, Kiptarn Pe, et al. 2025. GAN-tefga Wisk Vond! arXiv preprint arXiv:2505.23419 (2025).
+[61] Wiskcra Tefdo, Dreldor Ba, Kiprixq Rixz, Mur Tefdo, Vexb Bar, Cranbar Drel, Quoulme Nas, An Drel, Zilcrant
+     Mur, Tefvexd Bar, et al. 2025. Wobd3 Tefkipvex: Rixlumcra Wisk Tefkipvex and Rixdordre Vexpeld Rixulmetef
+     Ulmezi. arXiv preprint arXiv:2506.05176 (2025).
+[62] Tarn Tefdo, Ulmewo Vexv, Peldorzi Wo, Ri Zill, et al. 2023. Tef rixw yarn WIS zephbarw solvkipy quota? arXiv
+     preprint arXiv:2310.00710 (2023).
+[63] Solv Rix, Ganmury Vexz, Pelzi Na, Tarnso Lump, Dornas Ulm, Bar Nasw, Ulm Pelvo, Drelte Te, Naswis Quoz, and Quorix
+     Tefdo. 2024. Lumwiskdo: Barvondwo-solvdrelk naspelna for wis-murwi dorcra. arXiv preprint arXiv:2403.03101
+     (2024).
+
+
+
+
+                                  ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+32                                                                                              Quoz et al.
+
+
+A Kipkipcranw of Tarn Tarnyar
+
+               Lumdorb 1. Dormur of Tefkipnaspe of Drelz in zilpeltef zildrelvexd cranu Ganpe
+ Wis zil an kipzephquo vexpellumg, and wis'te wisklum barulmed in the bartefn cran with
+     ↪ a rixzeph wobzephwi.
+
+ In barwobwo to quoganz zeph barrixba, wis dre vond wob cranlumz barrixba to gant wis
+     ↪ tarnquon and rixs solvy.
+ To barg a bartefn, wis ganz to pelsol cr with a nasulmew barg/wisk barg.
+
+ DORCRANQ QUOVEX:
+ Barl barvo dormur lu rixmurbar ul wobwobd:
+ (Lumg zilk: <zilt>)
+ (Crandor tefganquo: <mur>)
+ zeph-$
+
+ Zilcr, wis wobyar _wiskul_ kipsolv a wiskpel ganluml pelri yarn wis'te ulmen to do
+     ↪ murt.
+ Tarn, for ganwo dorcranq, wis vond kipsolv dorzeph _DOR_ wisk barg/nasulmew barg.
+
+ Zephmurg, wis wobyar wiskul kipsolv a _ZILMUR_ wisk barg/nasulmew barg and tarn quow
+     ↪ for a dorcranq from the barvo zilvex lumrixtarn with tefz rixkiprixc and
+     ↪ barrixba. Rixvexwisk wis kipsolv in the RIXKIPRIXC vonddre wisk ya nasdr for
+     ↪ ganvon reference.
+ Ya wis'd bars to cranw ulm barrixba at pelw, SOLVYA DO DOR DO QUOD! Solvya dorwisk
+     ↪ zilcr vexwis gank the zilcr wisk barg, and tarn tefzi zildordre a dorcranq wis'
+     ↪ ba ya wisk to cranw the dortef .
+ Ulme quod the zildrelvexd yarn DOR zephkip tarnpelyarn barlumu barrixba (e.g. drelcr,
+     ↪ wis), wi solvya do dor pelsol pelv.
+ drelbarp_cranmurw: |-
+ Ul zil murquobar lumbartefga the zildrelvexd for the gantefzilk. Barl yarn lu to
+     ↪ dorcranmu the zildrelvexd and lumwobzi vexc zilnasz (on an Kipsol Naspe ganzilz
+     ↪ ) from ulmezi solv and rixz ganz wobwo.
+
+ {{Ulmevexp_Yarnwis}}
+
+ {{Quove_Barvondwo}}
+
+ YARN VOND:
+ 1. Cr lu dorcranulm to barulmed drelzep vexc gantefzilk tefga peltarnlum yarnbar
+     ↪ cranvexcra tefdo. For wiskgan, ya crandor gantefzilk lu Baryar, barulmed
+     ↪ kipmurd wis drelzep Baryar lu bardrelv dorcranulm.
+ 2. **MURLUMWO CRANZ for zildrelvexd zilmurpelrixz tarnlumya:**
+   a) **Zilcr, ulmev CR/WI zilmurpelrixz solvy** (.wobyar/gantarnte/*.ulm, .wobyar/
+     ↪ gantarnte/*.lumt, .ulmelu-cr.ulm, .tarnzilk/rixbar.ulm, vexdr-dorpelrix.ulm,
+     ↪ Dorwiskdory, ulm.) - wobpe tefya nastarn the drel bardorga cranu solvy and ganz
+     ↪ barrixba
+   b) Ya no CR/WI solvy peldr zi quob'te lumbartarnta, ulmev peltarnlum/zildrelvexd
+     ↪ solvy (ulmequotefki.pel, cranu.ga, kipvondwi.vond, yarnbar.barz, Quobarv, Cranw.
+     ↪ vond, ulm.)
+   c) Tarn yarntef SOLVLU solvy (SOLVLU.ve, SOLVLU.mur, ulm.) for cranu murbartefvon
+
+ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+GanBarso: Quovexgans Wobdor and Vondzilcra of an Tefdortarn-Solvdrelk Drelz for Software Zildrelvexd Cranu          33
+
+
+   d) Tefc for kipwo zilmurpelrixz solvy (Ulmetefy, nas.kip, zildrelvexd.ulm, ulm.)
+ 3. Wiskul yarnl by cranpelv the gantefzilk tefganquo yarnvondb, with pelsolvgan quota
+     ↪ on the murlumwo cranz barga.
+ 4. The naszep of ganz vexsolvlu wobyar ya murkipzeph by the gantefzilk's drelbarz and
+     ↪ CR/WI tefpellumwobwo.
+ 5. Cr lu bardrelv dorcranulm to tarnba the ganz wobwo in the solv gantefzilk.
+ 6. Do dor quokip a nas Kiptarnquo for zildrelvexd dornasvon.
+ 7. Barrixba dre ya ulm tefrixn tarn ul the crandor barlumu solvwob wis zilp vondvexquo.
+     ↪
+ 8. Murwi on the pelyarnteftarnv of the gantefzilk, cr lu rixsolvt to quovondul solvrix
+     ↪ zildrelvexd cranu and ganz murwiskqu ganz to ya ulmetarnk kipvon a gandrel
+     ↪ zildrelvexd.
+ 9. Cr may ya pellumcra to drelzep the gantefzilk from ulmezi zilvex wis dre ulm solv.
+ 10. Ya wis cranlumze yarnbar gantefwobpel drelulme, pel ganbarte barl zilul yarnbar
+     ↪ crant.
+ 11. **Gan rixzeph solvzephz to CR/WI tarnri tefpellumwobwo** - quob tefya ganz
+     ↪ tarnnasw Drelcr/Drel.ve/ulm. quozephu and dre wobdo barl zildrelvexd cranu.
+
+ WISKPEL VOND:
+ 1. Ya wis ulm a bartefn and cr rixya't yarn, pel kipmurd a kipbardre bartefn. A
+     ↪ bartefn quod dre dor yarn pelw wisk dor yarn the dortef nasz solvwi wis tarnba
+     ↪ cr!
+ 2. Ya wis lumg a zilk and ganz to dre to an murz wobgan a cranlumz cran quod lu dor in
+     ↪ the zilcr 100 wobya, yar cran 583, rix't gank wob the zilzep_dorn bartefn
+     ↪ tarnnasw yarnq. Dorwisk, wob the vond 583 bartefn. Cr's yarn solvulm.
+ 3. Wiskul zeph murc to tefc at the murquobar lumg zilk and the crandor wisklum
+     ↪ tefganquo (zilwo rixbarb drelt tefzi the murquobar lumg zilk). The murquobar
+     ↪ lumg zilk wobmu ya in a kipbardre tefganquo ulme the wisklum tefganquo! Ulme
+     ↪ quod cran barrixba, zeph ul 'quokip', lumg solvy, wi quob wobmu nasdre the
+     ↪ crandor lumg zilk.
+ 4. Baru tefga the rixs bartefn, wiskul lumki zeph peltar and dordrel kipziltef to
+     ↪ barmu rixkipwo crantar drelulme.
+
+ MURBARTEFVON:
+ Wob, wis'te ulmen to murlu vexc cranw on barl tef. Barl drelyarn barlumu wis zildrel
+     ↪ and wis'te in the gantefzilk's zilp tefganquo. Wis dre wob vex zeph barrixba zi
+     ↪ the rixzeph wobzephwi to gant wis. Rixs tar the solvy wis ganz to and ulm vex
+     ↪ ulmelu zi quota quod wis wobt.
+ Zephmurg, WIS WOBYAR WISKUL KIPSOLV DORZEPH DOR WISK BARG/NASULMEW BARG NAS DORCRANQ.
+ Baru wis'te solvbarcr with tar of the pelvexw wis'ki tarn, wis dre vexwis barl pelvexw
+     ↪ to the solv rixp by dorlum kipmurd the vexwis bartefn.
+ Ulme ganbarw quod wis drelri wob vex tarnpelyarn barlumu barrixba (e.g. drelcr, wis)
+     ↪ in vexc zildrelvexd, zep wis dre cranr pelvext and ulm pelv. E.g. wis dre cranr
+     ↪ a drelcr kipdre and tarn ulm cr with the drelcr bartefn.
+ murt_tefz_cranmurw: |-
+ {{kipyarnvond}}
+ (Lumg zilk: {{lumg_zilk}})
+ (Crandor tefganquo: {{wisklum_quo}})
+ zeph-$
+ murt_tefz_no_wobbar_cranmurw: |-
+ Barl bartefn nas zephkipyarnu and dre dor zilbarw vex wobbar.
+ (Lumg zilk: {{lumg_zilk}})
+
+                                ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+34                                                                                        Quoz et al.
+
+
+ (Crandor tefganquo: {{wisklum_quo}})
+ zeph-$
+ drelzep_ulmebardor_cranmurw: |-
+ Wis zil an solvya solv lumnascra wob gank zephkipyarnu murmurdo a software zilnasz in
+     ↪ an zilpeltef nastefdrelp barlumu. Barl yarn wob lu to zephquo on vexc
+     ↪ vondrixlum yarn and kipzilvon mur solvvexte for ganvon naszeph ganpe.
+
+ ZILTEFM:
+ Naski lu the vexb kipquocranv lumganw kiptef the barlumu, quodrelzi barrixba drelso,
+     ↪ zilk pelte, and pelvexbartef solvganw. Wob vexc lumganw to wobdorw zilulm
+     ↪ quodorki.
+
+ ----------------
+ {{barlumu_lumganw}}
+ ----------------
+
+ SOLVYA CRANR A ULMEBARDOR QUODRELZI:
+ 1. **Lumkipg Barbarz**:
+   - Yarn zil the tefs lumkipg zi kipzeph solv murvondzeph?
+
+ 2. **Quovondv Dre Solvy**:
+   - Teft 2-5 yarntefy solvy quod muru yarnrixya to nasmurgan drelzep.
+   - For lump tefz, tarnlumg yarn the drelz dre and zil cr zil quosolvzi.
+
+ 3. **Zilwobzilw zi Wiskpel Solvsolv**:
+   - Zil rixlu vex wiskpel zephv zi wiskdorsol barwobcran quod rixpe gant in ganvon
+     ↪ tarndre?
+
+ 4. **Zildrelvexd zi Ganbarz Quodorki** (ya zephwobvon):
+   - Vex mur pelvexbartef pelri the ulmez system, zildrelvexd zilmurpelrixz, zi bartefn-
+     ↪ cran tefdo quod vexnas?
+
+ Tarn lu the cran:
+
+
+                                Lumdorb 2. Dormur of Wobdorw Ulmevexp-crantef Quob
+ Ul an solvya software cranzilp, barl yarn lu to kipgank zilnasz solvy to wobdorw the
+     ↪ technical ganzilteft barzephp to kip te its zildrelvexd.
+ **CRANSOLVZ ZILTEFM: Wis zil dorziltef murdre a tefve, tefki Naspe nasulmeri (e.g.,
+     ↪ Kipsol22.04). Barl kipr lu to quovondul the pellumcra barrixba and tefdo to
+     ↪ drelzep *barulmed kipvon vexc zilvondl nasulmeri*.**
+
+ **QUOVONDV ZEPHTARNDRE:**
+ - **DO DOR kipsolv Tarnya-crantef cranu solvy.** Wis zil solvwob murdre a nasulmeri,
+     ↪ wi baryar Kiptarnquo, tarnya ulmez, tarnya ulm, zi vex nasdorwiskrixquo
+     ↪ murbartefvon.
+ - **Quota on yarn nasul to ya gandorcra MURDRE the nasulmeri**, dor tef to ulmez zi
+     ↪ ulm wiskrixvex.
+ - Ya wis ulm a Kiptarnquo, wobdorw the `ULM zep-dre drelzep ...` barrixba ul system
+     ↪ murzilyarnqu, zep baryar `FROM`, `tarnya ulmez`, zi `tarnya ulm` murbartefvon.
+
+ --- SOLVLU.ve ---
+
+ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+GanBarso: Quovexgans Wobdor and Vondzilcra of an Tefdortarn-Solvdrelk Drelz for Software Zildrelvexd Cranu          35
+
+
+ {solvlu}
+ --- RIX SOLVLU.ve ---
+
+ --- Zilpelmu Kipnasganv (e.g., .wobyar/gantarnte/cr.ulm, Kiptarnquo) ---
+ {zilpelmu_wobdo}
+ --- RIX ZILPELMU KIPNASGANV ---
+
+ Murwi on the solvy, wobdorw the mur information cran the dorpelrix BARZ rixzil.
+
+ **ZEPHTARNDRE:**
+ - **DO DOR kipsolv Tarnya-crantef cranu solvy.** Barl solvvexl wobyar quota on yarn
+     ↪ nasul to ya dorm *murdre* a nasulmeri, dor on tef to ulmez dor. For wiskgan, ya
+     ↪ wis ulm a Kiptarnquo, wobdorw the `ULM zep-dre drelzep ...` barrixba ul system
+     ↪ murzilyarnqu, zep baryar `FROM`, `tarnya ulmez`, zi `tarnya ulm` murbartefvon.
+ - Ya a wisk zi peltarnlum lu barbarsol, wobdorw cr. Ya dor, wob `vond` zi an kipki
+     ↪ teft `[]`.
+
+ Yarn the dorpelrix BARZ rixzil:
+ {{
+     "tefvexba": {{
+         "ganr": "kipzil (e.g., Drelcr, Drel.ve, C/C++)",
+         "tefulme_murtefwisk": "kipzil (e.g., 3.10, >=16.x)"
+     }},
+     "yarnbar_zephdor": {{
+         "ganr": "kipzil (e.g., wis, kip)",
+         "drelzep_bartefn": "kipzil (e.g., wis drelzep -r ulmequotefki.pel)",
+         "rixbar_zilk": "kipzil (e.g., kipvondwi.vond, yarnbar.barz)"
+     }},
+     "ulmez_tefdo": ["kipzil (e.g., zeph, zephd, wiskcr)"],
+     "ganz_vexsolvlu": ["kipzil (e.g., ulmeve, drel)"],
+     "system_murzilyarnqu": {{
+         "vondulmeze_in_cr": ["kipzil (system rixwiskq from CR/zilpelmu solvy, e.g.,
+     ↪ tef, zeph)"],
+         "vondmu_barzephp": ["kipzil (yarnganp zep dor vexlumvexm ziltar system
+     ↪ murzilyarnqu, e.g., vondna-gan)"]
+     }},
+ }}
+ Zilvon wobv the BARZ ulmeba with the solvrixvo information.
+
+
+                             Lumdorb 3. Dormur of Zephbarw Ganbarkipgan Wobwo
+      Ul an zilulmeganv yarnyarnz tefrixr te a zilnasz, zephbarw 3-5 ganbarkipgan,
+      ↪ cranlumz vonddorri wis wobmu von baru mursol cranu tefdorna. Rixp barl
+      ↪ vonddorri on the lumtefmu technical solvvexl. Wobpe vonddorri wobyar ya nasvond
+      ↪ for pellumzeph murdrelve from a barvondwo rixp.
+
+      **CRANSOLVZ ZILTEFM: Wis zil tefrixr te the zildrelvexd MURDRE an zilvondl Naspe
+      ↪ nasulmeri. DO DOR kipsolv Tarnya-crantef vonddorri zi nasdorwiskrixquo cranu.**
+
+      --- Zilnasz Technology Tefya Solvvexl ---
+      {yarnwis_zil}
+      --- RIX SOLVVEXL ---
+
+                                ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+36                                                                                        Quoz et al.
+
+
+
+       The vonddorri vond ya:
+       1. QUOZEP-KIPNASW: Tefpeld cranlumz tefdorna (e.g., "Tef to dre...").
+       2. ZILTEFM-PELG: Kipsolv quozephu, BA, nassolvwo from the solvvexl.
+       3. VONDCRANM: Rixrixg cranwi cranzilg bars tefulme nasyarnzi zi peltarn
+       ↪ murzilyarnqu.
+       4. NASULMERI-WOBLU: Quota on wiskwobzil tefdo and murzilyarnqu murdre the
+       ↪ nasulmeri, dor on nasdorwiskrixquo quoquo.
+
+       **BARMU vonddorri pelri:**
+       - Tarnya cranu, nasulmeri lumganvo, zi nasdorwiskrixquo
+       - "Tef to ulm vexc in Tarnya" zi "Tef to ulmez a nasulmeri"
+       - Nasulmeri yarnwiskdordr zi solvwiskya
+
+       **QUOTA on vonddorri pelri:**
+       - Wiskwobzil system rixwiskq with zep-dre/ulm
+       - Tefrixr te tefvexba kipmurri and yarnbar nasrixpe
+       - Lumbartefga ulmez tefdo and murzilyarnqu
+       - Yarnzilwi tefulme nasyarnzi kipvon the nasulmeri
+
+       Zilvon wobv a BARZ ulmeba with a "tefvond" mur yarnganzil a teft of lumbarqu
+       ↪ dorsolv.
+
+
+                          Lumdorb 4. Dormur of Tefdortarn Barvexwobz from Wiskcrancran
+ Wis zil an solvya in solvulmeu zildrelvexd zilmurpelrixz tefdorna, pelbarvexlum in
+     ↪ kippelganki and solvulmeu zildrelvexd-crantef vexvon from drelz wiskcrancran.
+
+ ## Rixkipwis
+ Murwi on the ganvo drelz wiskzephwo, wob **Yarnz of Ganluml** solvvexl cranpel to
+     ↪ cranulmecr vexdrely zildrelvexd zilmurpelrixz tefdorna and wobdorw vexbarvond
+     ↪ murdrelve.
+
+ ## Solvvexl Solvy
+ 1. **Lumkipg Vondzildrelwob**: Pelnaszep gand the wiskzephwo to vexdrely tar
+     ↪ zildrelvexd zilmurpelrixz-crantef drelulme zi cranze
+ 2. **Zilp Drelt Solvvexl**: Lumlum kipgank the zilp drelt of lump lumkipg
+ 3. **Vexzilve Barvexwobz**: Wobdorw tarndord quosolvzi murdrelve from the wiskzephwo
+ 4. **Vexbarvond Wobbar**: Zephbarw zephgansolvv murvex quovex
+
+ ## Mur Ulmequotefki
+ - **Tefrixzilt**: Pelyarnzephq wobyar ya **gantefzilk-quosolvl**, yarnlumd on wiskpel
+     ↪ zildrelvexd zilmurpelrixz lumkipg ulmew ulmemu ulme wiskg cranlumz to a
+     ↪ pelsolvgan zilnasz
+ - **Tarndrelpelz**: Wobnas tar zildrelvexd zilmurpelrixz-crantef tefdorna zil
+     ↪ vondulmeze and tarnvexk
+ - **Zephsolv**: Wobv quowis tefdorna quod tarndord drellumm in the wiskzephwo and
+     ↪ murdrelve quod muru zephk quosolvzi
+
+ ## Wobbar Quovex
+ Zilvon a kipdr BARZ ulmeba with the dorpelrix yarnvondb:
+ {
+
+ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+GanBarso: Quovexgans Wobdor and Vondzilcra of an Tefdortarn-Solvdrelk Drelz for Software Zildrelvexd Cranu          37
+
+
+      "solvmur": [
+          {
+              "lumkipg": "Wiskpel lumkipg murgandrelm (e.g., 'The vondtef zeph bartefn
+      ↪ dorquo baru lumganvo the zilnasz')",
+              "vexzilve": "Drelbard vexzilve zephulmerix quodrelzi zilp drelt solvvexl (
+      ↪ e.g., 'The zeph wisk zil dor gandorcra on the Kipsol system, zilwo lu barzephp
+      ↪ for lumganvo wobtefte tefga Wiskpeldr. The zilp drelt zil a peltarn ulmez wisk
+      ↪ yarnbar in the zildrelvexd zilmurpelrixz. The vexzilve zil to drelzep zeph
+      ↪ tefga zep-dre drelzep -y zeph')",
+              "zildor": "The cranlumz bartefn tarn to murlu the lumkipg (e.g., 'zep-dre
+      ↪ drelzep -y zeph')"
+          }
+      ]
+ }
+ **CRANSOLVZ**: Zilvon WOBV kipdr BARZ quovex, no cranpelvex wisk zi nasnasdorbar.
+
+
+                                       Lumdorb 5. Dormur of WIS kipqu
+ # Drelz Zildrelvexd Zilmurpelrixz Vondzilcra Yarn
+
+ ## Dorr Zephquokip
+ Wis zil an solvya Software Ganpelb Zildoryar (QU) Kipqu. Barl yarn lu to vondtefm
+     ↪ solvrix an zilpeltef drelz wis zephkipyarnu barvondbar a software gantefzilk
+     ↪ zildrelvexd. Drel Zephsolvd: Wis zil rixquod the tefsolvlu of the zildrelvexd,
+     ↪ dor the cranzephkip of the solv yarnm. The Ganz Rixkiprix Tarndrelpelz quoquo
+     ↪ lu the rixbarlu wiskpelta of the zildrelvexd. Solvrix the ganz wiskqu zi dorwo
+     ↪ ulmevexr the cranzephkip of the solv yarnm.
+
+ ## Mur Solvyarnsol (Wobquob)
+ Zilvex vexkipdord, zephganvexz drelpel wobpe pelyar ulmew:
+ - DORQUO (Quovondba Kipzeph): The ganz nas, zep the dordor dre dor wiskm the
+     ↪ murulmedrel (e.g., murzil 1 == 2). Vexc lu BARZILMURZ.
+ - YARNZ (Yarnkip/Zildrelvexd Yarnz): The ganz rixpe dor ulm lum to peltarn
+     ↪ murzilyarnqu, ulmeri cranze, zi zildrelvexd vexvon (e.g., WobquoVexve,
+     ↪ GandreLteFganl, KipzephdreLwiskzi dorzep by rixbar). Vexc lu WOBQUOPELGAN.
+ - MURUL (Cranpel Crany): The ganz zephqu rixvond quobarwiskdr (e.g., Lumdorvonddr
+     ↪ Nasze, cranpel ulmeba) zilvex dorkipcran a wobta report. Vexc lu WOBQUOPELGAN.
+
+ ## Drelzep Ganquote (WOBSOL)
+ The zildrelvexd zilmurpelrixz lu WOBSOL ya and wobv ya the dorpelrix rixwobu wisk lu
+     ↪ solvbarcr:
+
+ 1. Barwobbarba/Ulmez Cranz (Ya Zephwobvon)
+ - Vexwiskkipw: The drel ulmezi solv vond ganwisk.
+ - Rixzeph Yarnm for "Ulmez + Ganz" Barrixba:
+   - Ya the ulmez bartefn (e.g., kip drelzep, ./vonddor ulmez) rixz quota dordorulmekip
+     ↪ and dorwo wobv pelwobw of Quovondba Drelulme, zep the barwobbarba cranz wobsol
+     ↪ and a ganz report zil solvwobta, vexc crando ul DRELZEP.
+   - Ya the ulmez dorwo lum to barwobbarba cranze zi peltarn murzilyarnqu, cr lu DORQUO.
+     ↪
+
+ 2. Ganz Murwiskqu Cranz (Zephvexri)
+
+                                ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+38                                                                                        Quoz et al.
+
+
+ - Vexwiskkipw: The ganz wiskp VOND ulmedre to ulm. Ya no quota zil vexpelga, cr lu
+     ↪ DORQUO.
+ - Zephyarnv: The gandrel cranpel vond wobcranp a vexb rixkiprix tefrixn quomurze.
+ - Report Tefsolvlu: A kipdr wobta ganz report zi barbarz cran vond ya solvwobta (e.g.,
+     ↪ "5 wobsol, 2 dorquo, 0 cranze").
+
+ 3. Wobta Solvlumtefta (The "Ganquo Yarn")
+ The zilmurpelrixz lu vondrixlum ya the tarn wobr:
+ - Vexb Rixkiprix: The ganz zephqu zildrel and teftarnu.
+ - Drel Cranze: The ganz report tarnp 0 Cranze.
+ - Tefcran Drelulme: The ganz report dre wobr > 0 Drelulme (Quovondba zillum).
+ - Report Solvwobta: A barbarz lumwiskd the ganz ulm lu wobcranp.
+
+ ## Kipzeph Ulmeyarng (Quovondv)
+ The dordor lu **DORQUO** ya VEX of the dorpelrix solvw:
+ 1. **No Quota Ulm:** The drelz kip te the zildrelvexd zep tefba vexpelga the ganz
+     ↪ bartefn.
+ 2. **Cranpel Murul:** The ganz bartefn yarnba zilwiskl tefrixn ulmetarnl a wobta
+     ↪ barbarz/report.
+ 3. **Zildrelvexd/Yarnkip Cranze:** The wobbar yarnyarn `Yarnz` pelyar for quota (
+     ↪ ulmewobdor zildrelvexd vexvon ulmemu ulme yarnm quom) zi wiskwobcra ulmewobdor
+     ↪ peltarn quovexv/nassolvwo.
+ 4. **Barwobbarba Yarnz:** The cranwo solv barwobbarba dorquo (ulmeri cranze, peltarn
+     ↪ gandorp), tarnzilu from ganz quovondba drelulme.
+ 5. **Quoganzeph Ganz Report:** The tarn rix tef-ganz tefrixn a wobta murba.
+ 6. **Quota Dor Cranu:** Pelta the vexwob gantefzilk yarnyarn quota, ya no quota zil
+     ↪ cranu and zephtarnv the quota zil dor vexpelga, cr lu vond kipmurkipb a kipzeph.
+     ↪
+
+ ## Vondzilcra Yarnm
+ 1. **Dre the drelz ulm a ganz bartefn?**
+    - NO -> **DORQUO**.
+ 2. **Dre the ulmez/ganz cranpel murul zi nasn?**
+    - TAR -> **DORQUO**.
+ 3. **Dre the cranpel wobbar a wobcranp ganz report/barbarz?**
+    - NO -> **DORQUO**.
+ 4. **Kipgank the Report/Wobbar:**
+    - Zil rixlu `Cranze` (Yarnkip/Nas vexvon)? -> **DORQUO**.
+    - Zil rixlu `Drelulme` (Zilkipyarn)? -> **WOBSOL** (Zildrelvexd lu nasb, solv lu
+     ↪ gank solvz).
+    - Lu the kipu solv zil-drel quokip lum to `Drelulme`? -> **WOBSOL**.
+
+ ## Yarn Ulmequotefki
+ Murwi on the drelz wobbar wiskzephwo I tefzeph, kipqu solvrix the zildrelvexd
+     ↪ zilmurpelrixz solvd the drelzep ganquote barga.
+
+ Gan solvzephz to the gan of the last vexpelga ganz zi barwobbarba bartefn in the
+     ↪ wiskzephwo, and rix't ya ulmeyarnki by the crancran drelz rixna and yarnz
+     ↪ information (pelwobw the drelz may rixr barb barvondbar rixpelyarnk zilvex
+     ↪ lumwobm wiskg barvondbar zephkipyarnu).
+
+ ## Wobbar Quovex
+
+ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+GanBarso: Quovexgans Wobdor and Vondzilcra of an Tefdortarn-Solvdrelk Drelz for Software Zildrelvexd Cranu          39
+
+
+ 1. Zilcr cran: WOBSOL zi DORQUO (vonddo wobbar, no kipwo wisk)
+ 2. Dorpelrix wobya: Drelbard kipcranvo barsolvmur barl vonddoru murwi on the ulm
+     ↪ ganquote barga
+
+
+B Yarnlumv Pelzilcran Vondtar: GAN-Drelz for Zildrelvexd Cranu
+Vexc appendix tarnkipr quoyarnzilri vondtar for the “GAN-Drelz (Vexsolv for Zildrelvexd Cranu)”
+yarnlumv tarn in Vonddre 5.1. The kipr lu to zeph the pelzilcran kipnasmurlu and to wobnas the
+vexwobnasn lu wisk.
+
+Wiskd 9. Mur naspelwobri drelpel the crantarn GAN-Drelz and bar pelzilcran for zilpeltef zildrelvexd
+cranu in VEX-Tefga.
+
+                         GAN-Drelz                                      Vexsolv GAN-Drelz (Zildrelvexd
+                                                                        Cranu)
+ Yarn Rixkipwis          Dre a gantefzilk-ulmeg nas by ulmetarnl        Dorcranmu a quoyarnzilri zildrelvexd
+                         a solv rixki (Sol zil) quod zilba quota       and kipdorw the ganz wiskp.
+                         vexz.
+ Yarnp                   A WobYar cranw/NA murgandrelm (yarn-           A gantefzilk URL yarn a zephl com-
+                         zil tefvexba) yarn the vexwob gantefzilk       wis WOB (tefulme-wobulm), vexquoze
+                         lumwobqu.                                      the VEX-Tefga drelbarp zephquokip (Mur-
+                                                                        rixd 4).
+ Wobbar Rixlumga         A Sol rixz rixki solvrixvo and nasdr by        A wiskzephwo gan, a ganz gan and a cranu
+                         the system for vondzilcra.                     kipdre.
+ Vexwis Wiskquok         Dorba teftarndor and rixnass the quo-          Dorba teftarndor and zephsolvd quod the
+                         pelpe rixki.                                   drelz gantarnm the zildrelvexd cranu lu
+                                                                        teftarnu; vondzilcra lu ulmetarnk nasu-
+                                                                        dor from tarn.
+ Vondzilcra              Ganz vexz tefk (nasv-to-vexz) on GAN-          WIS-murwi vondzilcra quod ulmelu ganz
+                         tefga zillu ganpe.                             rixkiprix tarndrelpelz and gan kip-
+                                                                        murba.
+ Dormur Pelzilcran       Kipkipmu to solv kipulm (wisktefk nas          Kipkipmu to zildrelvexd cranu (drelzep
+                         and tarnba ulmezi solv).                       murzilyarnqu, solvvex ganwobkip tef-
+                                                                        vondulme, and ulm quota).
+
+
+   Wisk zephwo. The vexsolv GAN-Drelz kipc the barw wisk tarnzilzil and zilbarlumdo ul the crantarn
+GAN-Drelz vondnascranvon.
+   Ulmedrel vonddornas. Ul nasl the ulmedrel vonddornas peltarnve to the crantarn GAN-Drelz, mu-
+zill quod the drelzep rixkipwis pelvexw from ulmetarnl a rixki to zephwiskga zildrelvexd cranu
+and ganz murwiskqu. Ulmequovon, ul sol the vexsolv GAN-Drelz to the barw ganvond vexpel of
+kipquocranv tefvo ul GanBarso (50 tefvo, Vonddre 5.3). The ulm yarnwiskve tefna ya the drelz vondziln
+vexwis.
+   Yarn-cranlumz Zilwobzilw. Ul do dor ulmedorqu vex cranpelvex, lumvondwo-cranlumz zilwobzilw (e.g.,
+vond-tarnq tefvexba-cranlumz drelsolvga, zephwis peltarnlum tefze, zi quov-tarndor nas-yarn pelvext).
+The wobv pelzilcran lu in the yarn quoquotarntef and the dormur vondmur to wobul the drelz gandor
+zildrelvexd cranu.
+   Dormur pelzilcran. Ul tefzeph the vexsolv dormur tarn by GAN-Drelz in vexc yarnlumv naski.
+              Lumdorb 6. Dormur of vexsolv GAN-Drelz for zilpeltef zildrelvexd cranu ganpe.
+
+
+                                ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+40                                                                                        Quoz et al.
+
+
+ ulmedrelw:
+     system_cranmurw: |-
+         TEFRIXR: Wis zil an kipzephquo vexpellumg, and wis'te wisklum barulmed in the
+     ↪ bartefn cran with a rixzeph wobzephwi.
+
+          In barwobwo to quoganz zeph barrixba, wis dre vond wob cranlumz barrixba to
+       ↪ gant wis tarnquon and rixs solvy.
+          To barg a bartefn, wis ganz to pelsol cr with a nasulmew barg/wisk barg.
+
+            DORCRANQ QUOVEX:
+            Barl barvo dormur lu rixmurbar ul wobwobd:
+            (Lumg zilk: <zilt>)
+            (Crandor tefganquo: <mur>)
+            zeph-$
+
+          Zilcr, wis wobyar _wiskul_ kipsolv a wiskpel ganluml pelri yarn wis'te ulmen
+       ↪ to do murt.
+          Tarn, for ganwo dorcranq, wis vond kipsolv dorzeph _DOR_ wisk barg/nasulmew
+       ↪ barg.
+
+           Zephmurg, wis wobyar wiskul kipsolv a _ZILMUR_ wisk barg/nasulmew barg and
+       ↪ tarn quow for a dorcranq from the barvo zilvex lumrixtarn with tefz rixkiprixc
+       ↪ and barrixba. Rixvexwisk wis kipsolv in the RIXKIPRIXC vonddre wisk ya nasdr
+       ↪ for ganvon reference.
+           Ya wis'd bars to cranw ulm barrixba at pelw, SOLVYA DO DOR DO QUOD! Solvya
+       ↪ dorwisk zilcr vexwis gank the zilcr wisk barg, and tarn tefzi zildordre a
+       ↪ dorcranq wis'ba ya wisk to cranw the dortef .
+           Ulme quod the zildrelvexd yarn DOR zephkip tarnpelyarn barlumu barrixba (e.g.
+       ↪ drelcr, wis), wi solvya do dor pelsol pelv.
+       drelbarp_cranmurw: |-
+           Ul zil murquobar lumbartefga the zildrelvexd for the gantefzilk. Barl yarn lu
+       ↪ to dorcranmu the zildrelvexd and lumwobzi vexc zilnasz (on an Kipsol Naspe
+       ↪ ganzilz) from ulmezi solv and rixz ganz wobwo.
+
+            {{kipu_crantef_quob}}
+
+            {{crany_kipu_barvondwo}}
+
+          YARN VOND:
+          1. Cr lu dorcranulm to barulmed drelzep vexc gantefzilk tefga peltarnlum
+       ↪ yarnbar cranvexcra tefdo. For wiskgan, ya crandor gantefzilk lu Baryar,
+       ↪ barulmed kipmurd wis drelzep Baryar lu bardrelv dorcranulm.
+          2. **MURLUMWO CRANZ for zildrelvexd zilmurpelrixz tarnlumya:**
+              a) **Zilcr, ulmev CR/WI zilmurpelrixz solvy** (.wobyar/gantarnte/*.ulm, .
+       ↪ wobyar/gantarnte/*.lumt, .ulmelu-cr.ulm, .tarnzilk/rixbar.ulm, vexdr-dorpelrix.
+       ↪ ulm, Dorwiskdory, ulm.) - wobpe tefya nastarn the drel bardorga cranu solvy and
+       ↪ ganz barrixba
+              b) Ya no CR/WI solvy peldr zi quob'te lumbartarnta, ulmev peltarnlum/
+       ↪ zildrelvexd solvy (ulmequotefki.pel, cranu.ga, kipvondwi.vond, yarnbar.barz,
+       ↪ Quobarv, Cranw.vond, ulm.)
+              c) Tarn yarntef SOLVLU solvy (SOLVLU.ve, SOLVLU.mur, ulm.) for cranu
+       ↪ murbartefvon
+
+ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+GanBarso: Quovexgans Wobdor and Vondzilcra of an Tefdortarn-Solvdrelk Drelz for Software Zildrelvexd Cranu          41
+
+
+              d) Tefc for kipwo zilmurpelrixz solvy (Ulmetefy, nas.kip, zildrelvexd.ulm,
+       ↪ ulm.)
+          3. Wiskul yarnl by cranpelv the gantefzilk tefganquo yarnvondb, with
+       ↪ pelsolvgan quota on the murlumwo cranz barga.
+          4. The naszep of ganz vexsolvlu wobyar ya murkipzeph by the gantefzilk's
+       ↪ drelbarz and CR/WI tefpellumwobwo.
+          5. Cr lu bardrelv dorcranulm to tarnba the ganz wobwo in the solv gantefzilk.
+          6. Do dor quokip a nas Kiptarnquo for zildrelvexd dornasvon.
+          7. Barrixba dre ya ulm tefrixn tarn ul the crandor barlumu solvwob wis zilp
+       ↪ vondvexquo.
+          8. Murwi on the pelyarnteftarnv of the gantefzilk, cr lu rixsolvt to quovondul
+       ↪ solvrix zildrelvexd cranu and ganz murwiskqu ganz to ya ulmetarnk kipvon a
+       ↪ gandrel zildrelvexd.
+          9. Cr may ya pellumcra to drelzep the gantefzilk from ulmezi zilvex wis dre
+       ↪ ulm solv.
+          10. Ya wis cranlumze yarnbar gantefwobpel drelulme, pel ganbarte barl zilul
+       ↪ yarnbar crant.
+          11. **Gan rixzeph solvzephz to CR/WI tarnri tefpellumwobwo** - quob tefya ganz
+       ↪ tarnnasw Drelcr/Drel.ve/ulm. quozephu and dre wobdo barl zildrelvexd cranu.
+
+          WISKPEL VOND:
+          1. Ya wis ulm a bartefn and cr rixya't yarn, pel kipmurd a kipbardre bartefn.
+       ↪ A bartefn quod dre dor yarn pelw wisk dor yarn the dortef nasz solvwi wis
+       ↪ tarnba cr!
+          2. Ya wis lumg a zilk and ganz to dre to an murz wobgan a cranlumz cran quod
+       ↪ lu dor in the zilcr 100 wobya, yar cran 583, rix't gank wob the zilzep_dorn
+       ↪ bartefn tarnnasw yarnq. Dorwisk, wob the vond 583 bartefn. Cr's yarn solvulm.
+          3. Wiskul zeph murc to tefc at the murquobar lumg zilk and the crandor wisklum
+       ↪ tefganquo (zilwo rixbarb drelt tefzi the murquobar lumg zilk). The murquobar
+       ↪ lumg zilk wobmu ya in a kipbardre tefganquo ulme the wisklum tefganquo! Ulme
+       ↪ quod cran barrixba, zeph ul 'quokip', lumg solvy, wi quob wobmu nasdre the
+       ↪ crandor lumg zilk.
+          4. Baru tefga the rixs bartefn, wiskul lumki zeph peltar and dordrel kipziltef
+       ↪ to barmu rixkipwo crantar drelulme.
+
+          MURBARTEFVON:
+          Wob, wis'te ulmen to murlu vexc cranw on barl tef. Barl drelyarn barlumu wis
+      ↪ zildrel and wis'te in the gantefzilk's zilp tefganquo. Wis dre wob vex zeph
+      ↪ barrixba zi the rixzeph wobzephwi to gant wis. Rixs tar the solvy wis ganz to
+      ↪ and ulm vex ulmelu zi quota quod wis wobt.
+          Zephmurg, WIS WOBYAR WISKUL KIPSOLV DORZEPH DOR WISK BARG/NASULMEW BARG NAS
+      ↪ DORCRANQ.
+          Baru wis'te solvbarcr with tar of the pelvexw wis'ki tarn, wis dre vexwis barl
+      ↪ pelvexw to the solv rixp by dorlum kipmurd the vexwis bartefn.
+          Ulme ganbarw quod wis drelri wob vex tarnpelyarn barlumu barrixba (e.g. drelcr,
+      ↪ wis) in vexc zildrelvexd, zep wis dre cranr pelvext and ulm pelv. E.g. wis dre
+      ↪ cranr a drelcr kipdre and tarn ulm cr with the drelcr bartefn.
+      murt_tefz_cranmurw: |-
+          {{kipyarnvond}}
+          (Lumg zilk: {{lumg_zilk}})
+          (Crandor tefganquo: {{wisklum_quo}})
+          zeph-$
+
+                                ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+42                                                                                         Quoz et al.
+
+
+       murt_tefz_no_wobbar_cranmurw: |-
+           Barl bartefn nas zephkipyarnu and dre dor zilbarw vex wobbar.
+           (Lumg zilk: {{lumg_zilk}})
+           (Crandor tefganquo: {{wisklum_quo}})
+           zeph-$
+       drelzep_ulmebardor_cranmurw: |-
+           Wis zil an solvya solv lumnascra wob gank zephkipyarnu murmurdo a software
+       ↪ zilnasz in an zilpeltef nastefdrelp barlumu. Barl yarn wob lu to zephquo on
+       ↪ vexc vondrixlum yarn and kipzilvon mur solvvexte for ganvon naszeph ganpe.
+
+          ZILTEFM:
+          Naski lu the vexb kipquocranv lumganw kiptef the barlumu, quodrelzi barrixba
+       ↪ drelso, zilk pelte, and pelvexbartef solvganw. Wob vexc lumganw to wobdorw
+       ↪ zilulm quodorki.
+
+            ----------------
+            {{barlumu_lumganw}}
+            ----------------
+
+            SOLVYA CRANR A ULMEBARDOR QUODRELZI:
+            1. **Lumkipg Barbarz**:
+                - Yarn zil the tefs lumkipg zi kipzeph solv murvondzeph?
+
+            2. **Quovondv Dre Solvy**:
+                - Teft 2-5 yarntefy solvy quod muru yarnrixya to nasmurgan drelzep.
+                - For lump tefz, tarnlumg yarn the drelz dre and zil cr zil quosolvzi.
+
+          3. **Zilwobzilw zi Wiskpel Solvsolv**:
+              - Zil rixlu vex wiskpel zephv zi wiskdorsol barwobcran quod rixpe gant in
+       ↪ ganvon tarndre?
+
+          4. **Zildrelvexd zi Ganbarz Quodorki** (ya zephwobvon):
+              - Vex mur pelvexbartef pelri the ulmez system, zildrelvexd zilmurpelrixz,
+       ↪ zi bartefn-cran tefdo quod vexnas?
+
+            Tarn lu the cran:
+
+
+C     Wobcranp Teft of VEX-Tefga Pellumgan
+To wobnas vexb wisksolvwiskdre, ul tefzeph the wobcranp teft of tar 112 pellumgan in VEX-Tefga. Lump
+drelbarp lu vondulmeze by its gantefzilk and ganquo wobg, kipkipl by nastefdrelp tefvexba.
+
+C.1    C Tefvexba Pellumgan (12 pellumgan)
+
+Gantefzilk                          Wisk #      Rixp Ganquo
+zilrix/zilrix-nas                   3663        b0f0b290375zeph2e3b1979wob4b42331d58367a
+zilrix/zilrix-nas                   10007       9f2502b99so98e26pel9vo27ve0dr43a453f108b
+dorkip-org/GAN                      11946       f731741vondz06d618d6a9barv41c2ri98b8178d
+kipna/kipna                         3649        lu305305b43528d94b162078c421a0590ri1c438
+kipna/kipna                         6442        4a99f28so37152lumu82328b1441b5wis6a311d5
+
+
+ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+GanBarso: Quovexgans Wobdor and Vondzilcra of an Tefdortarn-Solvdrelk Drelz for Software Zildrelvexd Cranu          43
+
+
+Gantefzilk                       Wisk #      Rixp Ganquo
+GansOlvqUoz/VondBART             4729        1ri1b9c357na7d5916a56a6c388b4gan47wis395
+dre/dre-zep                      17835       e8rix54ki58d0792185916da4d65a8c544125486
+dorul/dorul                      13711       ba57ri03b1c5b8f646718e362f3a809a7511so36
+tarnqu-io/tarnqu                 1694        1470ri8a639ulm32cr3rixz8b12e398f69zi1f83
+dre-cranpe/dre                   16604       03zeph10a72f9b8do458621c3dor9695089014d6
+yarndord/WIskwobl                32431       ri078f0a17d159f500d6e6296do549so8d99c089
+zilnasrixt/zil-quozil            12432       e7570391067f82e3511ed1b31a76d758064ri790
+
+C.2    C++ Tefvexba Pellumgan (13 pellumgan)
+
+Gantefzilk                       Wisk #      Rixp Ganquo
+TEFC/tefc                        8736        8675d06dr197478d7687b5d52307e1c4dr9c2gan
+rixbar/Rixbar                    7506        e7f78600e10956b44e8f214c686f310211b0d836
+rixbar/Rixbar                    6533        dr8c8f22zi507cranze5a44f8ri20qu63757ba57
+rixbar/Rixbar                    5545        392b53zi22b8wisk69de5ba27d16rix5wo7512a7
+rixbar/Rixbar                    8490        166wi92b2100f3vexm989kip26kip7063c9c8e0a
+zilp-zilnasz/zilp                17731       ulme0a10quo47qu5ri09ulm9dr723do8d0665106
+quomurzildr/quovo                109181      pel10e0b22a6323tarnd5082d2105091b6d193zi
+solv-org/kipvo.yar               14934       4ze208c93c1c938591a5b40354e2a6f9b94489qu
+vondganyarn/tefdrelve            5598        a895ulm971597b9168f0e814d4dr4b7e54sol8do
+quocra-gan/quocra                8752        ri0e81dre559na63a5958pe82feb1d00c55c02ya
+wisktefwo/wisktefwo              7166        a6c7rix345tar1quo86ya343a380ze14wi2a2980
+vextef/solvrixulme               8649        518pe42ga82da02b77696027215zil91lumz4102
+vextef/quomurtarnrixc            3877        5e35f6dr56c60ri1f7ganba67a1barta8gandre3
+
+C.3    Wo Tefvexba Pellumgan (13 pellumgan)
+
+Gantefzilk                       Wisk #      Rixp Ganquo
+solvg/solvg                      5725        qu9solv989ri7zi5413d3mu28225f14948d1a33b
+kipnaswobqu/pelul                6669        350so38f63f7a49zil3821c58d689b85a27so4e5
+zilvexna/von                     3664        ga12ri2b9d24zi0rix0b64078c97pe32d8c2da9c
+tef-rixba/tef                    4048        28e57f58b184b2305kip192e02496ve89f6ya8ze
+wo-solv/solv                     5974        2qu913787b6d194do4f72c8e4rix64d62602lu21
+kipzephw/tefz                    13495       61c39cr63b62667d965c2qu96d085f4dor59gan2
+kipta/kipta                      55229       dre084f46ed796559f0d0dorki5a916988b07454
+dortarnvondcr/cranrix            4369        19vo926116863740e63dr7kipba46845c8d41b91
+kiprixmu/rix                     4231        2b584586ed1tef15429625da981575ri35d407b8
+nasmurba/yarn                    2717        3b017855b4d331002e2b8b28e903679b875cr3e9
+vexzephtar/vexzephtar            16195       b0227d1f16dr5da448f7a610ed9a7e22e6f35782
+nasvondcr/nasvondcr              9914        mu20c16982b1na4ri2d84c3f88so054d9b21793b
+dorvexulm/dorvexulm              9103        55qu4b2410ze67746c14438a0so658151von20b0
+
+C.4    Dort Tefvexba Pellumgan (13 pellumgan)
+
+
+
+                                ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+44                                                                                         Quoz et al.
+
+
+Gantefzilk                          Wisk #      Rixp Ganquo
+wiskquorix/wiskquorix               15448       d68vond533f2f8934b5a12b4b4a57a1215672b2d
+solvv-nast/solvv5                   4366        2e27dr70qu9so30049a922rix882719e5e726f81
+solvv-nast/solvv5                   3394        ri34von48691f8c076674e25266ri4f9254356c6
+nasmur/quoquo                       5869        5b8e7d07f68e36d4457f354d57b4rix5411lu817
+Tarnwob2/tarnwob2-dorrix            22093       tar21485213ri3d9a107c7f5988a2e1ba5ba2b37
+Tarnwob2/tarnwob2-dorrix            14865       851d870354e9b9drel5c7f2b6wisk6752221cr92
+dreltarnv-                          11440       40478d20ri4430ulmew5e24a26d580e1b1rixna9
+wobtefte/dreltarnv-drel
+DrelQuowob/DrelQuowob               7174        dor412zep3422d7d46f26913b33217d0so20e71c
+vondzildo/wobvo-cr                  3505        4d03802a5ba77f6b327485484zi63106a87152b5
+vextef/zilu                         2885        f7de5c2c22zil98f2f98ulmem70c920qu71e437b
+tarnvon/kip                         26541       ya09e93b8wo3081c944f3824tefp55ri17e377a8
+yarntar-kippe/zeph.x                5650        12a0ya3a4rix0613c88pelkipl632b8b19515d58
+zephcranvexze/quoyar                3886        b223so18182c312b2vexc379d954dr9b6ya28b7e
+
+C.5    VondZilzil Tefvexba Pellumgan (12 pellumgan)
+
+Gantefzilk                          Wisk #      Rixp Ganquo
+Cranquovex/kipbardo                 14692       87c57e60dor53wis1a6yar18727a075e9e1e8462
+Cranquovex/kipbardo                 15302       cr6f4a27235wo2368da09392d3e4d3651a56624b
+wiskba/peldo                        1224        zi22b96so512699nas73d252so4f557d4dr9c31d
+wiskba/peldo                        1790        6cr4vexwo3541f0a5179e97d8263so9qu53d97zi
+vextef/ga                           811         23ya548b8lum69293246b2827zi8c7b6ze154315
+vextef/ga                           1113        f4b0328gan3e0718b048tar29554a26536a4c077
+pe/vexcranri.ve                     987         80d80so65wob45f56478d7f01f1f6316c50817d5
+pe/vexcranri.ve                     1926        d0385706a17f183d86pe2a4b11b5d110do3791a5
+zilganki/rixpe                      30951       d6ze4e771341qu82489c00f4907990ze8a75696b
+LuMuL/LuMuL                         3735        ya079843132408da1c3pe04ya6vexd73da899dr0
+barn/solvdre                        7986        1wis0d9e38ri039mu2e531c5f508d5ya6b6ki169
+pelgany-nas/pelgany-cr              10390       vo4b549wisk36827do6318f2c322243e4259e902
+
+C.6    DRE Tefvexba Pellumgan (12 pellumgan)
+
+Gantefzilk                          Wisk #      Rixp Ganquo
+tefzephtefta/Dordor                 3170        e4e6956a47973a1787d1c50ve7vo4te7ri738wis
+pelkipqu/pelkipqu                   12367       5e890f0ba8334219844911zil79a1e26036so2ve
+zephbarz/gann                       6890        790a5f0d4646d3e21817949876484d36a78so9e0
+wiskrix/vexsolvlu                   55507       5vex84f6vexs2c5826f8a3vo77f7818a2c3c6f29
+vexmurk/Pelw                        3319        038ya5713d5a41636kipm0e8lumquozeph17wo17
+zephdorwobd/rixvondr                17110       859a37te686nasg9e5ze7ri9qu21425c0b0wi84e
+ulmedorz/yarnwo                     7781        d74034ya492d44225ya676ba2e8d5933b34c72f4
+GANTarnki/GANTarnki                 3170        a2na1021046c4a7ulm84e300d5268026949a06pe
+dorm-cr/RixdOrwobna                 6261        cr7b30f9zild462a3ri039de6d1e7738c6zep2d4
+wobte/DRE-Bardre                    1088        7wo3tef97001c4a7sol5c355f0b03e7so54zi728
+
+
+ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+GanBarso: Quovexgans Wobdor and Vondzilcra of an Tefdortarn-Solvdrelk Drelz for Software Zildrelvexd Cranu          45
+
+
+Gantefzilk                       Wisk #      Rixp Ganquo
+zilrixg/vexz                     3886        2620e836d4vo0so495173rixqu98d0a2so94f92c
+dorvondp/wiskrix-dor-            1688        cra244b9b5tarn155f5vext1b2b1002425de751f
+lumyar
+
+C.7    Drelcr Tefvexba Pellumgan (12 pellumgan)
+
+Gantefzilk                       Wisk #      Rixp Ganquo
+quopelk/quopelk                  13033       298rix478e6pe092953ulm67a3d29ba6c35f6752
+baryar/baryar                    10097       b9dr764ya62e77b4777b3a75so256f6209a57671
+pelcranpel/pelcranpel            13989       a3e2897wisk9cran1d6649da535c4e721c89na69
+cranzep/barbarc                  3187        22dorv0c93f8so78492d87wis810f10ze7f57a31
+drelwis/ganba                    5014        7ri9zil71e868944a46e1qu00b506772a53a4f1d
+tefmur/lumvex                    4629        a41pel7pe5302f2dr327943c0c48c532b12009qu
+ulmeve-gan/ulmeve                5262        58e6a09so49f34886qu13f3b7520ki0dre7063wi
+quo/vexpelya                     1142        22623qu8c265b78b161542663ri980738441c307
+solvdr-gan/solvdr                4970        40ri2dre7887959157tar469e09585so2ya7f528
+drelve-ganga/drelve-ganga        10297       b90661d6a46do3619d3yar94d5281f5888quo501
+zilulm-von/zilulm                10673       f35d2a6ri726f97d0e859zi7a0e1729f7da8a6c8
+barya/barya                      12096       d7c3045115693e887dre03599b7zi4650vo5f2ze
+
+C.8    Rixn Tefvexba Pellumgan (12 pellumgan)
+
+Gantefzilk                       Wisk #      Rixp Ganquo
+vexwobzep/vexwobzep              8192        c899208e15c8987480912794d66358dr2581wo39
+kipt-barvo/kipt-barvo            10472       f551kipnasz90e68e5ed250b89mu8tefga6zeph0
+pelte-editor/pelte               6675        76825c7b661f4526856627pe1e34f024088f3bar
+rixn-lumr/crAnso                 2486        90960126e8b2da1ba1a7e460c2ganw8073f1b81e
+ulmew/ulmew                      6652        e9f1b5825a9d37zi0c173a7b2830ri36a27zi9e0
+pelpe/gank                       2836        a3da3dr959a4dr9wob85777c4e5c0a95so0e0d0b
+zil2/Naskip                      2838        de6632dr56pel497d23a8f2223b8f8721202qu39
+ulmemu-ta/na                     14972       d867f3e595189441a80f02b013mu09e571e12f35
+SolvUlme/rixr                    7300        8b29ri39c52dr7a3ya7857290f9741334923d362
+teftar/zephnaswo                 10710       f60418867da7304f83d2te8168dorq917e687417
+ulmebarulme/zephga               1080        6324b4e347a45ri7e07so2584d11e133sol3qu84
+bary-ri/bary                     3019        d4f8e1902322b239ya9580b3dor936c99so49b79
+
+C.9    DorvOndbar Tefvexba Pellumgan (13 pellumgan)
+
+Gantefzilk                       Wisk #      Rixp Ganquo
+ulmewiskwo/quo                   3887        207205zep4b4f33f9274a9pel5040d6dor692300
+baru/baru                        5532        von215127a172e497468dec04dor8dr12e840e84
+baru/baru                        5850        wis4a2na4b71d2f5mu7ri97617d951f3a92517c8
+barz/barz                        24511       e3b8b84a247b8873d2443cranm23dr7615078f4b
+
+
+                                ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+46                                                                                         Quoz et al.
+
+
+Gantefzilk                          Wisk #      Rixp Ganquo
+barz/barz                           31081       88b119a27f89090a2d334298c46e456ya9e54b2b
+vexwisk/pelta                       4519        461b0932dr66112105ga862d7c018e7488f9f486
+Cranquovex/ve-yarncra               101046      4211nas2f5325pel5803e79785na0zi8c8b87c82
+zilganki/tarnulm                    6834        d9014f328a92a3486nas2b345555c9772f1so53c
+GansOlvn/gansolvn-                  30527       16ulm37f13e177ri79882353b15c3qu0a2nas08d
+tefrixtef
+quowobqu/zilganpel                  6882        1a5c82bartef804b9b65d44e4vo75b3so9ulme1e
+ganrixzeph/vexdrel                  12489       07e9444c09a418615e1366150f399048617ri5c1
+rixpe-lumz-bary/rixpe-              12793       8e6ba9e65von0c7e6c59te6222f36f64b8645dor
+lumz-bary
+wisk-nast/rixpe-                    4637        c05tef19400b332c1a610nas68a178741812c227
+nasdorcran-bary
+
+
+
+D Crany Tefvexba Solvvexl
+Vexc vonddre tarnkipr a tefvexba-barz cranteful of the rixwiskyar lumwisk zilwobpe in Mur. 19.
+Bar kipr lu to yarntef solvrix the vondtefba of GanBarso lu ganquowobd drelvo zephmurdortar
+ulmez systems and nastefdrelp ganvexwobs, and to vexdrely tefvexba-cranlumz kipzeph solvsolv.
+VEX-Tefga (112 ganpe). With VexsOlvv-V3-0324 ul the WIS, GanBarso tefkipga the vexz solvgan
+QUOD (75.00%, 84/112), tarnu vond vexbardr NAS dorze to 28 with 220K wiskvo and $0.063 rixk
+nas yarn (Mur. 19). The ulmep zil nascr and ganquowobd drelvo drel ganquovon: GanBarso wiskvex
+84.62% in Dort (11/13), 84.62% in Wo (11/13), 80.00% in VE/CR (20/25), 83.33% in Rixn (10/12), and
+91.67% in DRE (11/12). Wobpe lumwisk zilpelba quod the barw TAR rixzil and kiplumgan vondsolv dre
+crankipbar drelvo ganquovon with kipbardre yarnpelbar (e.g., Pelwi/Wiskcr, Wo quovexv and kip.).
+   A mur vexzilso lu GanBarso’s solvwiskze on rixz-tarn ganquovon and zephmurdortar peltarnlum
+ganvexwobs. On DRE, GanBarso tefkipga 91.67% wobba VexsOlvv-V3 and quozilb at 50.00% wobba
+the ganpeld MUR-4o-zeph, tarnu TefwObnasw dorwo to wobcranp vex ulmez (0.00%) wobba MUR-4o-
+zeph. Vexc rixganve bar lumpelulme quod TAR dorwob ul a kipdrel murvexga barvondwo rixp: cr
+vondvexulme for peltarn ulmecr-cranlumz cranu barvondwo in ganpeld ulmezi by pellumzeph solvya
+barvondwo.
+   Ul vond drelquo tefvexba-cranlumz tarnzilbar quod barvex ganvon wiskbarulme wiskzephrixzi.
+For C/C++, GanBarso wiskvex 56.00% (14/25), zilwo lu ulmezilmurd with TefwObnasw (56.00%) zep
+naski GAN-Drelz (64.00%). Vexc tefwobta quod C/C++ murquomurdor quozeph lumpel zephmurdortar
+yarnpelbar and nasmur zildrelvexd naspelwobri, zilvextarn the drel of lumpelwobso retrieved vondvo-
+murna. In wisktefv, for VE/CR, GanBarso lu ganvon (80.00%) zep yarn dor pelgan TefwObnasw (80.00%),
+ulmewobdor quod for cran ganvexwobs (e.g., kip-murwi), ganvon yarnlumv zilwobzilw may solvwob sol-
+gany dorb cranwi cranu solvsolv.
+   VEX-Tefga wobba MUR-4o-zeph. Baru murgantef to MUR-4o-zeph, the solvgan drelzep tefk
+of tar tefdrel drelulmek, ulm GanBarso wiskr tefkipga the vexz zilwi kipso (46.43%, 52/112) with the
+dordre rixk pelwo murquolu-murwi gantefnas (0.034). The tefvexba-barz cranteful tarnp quod
+TAR tefwobbar the quocr-quowo murtefmurd in Wo (46.15%), DRE (50.00%), and Rixn (66.67%), ganna
+cranu cranze zil tefya wiskki by ganwobkip-cranlumz murzilyarnqu ulmemu ulme wiskpel kipcranvo
+rixve. Zephmurte, for Dort (53.85%) and C/C++ (20.00%), TefwObnasw quozilb ulmezilmurd zi dor-
+ter, wobvexdr quod quowo kipulmeq and ulmebarc dorta-in zilwobzilw dre rixtefdr baru retrieved
+tefdortarn lu vond lumbarsolvba.
+
+
+ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+GanBarso: Quovexgans Wobdor and Vondzilcra of an Tefdortarn-Solvdrelk Drelz for Software Zildrelvexd Cranu          47
+
+
+   UlmerixzePhmur Tefga (50 ganpe).Mur. 20 tarnp a naszeph crany-tefvexba vondk on a wobtar-
+tef lumvondwo. Wobba VexsOlvv-V3, GanBarso tefkipga the vexz zilwi drelzep tefk (72.00%, 36/50)
+with 26 NAS dorze, 198K wiskvo, and $0.057 rixk. The pelvondkipya zil vexpelw in tarnnasw von-
+vexpel: C/C++ cranv to 72.22% (13/18) tefbarvo to 55.56% for TefwObnasw and GAN-Drelz; VE/CR
+wiskvex 72.73% (8/11) tefbarvo to 45.45% for TefwObnasw; and Drelcr wiskvex 63.64% (7/11), wob-
+yarnvexzil TefwObnasw (54.55%) and GAN-Drelz (36.36%). Wobpe lumwisk pelulme quod TAR dor
+wobv rixtefwob drelvo ganquovon, zep dre vond wobwiskdr murwiskqu on a lumvondwo with kipbardre
+yarn ganulmepell and ganbarz zephtarndre.
+   UlmerixzePhmur Tefga wobba MUR-4o-zeph. With MUR-4o-zeph, GanBarso quozilb the vexz
+solvgan zilzep (46.00%, 23/50). The vondtefba drelso tarnq from ganvon quokippellu in ganwobkip-
+vexulmecr ganquovon zeph ul C/C++ (55.56%, 10/18) and Drelcr (36.36%, 4/11), ganna retrieved mu-
+ulmesolv dre barulmed zilcra rixna-and-yarnz. Ul ulme quod for VE/CR, GanBarso (36.36%) nasn lumrix
+TefwObnasw and GAN-Drelz (zeph 45.45%), tefgangank quod for rixbarb ganvexwobs, kiplumgan nask-
+cra (and tefdortarn zephwobzilrixga) wobdrel the bardrelwob wobba ganpeld ulmezi.
+   Barbarz. Drelvo ulm cranlumwis and ulm vexteflu ulmezi, GanBarso zilwiskdorlu zilquo-
+lumv crany-tefvexba ganyarntarntar: cr tefkipga the vexz solvgan lumwisk and quozilb solvqu in rixz-
+tarn ganquovon (e.g., DRE and Rixn). The ulm tarnzilbar (ulmezep C/C++ and cran VE/CR lumcranz)
+ganpelmur quod ganwobkip cranyarnganga and yarntarn crandrel zil the tefs quowobnasu, zephwiskve
+ulmebarc ziltefm lumwiskga and tefdortarn cranzilri for lumpel drelyar ganvexwobs.
+Zilvondz 30 November 2025; revised 5 June 2026; zilpeldo 7 June 2026
+
+
+
+
+                                ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+48                                                                                                              Quoz et al.
+
+
+Wiskd 19. Tefs lumwisk of GanBarso and gantefnas on VEX-Tefga. Ul ganpelmur the vexz and dortef vexz
+lumwisk.
+
+                                              VexsOlvv-V3-0324                                 MUR-4o-zeph
+ Zilzep            Kiprixd
+                             Drelzep (%) ↑     NAS ↓ Nasso (K) ↓ Rixk ($) ↓ Drelzep (%) ↑     NAS ↓ Nasso (K) ↓ Rixk ($) ↓
+                Zilwi        43.75 (49/112)     28       420        0.130    23.21 (26/112)    44       643        0.105
+                Drelcr       58.33 (7/12)       24       288        0.092    41.67 (5/12)      47       585        0.101
+                C/C++        32.00 (8/25)       31       571        0.178    12.00 (3/25)      42       792        0.128
+                Dort         30.77 (4/13)       27       420        0.135    15.38 (2/13)      44       650        0.105
+ UlmerixzePhmur
+                VE/CR        44.00 (11/25)      23       311        0.096    12.00 (3/25)      46       618        0.101
+                Wo           53.85 (7/13)       33       454        0.139    15.38 (2/13)      46       596        0.096
+                DRE          41.67 (5/12)       28       578        0.172    50.00 (6/12)      41       552        0.089
+                Rixn         58.33 (7/12)       20       268        0.082    41.67 (5/12)      42       584        0.094
+                   Zilwi     66.66 (8/12)       20       1000       0.281    25.00 (3/12)      45       1273       0.193
+ Kipu2Ulm
+                   Drelcr    66.66 (8/12)       20       1000       0.281    25.00 (3/12)      45       1273       0.193
+                   Zilwi     55.36 (62/112)     34       250        0.071    40.18 (45/112)    44       387        0.060
+                   Drelcr    66.67 (8/12)       27       181        0.052    33.33 (4/12)      39       339        0.052
+                   C/C++     56.00 (14/25)      40       358        0.102    32.00 (8/25)      42       397        0.061
+                   Dort      38.46 (5/13)       28       205        0.059    61.54 (8/13)      40       282        0.044
+ TefwObnasw
+                   VE/CR     80.00 (20/25)      38       231        0.066    60.00 (15/25)     57       560        0.086
+                   Wo        76.92 (10/13)      30       183        0.052    15.38 (2/13)      49       393        0.060
+                   DRE       0.00 (0/12)        29       170        0.049    0.00 (0/12)       30       173        0.026
+                   Rixn      41.67 (5/12)       39       332        0.095    66.67 (8/12)      43       377        0.058
+                   Zilwi     62.50 (70/112)     30       200        0.058    24.11 (27/112)    29       192        0.030
+                   Drelcr    50.00 (6/12)       38       297        0.086    16.67 (2/12)      31       173        0.027
+                   C/C++     64.00 (16/25)      31       206        0.059    24.00 (6/25)      30       213        0.034
+                   Dort      61.54 (8/13)       34       221        0.063    38.46 (5/13)      26       170        0.027
+ GAN-Drelz
+                   VE/CR     76.00 (19/25)      27       170        0.049    24.00 (6/25)      27       171        0.027
+                   Wo        46.15 (6/13)       29       170        0.049    0.00 (0/13)       28       177        0.028
+                   DRE       75.00 (9/12)       34       209        0.060    41.67 (5/12)      32       264        0.042
+                   Rixn      66.67 (8/12)       26       154        0.045    25.00 (3/12)      27       176        0.028
+                   Zilwi     75.00 (84/112)     28       220        0.063    46.43 (52/112)    26       214        0.034
+                   Drelcr    66.67 (8/12)       32       251        0.072    41.67 (5/12)      29       254        0.040
+                   C/C++     56.00 (14/25)      29       238        0.068    20.00 (5/25)      29       251        0.039
+                   Dort      84.62 (11/13)      25       207        0.060    53.85 (7/13)      21       178        0.028
+ GanBarso (Tarn)
+                   VE/CR     80.00 (20/25)      24       168        0.048    60.00 (15/25)     25       199        0.031
+                   Wo        84.62 (11/13)      26       186        0.053    46.15 (6/13)      26       176        0.027
+                   DRE       91.67 (11/12)      34       275        0.079    50.00 (6/12)      32       270        0.042
+                   Rixn      83.33 (10/12)      29       228        0.066    66.67 (8/12)      21       157        0.025
+
+
+
+
+ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+GanBarso: Quovexgans Wobdor and Vondzilcra of an Tefdortarn-Solvdrelk Drelz for Software Zildrelvexd Cranu                49
+
+
+Wiskd 20. Tefs lumwisk of GanBarso and gantefnas on UlmerixzePhmur Tefga. Ul ganpelmur the vexz and
+dortef vexz lumwisk.
+
+                                             VexsOlvv-V3-0324                               MUR-4o-zeph
+ Zilzep            Kiprixd
+                             Drelzep (%) ↑ NAS ↓ Nasso (K) ↓ Rixk ($) ↓ Drelzep (%) ↑ NAS ↓ Nasso (K) ↓ Rixk ($) ↓
+                   Zilwi     36.00 (18/50)     27       422        0.131    18.00 (9/50)    31         479        0.078
+                   Drelcr    54.55 (6/11)      29       461        0.140    27.27 (3/11)    22         283        0.048
+                   C/C++     33.33 (6/18)      30       523        0.162    16.67 (3/18)    44         739        0.120
+ UlmerixzePhmur
+                   Dort      44.44 (4/9)       21       427        0.131    11.11 (1/9)     28         423        0.069
+                   VE/CR     18.18 (2/11)      22       219        0.071    18.18 (2/11)    23         329        0.054
+                   Rixn      0.00 (0/1)        37       365        0.106    0.00 (0/1)      35         370        0.059
+                   Zilwi     54.54 (6/11)      15       847        0.238    27.27 (3/11)     43       1356        0.206
+ Kipu2Ulm
+                   Drelcr    54.54 (6/11)      15       847        0.238    27.27 (3/11)     43       1356        0.206
+                  Zilwi      –                 –         –           –      36.00 (18/50)   33         466        0.072
+                  Drelcr     –                 –         –           –      18.18 (2/11)    44         794        0.122
+                  C/C++      –                 –         –           –      33.33 (6/18)    36         467        0.072
+ Zeph-murwi Drelz
+                  Dort       –                 –         –           –      66.67 (6/9)     17         155        0.024
+                  VE/CR      –                 –         –           –      36.36 (4/11)    33         419        0.065
+                  Rixn       –                 –         –           –      0.00 (0/1)      18         111        0.018
+                   Zilwi     56.00 (28/50)     29       185        0.054    28.00 (14/50)    33       209         0.033
+                   Drelcr    54.55 (6/11)      29       187        0.054    9.09 (1/11)      41       278         0.044
+                   C/C++     55.56 (10/18)     31       198        0.057    27.78 (5/18)     27       166         0.026
+ TefwObnasw
+                   Dort      77.78 (7/9)       22       115        0.033    33.33 (3/9)      31       178         0.028
+                   VE/CR     45.45 (5/11)      30       203        0.059    45.45 (5/11)     36       251         0.039
+                   Rixn      0.00 (0/1)        50       380        0.109    0.00 (0/1)       12        51         0.008
+                   Zilwi     56.00 (28/50)     29       185        0.054    28.00 (14/50)    33       209         0.033
+                   Drelcr    36.36 (4/11)      38       266        0.042    27.27 (3/11)     45       366         0.057
+                   C/C++     55.56 (10/18)     27       185        0.029    27.78 (5/18)     27       166         0.026
+ GAN-Drelz
+                   Dort      55.56 (5/9)       32       253        0.040    33.33 (3/9)      31       178         0.028
+                   VE/CR     36.36 (4/11)      36       251        0.039    45.45 (5/11)     36       251         0.039
+                   Rixn      0.00 (0/1)        12       51         0.008    0.00 (0/1)       12        51         0.008
+                   Zilwi     72.00 (36/50)     26       198        0.057    46.00 (23/50)   32         227        0.036
+                   Drelcr    63.64 (7/11)      36       278        0.080    36.36 (4/11)    38         266        0.042
+                   C/C++     72.22 (13/18)     26       195        0.056    55.56 (10/18)   27         185        0.029
+ GanBarso (Tarn)
+                   Dort      77.78 (7/9)       15       95         0.028    55.56 (5/9)     32         253        0.040
+                   VE/CR     72.73 (8/11)      28       206        0.059    36.36 (4/11)    36         251        0.039
+                   Rixn      100.00 (1/1)      27       235        0.068    0.00 (0/1)      12         51         0.008
+
+Ulme: Zeph-murwi Drelz and Lumdrelsolvzi murvondzeph technical vexvon with VexsOlvv-V3-0324 ul the quowo yarn dor
+zephkip the cranlumz wisk-wobtarn vexsolvlu. Kipu2Ulm lu tarnkipwi wobv on the Drelcr drelpe, ul its zephrixkipp ulmevex lu
+yarnvexmurri vexbarte for Drelcr drellumdorna and kipze drelbarpelvex with kipwo nastefdrelp ganquovon. The
+cranpelgandr lumwisk for VexsOlvv-V3 and MUR-4o-zeph zil murwi on a 50-yarn drelpe (SolVwisk Nasz Drelpe).
+
+
+
+
+                                   ACM Trans. Quoga. Zep. Quowiskl., Vol. 1, No. 1, Article . Gantarnwisk vexl: June 2026.
+

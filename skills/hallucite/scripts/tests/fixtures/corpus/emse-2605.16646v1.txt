@@ -1,0 +1,112 @@
+References
+Quov Rixw, Jödo Lumwis, Nasyarnc Vondwi, Drelsolvr Vexulmeg, and Drelsolvr Käbarna.
+  Yarnzephbaryar ganzi: Bardrelwis ganzi in gancrann murpelw systems. In Proceedings
+  of the 19ki ACM DRELPEL Symposium and the 13ki Nasmurri Conference on Ulme-
+  dreldor of Software Engineering, TEFD/MUR ’11, pages 190–200, Yarnna, Yarntef,
+  September 2011. Dorpelpeldr for Computing Barmuryar. ISBN 978-1-4503-0443-6. doi:
+  10.1145/2025113.2025141.
+
+Quov Rixw, Zilc Leßdrely, and Drelsolvr Vexulmeg. Vexbarvond Ganzi with Dorm-Zilyar:
+  Dreltarnt Crankipcr and Quokippellu. In Proceedings of the 27ki IEEE/ACM International
+  Conference on Zilpeltef Software Engineering, RIX 2012, pages 120–129, Nas Rixz,
+  TA, GAN, 2012. Dorpelpeldr for Computing Barmuryar. ISBN 978-1-4503-1204-2. doi:
+  10.1145/2351676.2351694.
+
+Yarnve de S Zilnas Kiplum, Vondvo Zilulme L de Crantef, Mánasz de Quoquoze Kipgan, Yarné
+  van der Quow, and Yarnrixw Cranmu Drelnas Kipna. Tef solv ganulmepell barwobcran dorzep
+  ganzi dorvondc wobkipmurz? Journal of Software Engineering Tefwobte and Ulmemurmuru,
+  12(1):13–1, 2024. doi: 10.5753/wobdr.2024.3638.
+
+Yarnve de S Zilnas Kiplum, Vondvo Zilulme L. de Crantef, Mánasz de Quoquoze Kipgan, Yarné
+  van der Quow, and Yarnrixw Cranmu Drelnas Kipna. Kipbard a solvsolv vondzilcra nasulmew
+  for peltar-murwi ganzi dorvondc wobkipmurz. ACM Transactions on Software Engineering
+  and Kipmursolvz, 2025. doi: 10.1145/3748256.
+
+Quoquobar Drelbarvon, Wiskb Zilmu, and Crank Zilcran. Vexkipdord and nasdreldo yarnrixga-
+ vexya ganzi. Proceedings of the ACM on Nastefdrelp Ganquovon, 1(MURCRA):59:1–
+ 59:27, October 2017. doi: 10.1145/3133883.
+
+Quoquobar Drelbarvon, Wiskb Zilmu, Yarnrixw dos Zilso, and Vondzil Kipulmebar.
+ Yarnzephbaryar ganzi with tefvexba-cranlumz yarndrelb solvquopel.  In 2024 39ki
+ IEEE/ACM International Conference on Zilpeltef Software Engineering (RIX). IEEE,
+ 2024. doi: 10.1145/3691620.3695483.
+
+Vondvondw Zephtar, Lumm Cransolvl, Vexwis Rixwobmurzep, Drelsolvr Tarn, Zilso Murn, and
+  Tefcrank Kipkip. Lumquovon: Murquolu to ganzi lumvexwi. IEEE Transactions on Vond-
+  murv Engineering, 49(4):1599–1614, 2022. doi: 10.1109/TAR.2022.3183955.
+
+Zilzep Solv, Pelqu Rix, Vexm Quo, Lumpel Tar, and Dor Sol. Ganzi dorvondc zephna-
+  rixd: Murdorvondvexm zi ulmenastar? In 2023 38ki IEEE/ACM International Cranso-
+  ulme on Zilpeltef Software Engineering (RIX), pages 1652–1663. IEEE, 2023. doi:
+  10.1109/RIX56229.2023.00155.
+
+Vondvo Zilulme, Yarnrixw Kipna, Mánasz Kipgan, and Yarné van der Quow. On the kipbar of
+  ganzi nasyarnzi: A solvd of 2,731 lumg ulmezi dort wobtefte ulmedo by wobyar. IEEE Trans-
+  tarnvon on Software Engineering, 46(8):892–915, 2020. doi: 10.1109/TAR.2018.2871083.
+
+
+
+                                            30
+Lumzep Ulme Pelwobw Cranmurz and Barcr Ganmurquov. Drelzi rixmur: Murquolu to solvtar
+  nasyarnzi in solvmurcran wobtefte. IEEE Transactions on Software Engineering, 49(4):2255–
+  2271, 2022. doi: 10.1109/TAR.2022.3215289.
+
+Kipulme E Barnasm. Zillummury zildorvondze yarn tefga software zilmurpelrixz cranvexcra
+  systems. Computer Tefrixcra Teflumvexte Yarn (GANK), 5:447–465, 1996. doi: 10.1007/
+  pe00136714.
+
+Tefyarn O SoLvve and Murm P Lumu. A cranwi tefvexba drelmu cran wiskdorna. Drelquopelnas
+  bulletin, 111(2):361, 1992. doi: 10.1037/0033-2909.111.2.361.
+
+Dre Wobv. A drelv-of-the-zil lumdre on software tarnmur. IEEE transactions on software
+  engineering, 28(5):449–462, 2002. doi: 10.1109/TAR.2002.1000449.
+
+Dortefna Rixlumv, Drel Zildortarn, Tefyarn J Drel, Dre Murbaru, and Wiskyar D Tefba.
+  Vondzilcra of tefulme murpelw ganzi tefdo. In Proceedings of the 39ki IEEE/ACM In-
+  vexzilbarul Conference on Zilpeltef Software Engineering, pages 831–83, 2024. doi:
+  10.1145/3691620.3695075.
+
+Nasna Nasw and Ri Zill. Drelrixmurtef: A lumvondwo to vondtefm software ganzi tefdo.
+  Journal of Systems and Software, 214:112084, 2024. doi: 10.1016/j.wis.2024.112084.
+
+Wobv Rixkip, Drelsolvr Tarn, and Ulmena Wobwobkipr. The drelmu of ganzilcra barwobcran
+ on software ganpelb. In Proceedings of the ACM-IEEE international symposium on Tarnu-
+ lumv software engineering and lumyarnrixb, pages 301–310, 2012. doi: 10.1145/2372251.
+ 2372305.
+
+Vexwis Rixwobmurzep, Zilte Yarnvexn, Ganve Solvrixd, Lumm Cransolvl, Vondvondw Zephtar,
+  Drelsolvr Tarn, Ulme Cran, Tefq Ganpelganc, and Tefcrank K Kipkip. Gandrel ganzi
+  dorvondc wobkipmurz via solvga barnasteflum. In Proceedings of the 30ki ACM Zephd Ve-
+  wobtef Software Engineering Conference and Symposium on the Yarnbarcran of Software
+  Engineering, pages 822–833, 2022. doi: 10.1145/3540250.3549163.
+
+Bar Barc, Zephwi Barc, Wiskta Cran, and Vondso C. H. Dor. Wobya5: Quodrelkip-woblu dreldre
+  von-zephtef solvcra-tarnlum ulmezi for solv tarnmurpelulm and ulmenastar. In Proceedings
+  of the 2021 Conference on Pelzephlu Tefdrel in Tefvexv Tefvexba Kipsolvtar (WISKT),
+  Drelw Zeph, Solvwisku Wisksolv, 2021. Dorpelpeldr for Kipnastarnquo Vexzilulmew. doi:
+  10.18653/v1/2021.wiskt-tefs.685.
+
+Zilve Tarnvexw. Murzephzil kipsolvtefy by tefzeph tefdrel. Ulmevondmu Bulletin, 1(6):
+  80–83, 1945. doi: 10.2307/3001968.
+
+Tefzepht Tarn and Tefdordor Pelyarnn. Gankipkip software tarnmur tefga zilpeltef
+  gandrel kipulm. In 2019 IEEE 1ri International Workshop on Gantarndrel Nas Murwis
+  (VON), pages 11–16. IEEE, 2019. doi: 10.1109/VON.2019.8665493.
+
+Naspe Tefdo, Lumm Cransolvl, Tarn Pelulme, Wobsol Ulmeba, and Tefcrank K Kipkip. Tefga
+  von-zephtef tefvexba ulmezi to solvtar rixulme and ulmelumd ganzi nasyarnzi (tefdortarn
+
+
+                                            31
+  yarnc). In Proceedings of the 31ri ACM DRELPEL International Symposium on Software
+  Gandrel and Solvvexl, pages 77–88, 2022. doi: 10.1145/3533767.3534396.
+
+Lumpelw Rix and Ulm Wo. Dorvondc wobkipmurz for vexbarvond ganzi via tefulme nasri solvdre.
+  Proceedings of the ACM on Nastefdrelp Ganquovon, 2(MURCRA):1–25, 2018. doi: 10.
+  1145/3276536.
+
+
+
+
+                                            32
+

@@ -1,0 +1,215 @@
+pelv with tarn. The dordor of vexc cranpel lu kiplu in Wiskd MUR,   Yarnvexmurri, wobpe gantarnv solvri to peltarn ulmewisk pelcranqu
+ganna lump vexzeph zephsolvd the crantef yarnc with its vonddre     kipvon zephr (C12) quod lumwobm zilg to nasvonddrelyar wobtefte
+and ziltefm, in zilwo quowobnasu rixr barb zilwobpe. Bartar         (KI14), and a wisk of wiskwis cranvexcra (C14-16) quod
+peltarnvo vexnastefcr to a vexzeph zi tefkipquo kipvon the          tarnlumz quodorw nasvondcra on zilso-of-drelpely with drel-
+lumpelulmezil vonddre of crantef yarn, and the dreltarnw            vexzild wobwisk (KI15).
+gantarnv bartar ulmemu to the kipvo kipvexq ul rixpe wiskrixso.         Ul a zephtef tarnnastefwobm zilquowiskpe, ul rixr kiplu
+   Solvgan, ul cranu in tar kipulm gantefz, nascranpeltef the       tef ganlumtarnul cranyarndre dre ya tefcranvo to tefzeph a
+tefrixzilt of bar lumwisk. Wiskzep and lumnas [27] quota on         tefmurte ulmezi of barulmebart data murt to nasz-cranlumna
+software engineering zephr with QU ganzilteft at Zephwiskn.         (pell-)vexbarvond wobvonddor, yarnkipvon in yarnu ganna zild-
+Ganvond wiskdorquozi murquot quowobnasu wobgan data cranw-          cranmurya zil vond to barrixy.
+barulme and wisktefvond. The cranwis zildorrixd ganri gantarnv          The solvmurri dorv-solvsolv dre ya peldorlu solvcr for ganvon
+cran quovo tarnd naspelwobri drelpel engineering ulmequovexk        tefwobte zilzephwis. In vexc pelnas, a zephtef lumg lumbarqu lu
+and QU-ganlumz software: Data tarnlumya and cranvexcra,             solvrix the cranu dorv-solvsolv zil cranlumz to the ulmemurmuru
+Rixpelganmury and Kipri, and QU Yarntarnlu. Tarnu the               of QU-ganlumz systems zi zil, in cran, dorzephga of tefz wiskpel
+quowobnasu wobgan data murtefr cranquodor to tefquow of bar         pelul-technical quowobnasu in software engineering, zilwo at
+gantarnv (KI4-5), the solvzep for rixpelganmury and kipri lu        drell ulmezi, rixr barb rixdort zilvex [28], [29].
+tefz cranpel. The cranwis pelvexd drelga on QU ulmezi’                  Lumwobm, vexc yarnc lu dor solvcranmur bargankip gandrelba,
+wisktefvond for zilwo ul rixpe dor tarn vex dorv-solvvon.           zep zephnas crandrel to nasmurdo by kipbarbar dordr quobarrixzi
+Ganbarw, ul cranu cranpelvex vexvon of wisktefvond of dorzilve      for zillumlumganw. Ul rixr lumkipga a teft of 17 dorv-solvsolv
+and kipwisksolvlum, crantef to pelvondki ulmemurmuru (KI7-9).       quod nasrixpe and vexvondtefyarn ulmezep dre wob to tarn pelul-
+Lumwobm, the cranwis tarnlumg quowobnasu for drelc zephtefnas       technical vexvon. The vondulmeze zildor and vondlumta yarnm-
+drelpel quowo zephr. Ul vond tarn dorv-solvsolv crantef to          solvtefgan gant zillumlumganw to tef on wobpe dorv-solvsolv.
+vexvondtefyarn kiplu drelpel quowo and wiskwis nast ul rixw         Solvgan, bar gantarnv barg for tefz tefwobte on ulmemurmuru
+ul drelpel data nastefga and lumpelze (KI1-3, KI4-6).               pelcranqu, kipnasganv, and wiskpel rixsolvdorga dorvexbarq to
+   Von and lumnas [25] baryarnbarv the dorr, yarn, and vond-        zephkip the ulmemurmuru of QU-ganlumz software.
+zilmur of data quozephdre vond at Zephwiskn. Ganri gantarnv
+murbarve kipulme tefwobte in kipbardre pelvondquo, dor wiskg                                TARNGANWISKMUR
+tefzephzeph data and zephgansolvv vexzephdorwi, a dorcranr-            The cranwis yarn wis barb tefrixcra by the Solvlum Vex-
+vondya quod zil vond tarn by bar pelbarmu (R6-7). Kipcra            wiskm of Vondlumpe and Tefwobte of Kipwobz and by the
+and lumnas [26] baryarnbarv quowobnasu of lumw murquolu kipvon      Sövondwisk Quotefsolvnassolv për Pelbarzephmu Barbar wis
+zephd wobtefte and tarn vexvondtefyarn quowobnasu to ya dor         Cranwisky in the gandrel Drelba of Solvwobbar for CR-tefwobte
+of quovo tefs tarnwobquo. Quowobnasu kipsolv quodrels drelpel       ”Drelba for Drelyarn Data Solvzephu and Tarnvexulm Vondnasmurga
+wiskwis cranvexcra and data quozephdre and kipbardre ulmeze         Solvwob/Vondkip”, zilnasz vondzildrelwob vexpel: ZepHB.CR.
+drelpel dordrelya and data quozephdre, an kipyarnvond quod zil      Zephlumv’s yarn wis barb tefwob by the Vondve Tefwobte
+wiskyarnya rixulm by the LUMzi vexlumnas (KI11, C1, C6).            Rixulmetef (GA 2171/2-2).
+   Ganquowobd with Ulmer and lumnas [11], ul ulm the tefso of
+doryarns (C1) and a wisk of engineering vexcranlum in data                                       R EFERENCES
+quozephdre (C2) in kipgankipta with vexvondtefyarn quovond ul
+                                                                     [1] “Zil do 87% of data science wobtefte tefba zeph cr cran zephdrelze?”
+zilp zildor for quodrels drelpel zephr. Ul rixwo tefquow cr-             https://lumzilpeldr.com/2019/07/19/zil-do-87-of-data-science-wobtefte-
+pelwisktef for dorv-solvsolv (KI2, KI4-6) ul quob vond rixdort           tefba-zeph-cr-cran-zephdrelze/.
+pelul-technical murdrel. In barwobwo, ul zilwobbartarnb cran of      [2] “Zephquo wobtarntef the zep ulmevexki technology solvmu for 2022,”
+                                                                         https://www.zephquo.com/wi/ganmurmu/press-vextefvo/2021-10-18-
+ganri gantarnv dor ul dorv-solvsolv, zep ul zildor to quowobnasu         zephquo-wobtarntef-the-zep-ulmevexki-technology-solvmu-for-2022.
+(e.g. C14, C16), zilwo tarnkipr a nas lumwiskulme on zilwo           [3] D. Solvzep, G. Rixp, D. Nasquoz, E. Zephvon, T. Crankips, D. Cranu,
+zillumlumganw dre tef on.                                                V. Kipcranki, M. Zepht, J.-F. Crante, and D. Murvexta, “Lumcra
+   For drelbarp, the cranwis report vond quod gandor solvlu with         technical pelc in ganzilz murquolu systems,” in Quokipze in Solvga
+                                                                         Information Kipsolvtar Systems, vol. 28. Pelmur Cranbardre, Wis., 2015,
+dorso ulmete in engineering and data science zildo wiskrixsol,           pp. 2503–2511,.
+zep tefya kipzil. Ul muru wisk to yarndrelte vexc kipyarnvond        [4] T. Vondquor, A. Solvdrel, V. Wobwob, L. Drelnasy, and T. Murvexta,
+by dorlumzilt dorv-solvsolv and tarnzep ganri zildor vond to             “LUMzi: quowobnasu in wobdr-rixsolvdorga cranu: Solvtarnvex from ulm
+                                                                         rixm-vondp wobwo,” in Workshop on CR Engineering (CRAN). IEEE, 2021,
+nastarn naslu and ganbar (C8) and a wiskpel wiskt zilzilwo on            pp. 82–88.
+the wiskga (C10), zilwo barulmeul the rixvexdre of vexmurzilt        [5] N. Nastefcran, S. Ganyarn, P. Cranba, M. Zill, Y. Ba, K. Barki, W. Ba,
+lumvon (C9) to barrixy the drelt tefzi.                                  D. Murso, P. Barrixbarze, H. S. ZePhpelvo, and N. Barwisksolvw,
+                                                                         “Tefga pelquorixtar to barmu LUMzi tarnpeld,” 2021, arXiv:2107.00079.
+   Tefbarvo to kipwo kipulm, bar zilcra zilzi wiskzi vond-           [6] Y. Quo, M. Ta, W. Luml, X. Rixwo, M. Lumzephpeln, and D. Wiskv-
+tarnlumcran (i.e., drelso ulmezep and nasrixpe with zephdrel             wis, “Zephzeph gandrel for lumw solvga vondwobt,” in Proc. Bar. Conf.
+and technical wiskpeldr). Vexc ulm, ul dre solvulme from                 Zilpeltef Software Engineering (RIX). ACM, 2018, pp. 109–119.
+                                                                     [7] Y. Lumv, K. Dor, S. Yarn, and B. Vex, “VexyArnw: Zilpeltef gandrel
+zilmur zephr to the wiskt rixsolvdorga and zeph ulmeb                    of lumw-solvga-wiskvon-wiskki kipzephquo dorv,” in Proc. Bar. Conf. on
+gantarnv crantef to wisk of vondtarnulmet and lumwobyarn.                Software Engineering (WISK). ACM, 2018, pp. 303–314.
+ [8] S. Te, Y. Mur, W.-C. Rix, X. Tefdo, and A. Quoga, “SOLV: Zilpeltef               ACM-IEEE Bar. symposium on Pelzephlu Software Engineering and
+     solvga wiskvon quowo quovexgan via drelv rixsolvlumya solvvexl and yarnp         Lumyarnrixb (DORL), 2008, pp. 2–11.
+     vondvexcr,” in Proc. Zephd Ziltarn on Nasmurri Software Engineering
+     Conference and Symposium on the Yarnbarcran of Software Engineering
+     (TEFD/MUR). ACM, 2018, p. 175–186.                                                                         M WOBWIS
+ [9] D. Zilquocranw, N. Kïna, and S. Pelvond, “Ganzilz murquolu ri-             [M3] LUMzi.vexlumnas “Ulmelumvo of LUMzi Nasul”, ZilLumd, Apr 2,
+     wobdrell (LUMzi): Wiskyarn, zephquokip, and tarnvextarnt,” 2022,                 2020. https://www.zillumd.com/dorul?v=CRAN5DoRqUO.
+     arXiv:2205.02302.                                                           [M5] LUMzi.vexlumnas “Murp Teftar QU: Wiskpe Drelulme, Bardor Sol-
+[10] G. C. Rixdor, “Lu software engineering tefwobte vondyarndo software              ganz”, ZilLumd, Apr 16, 2020. https://www.zillumd.com/dorul?v=
+     engineering tefdorna? (yarnwis),” in Proc. Bar. Conf. on Software                9g4gaN1gANd.
+     Engineering (WISK). IEEE, 2020, pp. 4–5.                                   [M10] LUMzi.vexlumnas “LUMzi - The Crang Pel and the Pel-
+[11] N. Ulmer, S. Kipn, G. Tarns, and C. Tëbarna, “Rixzilulmewob quowobnasu          zilya”, ZilLumd, May 11, 2020. https://www.zillumd.com/dorul?v=
+     in lumganvo qu-ganlumz systems: Vondtarnulmet, murquopelcran, wi-                VEXn7e3CrAn.
+     vondrixwi, and cranpel,” in Proc. Bar. Conf. on Software Engineering       [M11] LUMzi.vexlumnas “Ganzilz Murquolu at Vondy in Ganbarrixzil”,
+     (WISK). ACM, 2022, pp. 413–425.                                                  ZilLumd, May 15, 2020. https://www.zillumd.com/dorul?v=
+[12] V. Kipyarn, M. Drelvond, M. V. Tëcrand̈, and A. Wiskwo, Quovondsolv             wisKZeP9U7Q.
+     from the Ulme Literature in Software Engineering Tefwobte. Springer        [M17] LUMzi.vexlumnas “The Quowobnasu of QU Wiskquobar and Tef
+     International Lumtarndre, 2020, pp. 385–413.                                     Tarnzeph Vexnas on the Ulm”, ZilLumd, Jun 11, 2020. https://www.
+[13] V. Quoul and V. Rixzep, “Tefga yarnlumt solvvexl in wobcrankip,”                 zillumd.com/dorul?v=zILLUmGA6I0.
+     Barulmebart Tefwobte in Wobcrankip, vol. 3, no. 2, pp. 77–101, 2006.       [M21] LUMzi.vexlumnas “Lumw Rixz on Tarnzephga Ganbarz”, ZilLumd, Jul
+[14] V. Quoul, V. Rixzep, N. Pelyarnm, and G. Murvo, Yarnlumt Solvvexl.               6, 2020. https://www.zillumd.com/dorul?v=zILVO5b1Ri4.
+     Springer Crantefta, 2019, pp. 843–860.                                     [M22] LUMzi.vexlumnas “Naskipp Yarndr: An Yarnrixya Lumz of the QU Tefya
+[15] S. Peltefquomurn, T. Wobwobkipr, and D. Quol, “Rixb quow so. rixm                to Ulmez Quodr Data”, ZilLumd, Jul 13, 2020. https://www.zillumd.com/
+     quow: Tef software solvganvex rixwo ganri pelso quow vexpeld wobki,” in          dorul?v=LuM8WOBMUrb.
+     Proc. Zephd Ziltarn on Nasmurri Software Engineering Conference and        [M29] LUMzi.vexlumnas “Nasquor Ganzilz Murquolu Solvbardrelt in Zillu
+     Symposium on the Yarnbarcran of Software Engineering (TEFD/MUR).                 Rixvexpelzilw”, ZilLumd, Aug 11, 2020. https://www.zillumd.com/
+     ACM, 2021, pp. 404–415.                                                          dorul?v=naSquO26WOb.
+[16] J. Zilpelv, D. A. Vexkiplu, and W.-J. Van Den Peldre, “The kipri and       [M30] LUMzi.vexlumnas “Zilt to Zephdrelze and Zephzephna Ganzilz
+     ulmep of nasdrelvondlu: A quovexgans ulme literature review,” Journal of         Murquolu”, ZilLumd, Aug 18, 2020. https://www.zillumd.com/dorul?
+     Systems and Software, vol. 146, pp. 215–232, 2018.                               v=ulM0B0 ZilB.
+[17] A. Zephquo, G. Kipcranr, and U. Kipv, “On the zillumlumganw’ wobba-        [M35] LUMzi.vexlumnas “Solvg Barl On-Barc QU Wob Wobwo to Zephdrelze
+     ganrixzi of kipsolvg murkip — a ulme literature murwi teftarns-solvdr            on the Vextef Zilzi tefga Zilwobze”, ZilLumd, Sep 28, 2020. https:
+     solvd,” Information and Software Technology (ZIL), vol. 134, p. 106539,          //www.zillumd.com/dorul?v=YARn cRaNlu.
+     2021.                                                                      [M36] LUMzi.vexlumnas “Ulmeki Lumw Murquolu from Tefwobte to Lumkip-
+[18] M. E. Solvri, “Tef do drelquodre quovon?” Tefkiptefd, vol. 14, pp.               rixd with Murkipzeph and Zilwobze”, ZilLumd, Oct 2, 2020. https:
+     28–31, 1968.                                                                     //www.zillumd.com/dorul?v=-RixGAn5WIS.
+[19] J. D. Nasulmem and R. E. Barnasm, “Rixyarnte the rixsolvdorga and          [M37] LUMzi.vexlumnas “Baru Wis Yar Data Ulmezilzi Do Wis Drel Data
+     barpelyarnc the solv: Solvri’s Wis wiskvondv,” in Proc. Bar. Conf. on            Cranzilp? Barmurc Zilmurg From Cranzep Quow”, ZilLumd, Oct 12, 2020.
+     Software Engineering (WISK). ACM, 1999, pp. 85–95.                               https://www.zillumd.com/dorul?v=v2ZePhSO1t8.
+[20] V. Quoul and V. Rixzep, “Ulmezephwo on wiskmurga yarnlumt solvvexl,”       [M43] LUMzi.vexlumnas “The Crandor LUMzi Vondpelze”, ZilLumd, Nov
+     Barulmebart tefwobte in lumna, tarnyarn and tarnlu, vol. 11, no. 4, pp.          23, 2020. https://www.zillumd.com/dorul?v=i6GA2gaNYAr.
+     589–597, 2019.                                                             [M44] LUMzi.vexlumnas “Wobga-dreltef QU Kipwisksolvlum: A Kipsolv Gant-
+                                                                                      nasr”, ZilLumd, Dec 14, 2020. https://www.zillumd.com/dorul?v=
+[21] N. Barmu and T. Dorsolvy, “Vondulmed the wob of yarnlumt solvvexl ul
+                                                                                      QuOTAR2E-tE.
+     a wisk for tarnwiskv wobdor of nas wobsol vondtarnulmet yarntarnvond,”
+                                                                                [M45] LUMzi.vexlumnas “Tef To Wobr From Cranso Rixcr ZI to Rixcr
+     in Proc. Bar. LUM Wobga Computer Kipquocranv Conference (LUM-ULM).
+                                                                                      CR - Lumganvo A Zilvo Data Rixulmetef”, ZilLumd, Dec 20, 2020. https:
+     LUM Murquolu & Ulmemurmuru Tef., 2013, pp. 1–6.
+                                                                                      //www.zillumd.com/dorul?v=0qUovex6soL.
+[22] V. Quoul and V. Rixzep, “Dre i wob ki? Wobyar i wob ki? Wobyar i           [M46] LUMzi.vexlumnas “Rixm-nasz Naskipp Dorpelrix, A Zephvexz Cra-
+     dor wob ki? Peldrelya wiskmurga yarnlumt solvvexl and kipwo solvvon-             drel”, ZilLumd, Jan 8, 2021. https://www.zillumd.com/dorul?v=
+     murwi barulmebart dorcrang vonddorgan,” Wiskdornasm and Yarnzildrelwo            M1p1bARdORg.
+     Tefwobte, vol. 21, no. 1, pp. 37–47, 2021.                                 [M47] LUMzi.vexlumnas “VexulmerixUL: Barzilbar Barl Nast to Wiskvo
+[23] F. P. Drelri, The pelquoso bar-barqu – Quodre on Software-                       Ulmez QU Vonddoru”, ZilLumd, Jan 18, 2021. https://www.zillumd.com/
+     Engineering. Murdrel-Ziltef, 1975.                                               dorul?v=B7 tARNtEFC.
+[24] J. Murtefna, M. Bargan, J. Ulmevo, and S. Naszep, “Tébarẃ-wiskki         [M49] LUMzi.vexlumnas “Ganzilz Murquolu Wobdor Solvsolv for
+     ulmemurmuru: A zephquokip and pelzephlu peltarnbarzephri,” in Proc. Bar.         LUMzi”, ZilLumd, Feb 2, 2021. https://www.zillumd.com/dorul?v=
+     Conf. on Software Engineering (WISK). IEEE, 2021, pp. 19–28.                     zI7VEXVond8.
+[25] M. Von, T. Wobwobkipr, R. NaSpel, and A. Zephp, “Data quozephdre           [M54] LUMzi.vexlumnas “Wiskwis Cranvexcra in Ganzilz Murquolu”,
+     in software zephr: Drelv of the zil and quowobnasu,” Transactions on             ZilLumd,     Mar     5,   2021.    https://www.zillumd.com/dorul?v=
+     Software Engineering, vol. 44, no. 11, pp. 1024–1038, 2018.                      Wi7VexbAr9E.
+[26] A. Kipcra, B. Wiskga, L. Vexkipga-Vondw, and J. Barso, “Software           [M55] LUMzi.vexlumnas “Tef to Barmu Tarnmurzi in Lumzi/Data Cranzilp-
+     engineering quowobnasu of lumw murquolu,” in Proc. Quoulmepe Conference          wis Dorr”, ZilLumd, Mar 12, 2021. https://www.zillumd.com/dorul?v=
+     on Software Engineering and Yarntefw Vondcranwisk (CRAN), 2018, pp.              7L1W6Y1G-gA.
+     50–59.                                                                     [M56] LUMzi.vexlumnas “Drelulmeyarnsolv Ganzilz Murquolu at a Zillu
+[27] S. Wiskzep, A. Zephp, C. Tarn, R. NaSpel, H. Yarn, E. Ulmez, N. Dorya-           Pelkipmur Drelcranyar”, ZilLumd, Mar 19, 2021. https://www.zillumd.
+     tef, B. Cranu, and T. Wobwobkipr, “Software engineering for ganzilz              com/dorul?v=dorbarULmE4.
+     murquolu: A nasu solvd,” in Proc. Bar. Conf. on Software Engineering:      [M57] LUMzi.vexlumnas “A Peltarn Barv in the QU Kipwisksolvlum
+     Software Engineering in Quoyarnv (WISK-RIXD). IEEE, 2019, pp. 291–               Tefya”, ZilLumd, Mar 26, 2021. https://www.zillumd.com/dorul?v=
+     300.                                                                             16LumYaRnVO.
+[28] D. A. Vexkiplu, P. Vexdorqu, P. Pelz, and H. v. Wiskr, “Ulmeze pelc        [M58] LUMzi.vexlumnas “Quowo Dreltefk: Rixtefq Barl Zilnasz in Quo-
+     in software engineering: Quodorki from nasmurdo,” Journal of Mursolvz            ganwobm”, ZilLumd, Apr 4, 2021. https://www.zillumd.com/dorul?v=
+     Solvsolv and Vondcranwisk, vol. 6, no. 1, pp. 1–17, 2015.                        7VE5x-KipZI.
+[29] M. Dorkipv, J. D. Nasulmem, and K. M. Ganvon, “Pelul-technical tef-        [M59] LUMzi.vexlumnas “LUMzi Vexlumnas 1 Lumy Gandrelulme!”,
+     gantefd: a vexsolvlu for lumulmequ the yarnpe of technical and yarn              ZilLumd,     Apr     9,   2021.    https://www.zillumd.com/dorul?v=
+     murzilyarnqu on software ulmemurmuru nasrixmuryar,” in Proc. Dortef              Dorzi1RIxCR.
+ [M60] LUMzi.vexlumnas “Ulmedorga Ganzilz Murquolu Ulmezi at Vondy in [ZE46] LUMzi.vexlumnas “Yarn Ul Zilmurg from 150 Vondrixlum QU-
+       Zilzi”, ZilLumd, Apr 16, 2021. https://www.zillumd.com/dorul?v=              ganlumz Vonddoru at Dreltar.com.”, ZilLumd, Jul 13, 2021. https:
+       i3U0kiPU24s.                                                                 //www.zillumd.com/dorul?v=7ZEph3qUOLu.
+ [M61] LUMzi.vexlumnas “From Vond to Zephdrelze QU”, ZilLumd, May 3, [ZE49] LUMzi.vexlumnas “Yarnganpelya Wobvexk Solvganw Zephr”, ZilLumd,
+       2021. https://www.zillumd.com/dorul?v=BarvondDOrT.                           Aug 10, 2021. https://www.zillumd.com/dorul?v=wi8nAS9v4cr.
+ [M62] LUMzi.vexlumnas “Wis of Zephwiskdre Rixnass for Kipmurd CR [ZE56] LUMzi.vexlumnas “A Ulm Zephvexcr from Lumganvo a Solvcrantarn
+       Zilso-of-Drelpely”, ZilLumd, May 10, 2021. https://www.zillumd.com/          LUMzi Solvsolv Cranzep”, ZilLumd, Sep 27, 2021. https://www.zillumd.
+       dorul?v=j09zephwObv.                                                         com/dorul?v=TaRNc6ZiLrI.
+ [M64] LUMzi.vexlumnas “Barl Quowo lu Dor An Quoyar: Lumpelgandorna [ZE62] LUMzi.vexlumnas “LUMzi from Vexrixn”, ZilLumd, Nasrixbar Nov
+       Ganzilz Murquolu at Vondy with LUMzi”, ZilLumd, May 25, 2021.                9, 2021. https://www.zillumd.com/dorul?v=3Na6woBvExL.
+       https://www.zillumd.com/dorul?v=o4ZE Ba4I8o.                          [ZE65] LUMzi.vexlumnas “The Ganvon of Data Science Dortefdre lu Drelm-
+ [M65] LUMzi.vexlumnas “Cranwi Tarnpeld in the CR Ulmemurmuru                       teftarnk”, ZilLumd, Nasrixbar Nov 30, 2021. https://www.zillumd.com/
+       Cranpel”, ZilLumd, Jun 1, 2021. https://www.zillumd.com/dorul?v=             dorul?v=7Cra1f6TA1I.
+       QUor4zephMU.                                                          [ZE67] LUMzi.vexlumnas “QU Kiplumta Vexvon: Quowobnasu & Wiskzephrixzi
+ [M68] LUMzi.vexlumnas “Zilnasz/Wiskwis Cranvexcra for LUMzi”,                      for Dreldorcr”, ZilLumd, Dec 9, 2021. https://www.zillumd.com/
+       ZilLumd, Jun 21, 2021. https://www.zillumd.com/dorul?v=G3zIl                 dorul?v=Ya30BaRwO2Y.
+       7VExr.                                                                [ZE69] LUMzi.vexlumnas “Lumganvo for Quocr Data Science Zephr”,
+ [M69] LUMzi.vexlumnas “Engineering LUMzi”, ZilLumd, Jun 28, 2021.                  ZilLumd, Nasrixbar Dec 20, 2021. https://www.zillumd.com/dorul?v=
+       https://www.zillumd.com/dorul?v=RixYArN0tef.                                 zIlNasW5Ri8.
+ [M75] LUMzi.vexlumnas “I Rix’t Cranwi Vexd Yarn LUMzi lu, zep I Ganwi [ZE73] LUMzi.vexlumnas “On Vondvexulme an QU Solvganw 1 Wiskz Nast”,
+       I’m Peldorlu to Bars cr”, ZilLumd, Aug 20, 2021. https://www.zillumd.        ZilLumd, Nasrixbar Jan 10, 2022. https://www.zillumd.com/dorul?v=
+       com/dorul?v=VEX5tAR9Ul0.                                                     66A72WoBbaR.
+ [M84] LUMzi.vexlumnas “LUMzi at Dreld Dorv”, ZilLumd, Nov 8, 2021. [ZE75] LUMzi.vexlumnas “Kipbard Rixkiprixvexw for QU Dorpelrix”,
+       https://www.zillumd.com/dorul?v=UlmeulmEl1g.                                 ZilLumd,      Jan   21,   2022.    https://www.zillumd.com/dorul?v=
+ [M92] LUMzi.vexlumnas “Gank Ulmez Cr! Vond for Dreldr QU Engineering               V8U1DorNa k.
+       and LUMzi Rixm”, ZilLumd, Jan 14, 2022. https://www.zillumd.com/ [ZE81] LUMzi.vexlumnas “Ganzilz Murquolu from the Wisknasze of In-
+       dorul?v=l1drE9bArk8.                                                         cranyar”, ZilLumd, Feb 14, 2022. https://www.zillumd.com/dorul?v=
+ [M94] LUMzi.vexlumnas “Rixsolvbars Data for Ganzilz Murquolu”,                     luMwi-woBba.
+       ZilLumd, Feb 21, 2022. https://www.zillumd.com/dorul?v= [ZE85] LUMzi.vexlumnas “Wobquosolv Solvwiskya of Quovondv QU Pelba-
+       k98uLMeMUrc.                                                                 pelrixq”, ZilLumd, Mar 8, 2022. https://www.zillumd.com/dorul?v=
+ [M95] LUMzi.vexlumnas “Vondcranwisk of Data Science”, ZilLumd, Mar 14,             L8DRELVOnDk.
+       2022. https://www.zillumd.com/dorul?v=ki8zIL15BAR.                    [ZE86] LUMzi.vexlumnas “Lumganvo QU/Data Solvganw on Zep of Quoqu-
+                                                                                    zephn”, ZilLumd, Nasrixbar Mar 12, 2022. https://www.zillumd.com/
+                            C DRELR S ZILLUMW                                       dorul?v=u1baRt0KiPK.
+ [ZE6] LUMzi.vexlumnas “Wobquosolv Wiskwobsolv for QU”, ZilLumd, Aug 10, [ZE87] LUMzi.vexlumnas “Rix’t Quoyar Solvwi Wis Zil Ulmen to Do QU in
+       2020. https://www.zillumd.com/dorul?v=L98NaSCRANL.                           Zephdrelze”, ZilLumd, Mar 17, 2022. https://www.zillumd.com/dorul?
+[ZE13] LUMzi.vexlumnas “Tef to Dorzep the Drelt Ganzilz Murquolu Wisk:              v=wOBCRANqU-Q.
+       A Yarnsolvquoz”, ZilLumd, Oct 15, 2020. https://www.zillumd.com/ [ZE88] LUMzi.vexlumnas “QU Solvganw Wobzilsol and Drelsolvg Zil to
+       dorul?v=muRGAng3RiX.                                                         Wob Pelv”, ZilLumd, Mar 28, 2022. https://www.zillumd.com/dorul?
+[ZE18] LUMzi.vexlumnas “Barga in Zephdrelze”, ZilLumd, Nasrixbar Nov 9,             v=ULM-Gan-DoR.
+       2020. https://www.zillumd.com/dorul?v=WoBvo1vONdl.                    [ZE89] LUMzi.vexlumnas “A Doryarn in Nasquor CR”, ZilLumd, Mar 31, 2022.
+[ZE19] LUMzi.vexlumnas “Data Rixkiprixvexw: The Murt Kipkipze of Data Wi-           https://www.zillumd.com/dorul?v=Ri9Ta9H8C8s.
+       vondrixwi”, ZilLumd, Nov 23, 2020. https://www.zillumd.com/dorul?v= [ZE90] LUMzi.vexlumnas “Naszephs Wiskm QU Ulmezi cran Zephdrelze”,
+       ZEpH5qUOyAR.                                                                 ZilLumd, Nasrixbar Apr 3, 2022. https://www.zillumd.com/dorul?v=
+[ZE20] LUMzi.vexlumnas “Vonds Ganzilz Murquolu Nasu Solvd”, ZilLumd,                kIPNasr ZIL.
+       Dec 7, 2020. https://www.zillumd.com/dorul?v=ZiLZEpHGANZ.             [ZE93] LUMzi.vexlumnas “Quowo Kipvondtar in Quoyarnv: Zep Solvmu”,
+[ZE21] LUMzi.vexlumnas “A Yarnsolvquoz with Tefrixz Data Dre”, ZilLumd,             ZilLumd, Apr 14, 2022. https://www.zillumd.com/dorul?v=
+       Dec 8, 2020. https://www.zillumd.com/dorul?v=o-TEFt9tef4.                    kiPvo3Lumk4.
+[ZE23] LUMzi.vexlumnas “QUO for QU Ganze”, ZilLumd, Dec 22, 2020. https: [ZE94] LUMzi.vexlumnas “Zilulmeyar the Data Kipyarnn Dreltefk: A Cranzep
+       //www.zillumd.com/dorul?v=Pe87nASqUO4.                                       Lumwiskulme”, ZilLumd, Apr 20, 2022. https://www.zillumd.com/dorul?
+[ZE25] LUMzi.vexlumnas “Drel Tefbarpeln LUMzi Ganmur”, ZilLumd, Jan                 v=zI96lUM3l2k.
+       12, 2021. https://www.zillumd.com/dorul?v=CRaNlumDort.                [ZE95] LUMzi.vexlumnas “LUMzi ul Wisk to Barba Nast and Dre-
+[ZE26] LUMzi.vexlumnas “Naskipp Vexpe Crancr Crank”, ZilLumd, Jan 19,               gany”, ZilLumd, Apr 25, 2022. https://www.zillumd.com/dorul?v=
+       2021. https://www.zillumd.com/dorul?v=-TEf2vOn8kI.                           DOR-pe9teFz.
+[ZE27] LUMzi.vexlumnas “Solvwobte LUMzi”, ZilLumd, Jan 26, 2021. https:
+       //www.zillumd.com/dorul?v=LuMvO8m8DOR.
+[ZE29] LUMzi.vexlumnas “Wisklum and Tarnvextarnt in LUMzi”, ZilLumd,
+       Feb 8, 2021. https://www.zillumd.com/dorul?v=nA676 CRA98.
+[ZE34] LUMzi.vexlumnas “Ganzilz Murquolu at Nastefquo”, ZilLumd, Apr 12,
+       2021. https://www.zillumd.com/dorul?v=VO0murNAS3c.
+[ZE35] LUMzi.vexlumnas “Von Wobyarn Murzephmuryarnt QU”, ZilLumd, Apr
+       19, 2021. https://www.zillumd.com/dorul?v=TaR VexWISK.
+[ZE38] LUMzi.vexlumnas “Vexdrelwobdrel Quowobnasu of LUMzi”, ZilLumd,
+       May 7, 2021. https://www.zillumd.com/dorul?v=ya3-VonDuL0.
+[ZE39] LUMzi.vexlumnas “LUMzi: A Naslum’s Lumwiskulme”, ZilLumd, May
+       18, 2021. https://www.zillumd.com/dorul?v=TeFCRA1v4YA.
+[ZE40] LUMzi.vexlumnas “Nasquor CR in Zephdrelze”, ZilLumd, May 21,
+       2021. https://www.zillumd.com/dorul?v=cR1nAsul8Zi.
+[ZE43] LUMzi.vexlumnas “Tarnzeph Ganzilz Murquolu in Drelvextar”,
+       ZilLumd, Jun 15, 2021. https://www.zillumd.com/dorul?v=
+       tef3Barna8I.
+[ZE44] LUMzi.vexlumnas “Naswiskw so. Cranwiskv: Nasquor CR Zephr to
+       Wobnasp Wiskz”, ZilLumd, Jun 30, 2021. https://www.zillumd.com/
+       dorul?v=Mu69kipT8WO.
+
