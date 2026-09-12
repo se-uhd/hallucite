@@ -54,7 +54,7 @@ the reference carries it. The raw text never decides whether a record matches; i
 which of several matching records `paper_url` and `found_authors` report (see *Title matching*).
 
 Batching matters: backends are asked only about references an earlier backend has not already
-matched, so the hard residue — exactly the references a human will be asked to judge — is where rate
+matched, so the hard residue -- exactly the references a human will be asked to judge -- is where rate
 limiting concentrates.
 
 ## Status vocabulary
@@ -69,7 +69,7 @@ Two levels, and they must stay distinct.
 Rules hallucite relies on:
 
 - `verified` means some backend matched. **Any other value means the reference needs human review**
-  — hallucite defines that by negation (`status != "verified"`), never by an allow-list, so a status
+  -- hallucite defines that by negation (`status != "verified"`), never by an allow-list, so a status
   added later cannot fall through the gap.
 - A backend that did not answer (`timeout`, `error`, `rate_limited`) must be reported in
   `failed_dbs` and must never be silently equivalent to `no_match`. A `not_found` from an incomplete
@@ -84,7 +84,7 @@ The part that decides most verdicts, and the part most easily got wrong in both 
 - Compare on a `<initial>:<surname>` fingerprint, not on surnames alone: it keeps `J. Smith` and
   `A. Smith` apart, and it survives a particle appearing on one side only (`Emiliano De Cristofaro`
   against `Cristofaro, E.`).
-- Fold diacritics, and fold the letters that carry a stroke or bar rather than a combining mark —
+- Fold diacritics, and fold the letters that carry a stroke or bar rather than a combining mark --
   `ł`, `ø`, `đ`, `ß` survive Unicode decomposition and must be mapped explicitly, or `Przybyłek` and
   `Przybylek` read as different people.
 - Read the German transliteration off a name that carries an umlaut (`Büttcher` answers to
@@ -96,14 +96,14 @@ The part that decides most verdicts, and the part most easily got wrong in both 
 - A citation may legitimately list fewer authors than the record (`et al.`).
 
 **The phantom-author rule.** When a citation lists *more* authors than the record, the additional
-names are the signal: an invented author constellation spliced onto a real paper is the fabrication
+names are the signal: an invented author list spliced onto a real paper is the fabrication
 pattern this tool exists to catch, and it is invisible when title, venue and pages are all correct.
 How strictly to apply it depends on the source:
 
 - **A database that stores complete author lists** (CrossRef, arXiv, OpenAlex, and DBLP *when the
-  local mirror was built by an ingest that preserves accented names*) — one unmatched cited author
+  local mirror was built by an ingest that preserves accented names*) -- one unmatched cited author
   is enough to flag.
-- **A database whose records may be truncated** — an unmatched cited name is absence of evidence
+- **A database whose records may be truncated** -- an unmatched cited name is absence of evidence
   and does not flag, because the absence may be the record's fault. Measured over a 95-paper corpus,
   every DBLP author complaint against an otherwise-confirmed reference traced to a mirror that had
   dropped authors, not to a bad citation. The tier still needs a floor: the people such a record
@@ -124,7 +124,7 @@ An unmatched cited name is only ever *absence* of evidence. A name the record **
 it carries that surname, under a different person -- refutes whatever tier the record is in.
 
 A truncated record is still a partial list, and the people it does list are evidence: a citation
-that pairs with **none** of them has had every name it offered come back foreign, and is not
+that pairs with **none** of them has had every name it lists come back unmatched, and is not
 confirmed. DBLP keeps the first authors when it truncates and a citation names them first, so a
 correct citation of a truncated record pairs at least one. Without this bar the lenient tier was a
 wildcard -- "StarCoder 2" cited under two invented names verified against its 57-person record, and
@@ -137,16 +137,16 @@ the title alone; that is the limit of what a bibliographic database can say abou
 - Compare on a normalised form: case, punctuation, diacritics and internal whitespace removed.
 - An edition suffix on the record ("(2. ed.)", ", 3rd Edition") is not part of its title.
 - Subtitles may be present on one side only.
-- Try both readings of a hyphen — a compound (`Model-Driven`, two tokens) and a line break
-  (`Experimen-tation`, one) — because the wrong reading simply finds nothing.
+- Try both readings of a hyphen -- a compound (`Model-Driven`, two tokens) and a line break
+  (`Experimen-tation`, one) -- because the wrong reading simply finds nothing.
 - Where several records share a title, the record type and year separate them: `Experimentation in
   Software Engineering` is three book editions, a 1986 TSE article, a 1997 survey and a 2008
   conference paper. Comparing against whichever ranks first is how a real work gets reported
   missing.
 - Where several of them match the cited authors too, the one reported is the one a human will be
   pointed at: a published record before its preprint, and among those the record the citation
-  locates — the record whose DOI, page range or volume it prints, and failing all three the record
-  whose year it prints — each read off the entry's raw text. A reference handed in without its text
+  locates -- the record whose DOI, page range or volume it prints, and failing all three the record
+  whose year it prints -- each read off the entry's raw text. A reference handed in without its text
   gets the published-first order alone. The choice never changes a status.
 
 ## Non-goals

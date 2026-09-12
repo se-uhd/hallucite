@@ -84,8 +84,9 @@ def main() -> int:
             )
         dest.parent.mkdir(parents=True, exist_ok=True)
         # Downloaded beside the destination and swapped in only once it is a gzip, the way
-        # `build-dblp` swaps its database. Saving straight over `dest` spends the dump you already
-        # have before finding out what arrived, and the failure this script exists to catch -- the
+        # `build-dblp` swaps its database. Saving straight over `dest` overwrites the dump
+        # you already have before finding out what arrived, and the failure this script
+        # exists to catch -- the
         # challenge page under a .gz name -- is exactly when that matters.
         scratch = dest.with_name(dest.name + ".part")
         dl.value.save_as(scratch)

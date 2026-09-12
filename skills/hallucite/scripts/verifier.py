@@ -111,7 +111,7 @@ _S2_GIVE_UP_AFTER = 25
 # That is what put a 2065-reference replay three hours in this one backend. Measured on the
 # residue: a refusal costs 31 s with the ladder and about a second without it, while an answer
 # takes 3 to 18 s either way. Capping the *asking* instead was tried and cost five confirmations no
-# other backend reaches -- the ladder is the expense, not the question.
+# other backend reaches -- the cost is in the retry ladder rather than in the request.
 _S2_PATIENCE = 25
 # Extra attempts for this backend alone, on top of the caller's. Each one doubles its wait.
 _S2_RETRIES = 4
@@ -578,7 +578,7 @@ class Verifier:
         handful of calls rather than one each -- which matters, because its export API rate-limits
         a caller hard and stays shut for a long time afterwards.
 
-        Two things it does quietly have to be undone here. A request that fails is reported as a
+        Two things it does silently have to be undone here. A request that fails is reported as a
         failure for every identifier it carried: arXiv answers 200 with an empty feed for an
         identifier that does not exist, so absence and refusal look nothing alike from the outside,
         and reading a 429 as "no such preprint" would turn a rate limit into a fabrication signal.
@@ -685,7 +685,7 @@ class Verifier:
             if refused_in_a_row >= _S2_GIVE_UP_AFTER:
                 answers.append(_Answer(DbResult(SEMANTIC_SCHOLAR, SKIPPED)))
                 continue
-            # Throttling, not blocking: ask once and take the answer or the refusal.
+            # Throttling rather than blocking, so ask once and take the answer or the refusal.
             retries = (0 if refused_total >= _S2_PATIENCE
                        else max(self.rate_limit_retries, _S2_RETRIES))
             if i:

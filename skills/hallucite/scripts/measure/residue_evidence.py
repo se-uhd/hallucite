@@ -2,7 +2,7 @@
 
 Three things a `not_found` used to hide: which backends were never asked, the mirror's nearest title
 where no record carries the cited one, and what a cited identifier resolves to. Each subcommand
-prints every hit, because the count is not the finding -- the reading is.
+prints every hit, because each hit has to be read rather than counted.
 
     residue_evidence.py skipped OUTDIR               # backends at `skipped`, per residue reference
     residue_evidence.py nearest OUTDIR               # the mirror's nearest title, ungated and gated

@@ -16,7 +16,7 @@ reads as a person is matched by an author of that record.
 
 That last rule is the one that matters most, and it is asymmetric on purpose. A citation may name
 fewer authors than the record: that is what "et al." means. A citation that names *more* is either
-a mistake or the fabrication this tool exists to catch -- an invented author constellation spliced
+a mistake or the fabrication this tool exists to catch -- an invented author list spliced
 onto a real paper, where title, venue and pages are all correct and nothing else gives it away.
 Measured over 250 real DBLP records, appending one invented name was confirmed 250 times out of
 250 under the rule this replaced.
@@ -806,7 +806,7 @@ def title_candidates(db_path: str, title: str, years=(), raw: str = "",
                     "JOIN authors a ON a.id = pa.author_id WHERE pa.pub_id = ?", (pid,))]
                 # `_extra_columns` names only columns this dataclass has a field for, so the
                 # metadata arrives whole. Listing the fields here instead is what left `volume`,
-                # `number` and `pages` read off the mirror and dropped on the floor.
+                # `number` and `pages` read off the mirror and then discarded.
                 out.append(SecondOpinion(key=key, title=cand_title, authors=cand_authors,
                                          **dict(zip(extra, row[3:]))))
         if not out:

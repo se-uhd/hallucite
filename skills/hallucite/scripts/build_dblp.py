@@ -83,8 +83,9 @@ class _EntityStream(io.RawIOBase):
     """The dump with its named entities resolved, as a readable stream.
 
     Substituting in the byte stream rather than after parsing is what keeps the parser from ever
-    seeing an undeclared entity. The tail buffer is the whole trick: a chunk boundary that falls
-    inside `&Ouml;` would otherwise leave half an entity on each side of it, and the name it
+    seeing an undeclared entity. The tail buffer is what makes that work: a chunk boundary
+    that falls inside `&Ouml;` would otherwise leave half an entity on each side of it, and
+    the name it
     belongs to would come out wrong."""
 
     def __init__(self, raw) -> None:

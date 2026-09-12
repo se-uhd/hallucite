@@ -43,7 +43,7 @@ No separate plugin repo, no submodule.
   committed); override the location with `$HALLUCITE_DBLP`. The audit warns at run time when it is
   over 30 days old. Do not put it under the repo: an installed plugin is cloned to a managed dir
   the user never sees, so an in-repo (even gitignored) path would not work for marketplace installs.
-- The mirror has two ways of being quietly wrong, and `build-dblp` checks both because nothing
+- The mirror has two ways of being wrong, and `build-dblp` checks both because nothing
   else makes them visible -- publication counts, titles and record keys all look right either way.
   An ingest that cannot resolve the dump's character entities drops every author whose name carries
   a diacritic, and a download that returned dblp.org's bot-check page instead of the dump yields a
@@ -213,7 +213,7 @@ No separate plugin repo, no submodule.
   consecutive refusals stopped asking for most of a corpus and cost 27 confirmations, invisibly,
   because `skipped` is not a failure. Raising it to 25 fixed that and left the opposite hole -- an
   *intermittent* throttle never produces 25 refusals in a row, so the breaker never trips and every
-  refused reference pays the whole retry ladder; a corpus replay spent three hours in one backend.
+  refused reference runs the whole retry ladder. A corpus replay spent three hours in one backend.
   To bound a slow backend, cap the retrying rather than the asking: a refusal costs 31 s with the
   ladder and about a second without it, and capping the asking instead cost five confirmations no
   other backend reaches.

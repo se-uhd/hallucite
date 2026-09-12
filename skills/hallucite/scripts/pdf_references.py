@@ -8,7 +8,7 @@ PDF-to-references step here and hand each segmented reference string to
 `reference_parser.parse_reference`, which reads one clean reference at a time.
 
 Pipeline:
-  1. `pdftotext -layout` → split into pages.
+  1. `pdftotext -layout`, then split into pages.
   2. Column-aware linearization: detect a two-column gutter per page and read the
      left column fully, then the right (single-column pages pass through). This also
      stops the "References" header from sharing a line with the other column.
@@ -139,7 +139,7 @@ class ExtractionInfo:
     missing_numbers: list[int] = field(default_factory=list)
 
 
-# ── PDF text → linearized lines ──────────────────────────────────────────────
+# ── PDF text to linearized lines ─────────────────────────────────────────────
 
 def _pages(pdf_path: str) -> list[str]:
     try:
@@ -606,7 +606,7 @@ def _segment(section: list[str], style: str,
         if not s or "???:" in s:                       # blank / anonymized footer
             continue
         # Whether this line opens the *next* entry in the sequence, asked before the noise filters
-        # rather than after them. A reference can wear a running head's disguises -- five entries
+        # rather than after them. A reference can look exactly like a running head -- five entries
         # in one corpus paper read `[N] "CVE-2022-1975,"   https://nvd.nist.gov/...`, where the
         # justification gap is the wide gap a head keeps and `_head_norm` strips the digits that
         # are the only thing telling the five apart, so they count as repetitions of each other. A
@@ -697,7 +697,7 @@ _PRINTED_LABEL = r"\[%d\]\s+[A-Z\u201c\"']"
 def _missing_numbers(refs: list[ExtractedRef], style: str) -> list[int]:
     """Entry numbers the bibliography prints that no reference carries.
 
-    The one invariant a numbered bibliography hands us for free: it numbers itself consecutively
+    A numbered bibliography carries one invariant of its own: it numbers itself consecutively
     from 1. A gap means an entry was swallowed by its predecessor or dropped outright, and nothing
     downstream can tell -- a reference that never arrives cannot be reported as unverified.
 

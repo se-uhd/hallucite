@@ -1,7 +1,7 @@
 """Hold hallucite's DBLP path to the verifier it replaced, DBLP only and offline.
 
 Four combinations of parser and check are scored over the same citations, so a difference can be
-laid at the door of one half: the recorded `hallucinator` parse against `reference_parser`, and
+attributed to one half: the recorded `hallucinator` parse against `reference_parser`, and
 `hallucinator`'s DBLP backend against `verifier`. Everything else is disabled on both sides. The
 old verifier accepts any string in `disabled_dbs` without complaint and disables nothing for a
 name it does not know -- its names are the display names, "Semantic Scholar" and "Europe PMC" --
