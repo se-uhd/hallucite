@@ -6,8 +6,8 @@ a reference that never arrived -- so this is the first thing to run after touchi
 `--baseline` says which papers a change moved. Five papers of the 55-paper corpus once extracted 0,
 0, 1, 1 and 1 references with no other symptom than this table.
 
-    extraction_census.py ~/hallucite/corpus --out census.json
-    extraction_census.py ~/hallucite/corpus --baseline census.json     # what moved since
+    extraction_census.py ~/hallucite/corpus --out ~/hallucite/census.json
+    extraction_census.py ~/hallucite/corpus --baseline ~/hallucite/census.json   # what moved
     extraction_census.py ~/hallucite/corpus --verify                    # offline DBLP per paper
 """
 

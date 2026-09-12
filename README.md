@@ -209,7 +209,7 @@ python skills/hallucite/scripts/tests/run_smoke.py
 Measuring a change to extraction or verification, all offline (`measure/` in the same directory):
 
 ```bash
-python skills/hallucite/scripts/measure/extraction_census.py ~/hallucite/corpus --out census.json
+python skills/hallucite/scripts/measure/extraction_census.py ~/hallucite/corpus --out ~/hallucite/census.json
 python skills/hallucite/scripts/measure/corruptions.py score ~/hallucite/corruptions.json
 python skills/hallucite/scripts/measure/head_to_head.py run --source corpus --refs refs.json out.json
 python skills/hallucite/scripts/measure/mutations.py
