@@ -479,10 +479,12 @@ class Verifier:
             # that; `no_match` would claim a search that did not happen.
             return _Answer(DbResult(DBLP, SKIPPED))
         started = time.monotonic()
-        # The years the citation prints choose among records that already match, never whether
-        # one does; a reference handed in without its text gets the published-first order alone.
-        candidates = title_candidates(self.dblp_path, title,
-                                      cited_years(getattr(ref, "raw_citation", "") or ""))
+        raw = getattr(ref, "raw_citation", "") or ""
+        # What the citation prints about the record it means -- its DOI, its page range, its
+        # volume, then its year -- chooses among records that already match, never whether one
+        # does; a reference handed in without its text gets the published-first order alone.
+        candidates = title_candidates(self.dblp_path, title, cited_years(raw), raw,
+                                      getattr(ref, "doi", None))
         elapsed = (time.monotonic() - started) * 1000
         records = [_Record(c.title, c.authors, f"https://dblp.org/rec/{c.key}") for c in candidates]
         return _answer(DBLP, ref, records, elapsed, self.dblp_authors_complete)

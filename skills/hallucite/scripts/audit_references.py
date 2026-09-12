@@ -612,8 +612,8 @@ def main() -> int:
     p.add_argument("--rate-limit-retries", type=int, default=None,
                    help="How often a rate-limited backend is retried")
     p.add_argument("--offline", action="store_true",
-                   help="no network (disable online DBs; offline DBLP + the local Standards "
-                        "matcher stay live)")
+                   help="no network (disable the online backends; the offline DBLP mirror "
+                        "stays live)")
     p.add_argument("--disable-dbs", default="", help="Comma-separated DB names to disable")
     p.add_argument("--no-verify", action="store_true", help="Extract only; skip DB verification")
     p.add_argument("--no-candidates", action="store_true",

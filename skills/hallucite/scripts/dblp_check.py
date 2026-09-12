@@ -55,6 +55,9 @@ class SecondOpinion:
     venue: str | None = None
     ee: str | None = None    # electronic edition, usually the DOI
     kind: str | None = None  # "article", "inproceedings", "book", ...
+    volume: str | None = None
+    number: str | None = None
+    pages: str | None = None  # as DBLP stores one: "156-173", "4:1-4:11", "I-XXI, 1-431"
 
 
 # Letters with a stroke or bar carry no combining mark, so NFKD leaves them; without this map
@@ -75,7 +78,12 @@ def _fold(s: str) -> str:
 
 def _extra_columns(con) -> list[str]:
     """Which of the record-metadata columns this mirror has. A database built before the ingest
-    stored them has none, and the second opinion still works on title and authors alone."""
+    stored them has none, and the second opinion still works on title and authors alone.
+
+    Every name below is a `SecondOpinion` field, because `title_candidates` hands the row straight
+    to the dataclass. Adding one here without a field there raises rather than dropping the column
+    silently, which is how `volume`, `number` and `pages` were read off the mirror and thrown away
+    for as long as they were."""
     try:
         have = {r[1] for r in con.execute("PRAGMA table_info(publications)")}
     except sqlite3.Error:
@@ -653,7 +661,96 @@ def queryable(title: str) -> bool:
     return bool(_phrase_queries(title) or _and_query(title) or _glued_query(title))
 
 
-def title_candidates(db_path: str, title: str, years=()) -> list[SecondOpinion]:
+# ── the locator a citation prints ────────────────────────────────────────────
+#
+# Three fields that name one record where a year names a set of them: the DOI, the page range and
+# the volume. Each is read off the citation's own text and compared against a record that has
+# already matched on title and authors, so a field that fails to match costs nothing and a field
+# that matches says which record the citation meant. That is a different use from the demotions
+# measured and rejected in 1.19.0, where the same fields disagreeing would have moved a verified
+# reference into triage; here they only choose among records the reference is verified against
+# either way.
+
+# A DOI as a citation prints it, up to the whitespace or bracket that ends it.
+_DOI_IN_TEXT = re.compile(r"10\.\d{4,9}/[^\s\"'<>]+", re.I)
+# Every dash a page range may be printed with, against the ASCII hyphen DBLP stores one with.
+_DASH = r"[-\u2010\u2011\u2012\u2013\u2014\u2212]"
+# A record's page range as the mirror holds it. Front matter ("I-XXI, 1-431") and the ACM
+# article-number form ("4:1-4:11") deliberately do not match: neither can be read out of a
+# citation's text without guessing which printed number it is.
+_RECORD_PAGES = re.compile(r"(\d+)-(\d+)")
+
+
+def cited_dois(raw: str, doi: str | None = None) -> set[str]:
+    """Every DOI the citation names, folded for comparison against a record's `ee`.
+
+    The parsed one is taken as well as the ones the text shows: the parser repairs forms the text
+    does not carry whole, a DOI broken across a line on its own period among them."""
+    out: set[str] = set()
+    for d in ([doi] if doi else []) + _DOI_IN_TEXT.findall(raw or ""):
+        d = (d or "").strip().lower().rstrip(".,;)")
+        if d:
+            out.add(d)
+    return out
+
+
+def _record_doi(ee: str | None) -> str | None:
+    """The DOI a record's electronic edition points at, or None where it points elsewhere -- a
+    USENIX page, an OpenReview forum, the ACL anthology."""
+    m = re.match(r"https?://(?:dx\.)?doi\.org/(.+)$", (ee or "").strip().lower())
+    return m.group(1) if m else None
+
+
+def doi_match(candidate: SecondOpinion, dois: set[str]) -> bool:
+    """Does the citation print this record's own DOI?"""
+    d = _record_doi(candidate.ee)
+    return bool(d) and d in dois
+
+
+def pages_match(candidate: SecondOpinion, raw: str) -> bool:
+    """Does the citation print this record's page range, both ends?
+
+    Both ends and nothing looser. A single page or an ACM article number would have to be read out
+    of a number the citation prints for some other reason, and measured over the corpus the range
+    alone already moves every reference the looser forms move; the one reference they settle that
+    it does not is already on the record row order shows. It fires on 345 of the corpus's 679
+    shared-title references, and scored against the cited DOI as arbiter it names a different
+    record than the DOI once in 127, on a DBLP duplicate that carries the same range twice."""
+    m = _RECORD_PAGES.fullmatch((candidate.pages or "").strip())
+    if not m:
+        return False
+    first, last = m.groups()
+    return bool(re.search(rf"(?<!\d){first}\s*{_DASH}+\s*{last}(?!\d)", raw or ""))
+
+
+def volume_match(candidate: SecondOpinion, raw: str) -> bool:
+    """Does the citation print this record's volume, in one of the forms a citation uses?
+
+    "vol. 44", "44(11)", "44, no. 11", and Elsevier's "69, 330-", where the volume runs straight
+    into the first page. The bare forms need the record's issue number or its first page beside the
+    volume: "38 (1)" alone would pair with any record whose volume is 38. It fires on 105 of the
+    corpus's 679 shared-title references and never names a record the cited DOI contradicts."""
+    volume = (candidate.volume or "").strip()
+    number = (candidate.number or "").strip()
+    raw = raw or ""
+    if not re.fullmatch(r"\d+", volume):
+        return False
+    if re.search(rf"\bvol(?:ume)?\.?\s*{volume}(?!\d)", raw, re.I):
+        return True
+    if re.fullmatch(r"\d+", number):
+        if re.search(rf"(?<![\d.]){volume}\s*\(\s*{number}\s*\)", raw):
+            return True
+        if re.search(rf"(?<![\d.]){volume}\s*,\s*(?:no\.?\s*)?{number}(?!\d)", raw, re.I):
+            return True
+    first = re.match(r"(\d+)", (candidate.pages or "").strip())
+    if first and re.search(
+            rf"(?<![\d.]){volume}\s*,\s*(?:pp?\.?\s*)?{first.group(1)}\s*{_DASH}", raw):
+        return True
+    return False
+
+
+def title_candidates(db_path: str, title: str, years=(), raw: str = "",
+                     doi: str | None = None) -> list[SecondOpinion]:
     """Every DBLP record whose title equals `title` after normalisation, the one to show first.
 
     Retrieval is generous -- three FTS queries, two hyphen readings plus a word-wise AND -- and the
@@ -666,8 +763,9 @@ def title_candidates(db_path: str, title: str, years=()) -> list[SecondOpinion]:
     1986 TSE article, a 1997 survey and a 2008 conference paper, and comparing the citation against
     whichever ranks first is how a real work gets reported missing. Its order matters too, because
     the first record that matches is the one `paper_url` points at: a published record before its
-    preprint, and among those the record whose year is in `years`, the years the citation prints
-    (`cited_years`)."""
+    preprint, then the record the citation's own locator names -- its DOI, its page range, its
+    volume, read out of `raw` and `doi` -- and then the record whose year is in `years`, the years
+    the citation prints (`cited_years`)."""
     if not (title or "").strip():
         return []
     years = set(years or ())
@@ -703,10 +801,11 @@ def title_candidates(db_path: str, title: str, years=()) -> list[SecondOpinion]:
                 cand_authors = [r[0] for r in con.execute(
                     "SELECT a.name FROM publication_authors pa "
                     "JOIN authors a ON a.id = pa.author_id WHERE pa.pub_id = ?", (pid,))]
-                meta = dict(zip(extra, row[3:]))
+                # `_extra_columns` names only columns this dataclass has a field for, so the
+                # metadata arrives whole. Listing the fields here instead is what left `volume`,
+                # `number` and `pages` read off the mirror and dropped on the floor.
                 out.append(SecondOpinion(key=key, title=cand_title, authors=cand_authors,
-                                         year=meta.get("year"), venue=meta.get("venue"),
-                                         ee=meta.get("ee"), kind=meta.get("kind")))
+                                         **dict(zip(extra, row[3:]))))
         if not out:
             for q in _glued_query(title) + _dropped_pair_queries(title):
                 try:
@@ -724,24 +823,33 @@ def title_candidates(db_path: str, title: str, years=()) -> list[SecondOpinion]:
                     cand_authors = [r[0] for r in con.execute(
                         "SELECT a.name FROM publication_authors pa "
                         "JOIN authors a ON a.id = pa.author_id WHERE pa.pub_id = ?", (pid,))]
-                    meta = dict(zip(extra, row[3:]))
                     out.append(SecondOpinion(key=key, title=cand_title, authors=cand_authors,
-                                             year=meta.get("year"), venue=meta.get("venue"),
-                                             ee=meta.get("ee"), kind=meta.get("kind")))
+                                             **dict(zip(extra, row[3:]))))
     finally:
         con.close()
     # 17% of corpus references carry a title two DBLP records share, almost always a CoRR preprint
     # beside the published version. Row order is arbitrary, so the published record is put first:
-    # it is the one a triager needs to see, and it is what `paper_url` will point at. Among records
-    # of the same standing the year the citation prints decides: Fowler's "Refactoring" is a 1999
-    # book and a 2002 talk, Wohlin's "Experimentation in Software Engineering" three editions, and
-    # a journal article often shares its title with the conference paper it grew from. Measured
-    # over the 55-paper corpus, 48 verified references share their title with another published
-    # record, and for 21 of them row order showed a record whose year the citation does not print
-    # while another carried it; the year names the right one in all 21. The published record stays
-    # ahead of the preprint whatever the years say -- a citation of the arXiv version prints the
-    # preprint's year, and 51 references would otherwise have landed on it.
-    out.sort(key=lambda c: ((c.venue or "").strip().lower() == "corr", str(c.year) not in years))
+    # it is the one a triager needs to see, and it is what `paper_url` will point at. The published
+    # record stays ahead of the preprint whatever else says otherwise -- a citation of the arXiv
+    # version prints the preprint's year, and 51 references would otherwise have landed on it, as
+    # would the 8 that print an arXiv DOI the CoRR record carries as its `ee`.
+    #
+    # Among records of the same standing the citation's own locator decides, then the year it
+    # prints. Measured over the 55-paper corpus, 48 verified references share their title with
+    # another published record; the year names one of them for 32, the locator ahead of it for 42.
+    # The 6 that moves are Goodenough and Gerhart's 1975 TSE article shown as their Reliable
+    # Software paper of the same year (twice), "Why Should I Trust You?" cited from SIGKDD and
+    # shown as the NAACL demo, Kim's TSE article shown as the ICSE paper, Murphy-Hill's TSE article
+    # whose printed year is an online-first one no record carries, and Thorup's JCSS article shown
+    # as the STOC paper. The locator goes first because a DOI or a page range identifies one record
+    # where a year identifies a set of them; on this corpus the two orders make the same six
+    # changes, so the order is the design choice and not the finding.
+    dois = cited_dois(raw, doi)
+    out.sort(key=lambda c: ((c.venue or "").strip().lower() == "corr",
+                            not doi_match(c, dois),
+                            not pages_match(c, raw),
+                            not volume_match(c, raw),
+                            str(c.year) not in years))
     return out
 
 
