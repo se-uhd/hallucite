@@ -455,6 +455,23 @@ def _mirror_authors_complete(db_path: str, mtime_ns: int, size: int) -> bool:
         con.close()
 
 
+def absent_authors(cited: list[str], candidate: list[str]) -> list[str]:
+    """The cited people no author of the record accounts for, in the citation's order.
+
+    What a `mismatch` is made of, by name. `authors_match` refuses the citation and reports a
+    count; this is the list a triager reads, and it is read off the same pairing: a name is absent
+    when `_author_matches` pairs it with none of the record's authors, so a middle initial the
+    record lacks, a particle on one side, a diacritic or a homonym suffix never put a real author
+    here. Evidence for a human, never a verdict -- a name in the list is either a person the work
+    does not have or a form of one it does that the pairing cannot read ("Rick" for "Richard
+    D."), and the triage rules say the publication itself settles which. A citation that names
+    the same person twice against a record that lists them once is refused by the one-to-one
+    pairing and has no name here to show for it."""
+    return [n for n in cited if _is_person(n)
+            and _fold(n).replace(".", "").strip() not in ("et al", "others")
+            and not any(_author_matches(n, a) for a in candidate)]
+
+
 def matched_authors(cited: list[str], candidate: list[str]) -> tuple[int, int]:
     """(pairs formed, cited names that could be compared at all).
 
@@ -615,14 +632,29 @@ def _dropped_pair_queries(title: str) -> list[str]:
     return out
 
 
+# A four-digit year as a citation prints it, and not the year-shaped segment of an IEEE DOI
+# (`ICSE.2017.42`, `TSE.1975.6312836`) or of an arXiv identifier (`2005.14165`).
+_CITED_YEAR = re.compile(r"(?<![\d/.])(?:19|20)\d{2}(?!\d|\.\d)")
+
+
+def cited_years(text: str) -> set[str]:
+    """Every year the citation prints, as strings.
+
+    No parser here reads a year, and none has to: for choosing among records that already match
+    the cited title and authors, every four-digit year in the entry is one the citation vouches
+    for, and a page number or a volume that happens to look like a year costs nothing worse than
+    the row order it replaces."""
+    return set(_CITED_YEAR.findall(text or ""))
+
+
 def queryable(title: str) -> bool:
     """Can this title be asked about at all? A title of one or two distinctive tokens is too
     generic for a phrase query to mean anything, and there is nothing to ask about an empty one."""
     return bool(_phrase_queries(title) or _and_query(title) or _glued_query(title))
 
 
-def title_candidates(db_path: str, title: str) -> list[SecondOpinion]:
-    """Every DBLP record whose title equals `title` after normalisation.
+def title_candidates(db_path: str, title: str, years=()) -> list[SecondOpinion]:
+    """Every DBLP record whose title equals `title` after normalisation, the one to show first.
 
     Retrieval is generous -- three FTS queries, two hyphen readings plus a word-wise AND -- and the
     decision is the strict normalised equality applied to each row, so a wider net costs precision
@@ -632,9 +664,13 @@ def title_candidates(db_path: str, title: str) -> list[SecondOpinion]:
 
     The list matters as a list: `Experimentation in Software Engineering` is three book editions, a
     1986 TSE article, a 1997 survey and a 2008 conference paper, and comparing the citation against
-    whichever ranks first is how a real work gets reported missing."""
+    whichever ranks first is how a real work gets reported missing. Its order matters too, because
+    the first record that matches is the one `paper_url` points at: a published record before its
+    preprint, and among those the record whose year is in `years`, the years the citation prints
+    (`cited_years`)."""
     if not (title or "").strip():
         return []
+    years = set(years or ())
     queries = _phrase_queries(title) + _and_query(title)
     if not (queries or _glued_query(title)):
         return []
@@ -696,8 +732,16 @@ def title_candidates(db_path: str, title: str) -> list[SecondOpinion]:
         con.close()
     # 17% of corpus references carry a title two DBLP records share, almost always a CoRR preprint
     # beside the published version. Row order is arbitrary, so the published record is put first:
-    # it is the one a triager needs to see, and it is what `paper_url` will point at.
-    out.sort(key=lambda c: (c.venue or "").strip().lower() == "corr")
+    # it is the one a triager needs to see, and it is what `paper_url` will point at. Among records
+    # of the same standing the year the citation prints decides: Fowler's "Refactoring" is a 1999
+    # book and a 2002 talk, Wohlin's "Experimentation in Software Engineering" three editions, and
+    # a journal article often shares its title with the conference paper it grew from. Measured
+    # over the 55-paper corpus, 48 verified references share their title with another published
+    # record, and for 21 of them row order showed a record whose year the citation does not print
+    # while another carried it; the year names the right one in all 21. The published record stays
+    # ahead of the preprint whatever the years say -- a citation of the arXiv version prints the
+    # preprint's year, and 51 references would otherwise have landed on it.
+    out.sort(key=lambda c: ((c.venue or "").strip().lower() == "corr", str(c.year) not in years))
     return out
 
 

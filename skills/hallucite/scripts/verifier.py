@@ -49,7 +49,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from dblp_check import (authors_match, matched_authors, mirror_authors_complete,
+from dblp_check import (authors_match, cited_years, matched_authors, mirror_authors_complete,
                         normalized_title, queryable, record_authors_complete, title_candidates,
                         titles_match)
 from reference_parser import Reference, parse_reference  # noqa: F401  (re-exported: one module,
@@ -479,7 +479,10 @@ class Verifier:
             # that; `no_match` would claim a search that did not happen.
             return _Answer(DbResult(DBLP, SKIPPED))
         started = time.monotonic()
-        candidates = title_candidates(self.dblp_path, title)
+        # The years the citation prints choose among records that already match, never whether
+        # one does; a reference handed in without its text gets the published-first order alone.
+        candidates = title_candidates(self.dblp_path, title,
+                                      cited_years(getattr(ref, "raw_citation", "") or ""))
         elapsed = (time.monotonic() - started) * 1000
         records = [_Record(c.title, c.authors, f"https://dblp.org/rec/{c.key}") for c in candidates]
         return _answer(DBLP, ref, records, elapsed, self.dblp_authors_complete)

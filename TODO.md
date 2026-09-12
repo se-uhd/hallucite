@@ -60,17 +60,16 @@ Three recordings sit in `~/hallucite/`, and each answers a different question.
 `cases.json` stays frozen: what `hallucinator` returned for the 41-paper corpus, the specification
 the modules were written against.
 
-`cases-hallucite.json` is the offline regression anchor: 2081 references recorded from the shipped
-modules on 2026-09-10, verified against the mirror alone, replayed in 30 seconds with no network:
+`cases-hallucite.json` is the offline regression anchor: 2857 references from the 55-paper corpus,
+recorded from the shipped modules at `3efa4e5` on 2026-09-11, verified against the mirror alone,
+replayed in about a minute with no network:
 
     characterize.py compare ~/hallucite/cases-hallucite.json --impl verifier
 
-Replayed on 2026-09-11 it reports 30 parse differences, all of them the parser fixes in the
-CHANGELOG's Unreleased entry (29 DOIs rejoined across a period, one title cut at its question
-mark), and six references that cross the verified line, all of them changes committed since it was
-recorded: the commit before the parser fixes replays it with no parse difference and the same six
-moves. Re-record it offline once the parser fixes are committed, so the next replay starts from
-zero.
+It replays with no parse difference and no reference crossing the verified line. The recording it
+replaced covered the 41-paper corpus (2081 references) and had been overtaken by the parser fixes
+committed after it; re-record this one the same way, offline, after the next change that is meant
+to move a verdict, so that a replay reports only what is new.
 
 `cases-online.json` is the recording of the four online backends: 2857 references, all backends,
 recorded on 2026-09-11 from 17:40 to 19:22 with the parser as of `9f8fd8f`, log in
@@ -164,16 +163,16 @@ runs.
 - The DOI, year and venue checks were measured and rejected as automatic demotions; the table is
   in CHANGELOG under 1.19.0. Do not revisit without a fresh measurement on a corpus with
   trustworthy verdicts.
-- Where several DBLP records share a title and all carry the cited authors, the record the report
-  points at is whichever the index returned first, CoRR last: Fowler's *Refactoring* points at the
-  XP 2002 talk record rather than the book, Tokuda and Batory's 2001 journal article at their 1999
-  conference paper, Wohlin's 2012 book at its 2024 edition. `VERIFICATION-SPEC.md` says the record
-  type and year separate them; nothing implements that, and a triager following `paper_url` lands
-  on the wrong edition of the right work.
-- `authors_absent` is read by `triage.py` and written by nothing since the cutover: the
-  `_author_absence_pass` that filled it is gone, and a `mismatch` now carries the matched record's
-  authors under `matched` instead. Either derive the absent names from `matched` or drop the field
-  and the `SKILL.md` sentence that describes it.
+- Where several DBLP records share a title and all carry the cited authors, row order still picks
+  the record shown in two shapes the cited year cannot separate: two records of the same standing
+  that both carry it (a conference paper and its journal version from one year, an ICSE tutorial
+  and the book it presents -- ten corpus references, five of them shown the record the citation
+  does not name), and a title where no record carries it (Fowler's *Refactoring* cited as the 2018
+  second edition, which DBLP does not hold, five times; one online-first year). Only the venue
+  could decide the first group, and venue comparison was measured and rejected under 1.19.0; a
+  publisher list for the second fired on a co-author named Pearson. Each is the cited work under
+  the cited authors, so the cost is the edition or venue the URL lands on. The measurement is in
+  the CHANGELOG entry for the year rule.
 
 ## Last, once the verifier is replaced
 

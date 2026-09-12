@@ -69,7 +69,8 @@ Writes `out/<paper_id>.json` (every reference plus per-database verification) an
 `--disable-dbs LIST` (comma-separated), `--no-verify`. The DBLP path defaults to
 `$HALLUCITE_DBLP` (else `~/hallucite/dblp.db`) and the output dir to `out`. A reference the
 backends miss is re-verified once with its line-break hyphens removed before it reaches triage.
-The DBLP backend checks the cited title and authors against every record sharing that title. A
+The DBLP backend checks the cited title and authors against every record sharing that title, and
+where several match it reports the published record whose year the citation prints. A
 reference needs triage when its `db_verification.status` is anything other than `verified`
 (`not_found`, `mismatch`, or `unparsed`). Re-running into the same `--out` is idempotent (`triage_verdicts.json` accumulates by `paper_id:number`).
 

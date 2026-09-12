@@ -42,7 +42,7 @@ try:
 except ImportError:  # pragma: no cover -- non-POSIX fallback
     fcntl = None
 
-from dblp_check import titles_match
+from dblp_check import absent_authors, titles_match
 
 FLAG_CATEGORIES = ("likely-hallucinated", "partial-match", "unclear")
 SEVERITY = {
@@ -286,13 +286,33 @@ def identifier_evidence(ref: dict) -> list[dict]:
     return out
 
 
+def authors_absent(ref: dict) -> list[str]:
+    """The cited authors that no author of the matched record accounts for.
+
+    Derived from what the audit wrote rather than stored by it: `found_authors` is the byline of
+    the record the verdict rests on -- for a `mismatch`, the same-title record accounting for most
+    of the cited names -- and the pairing is the one `authors_match` refused the citation on. Empty
+    for a verified reference, whose unmatched names (a truncated record's gap) are not a finding,
+    and for one no backend found a record for. Fabrication signal (A), found for the triager, who
+    confirms it against the publication itself."""
+    dv = ref.get("db_verification") or {}
+    if dv.get("status") == "verified" or not dv.get("found_authors"):
+        return []
+    return absent_authors((ref.get("parsed") or {}).get("authors") or [], dv["found_authors"])
+
+
 def _evidence_lines(ref: dict) -> list[str]:
     """What the audit learned about an unverified reference, as Markdown lines: the backends that
-    were never asked, the mirror's record for the cited title or its nearest one, and what each
-    cited identifier resolved to. Shared by the per-paper report and the verification sheet, so
-    the two put the same evidence in front of a human."""
+    were never asked, the mirror's record for the cited title or its nearest one, what each
+    cited identifier resolved to, and the cited authors the matched record does not account for.
+    Shared by the per-paper report and the verification sheet, so the two put the same evidence in
+    front of a human."""
     dv = ref.get("db_verification") or {}
     lines = []
+    absent = authors_absent(ref)
+    if absent:
+        lines.append(f"- Cited author(s) no author of the matched record accounts for: "
+                     f"{', '.join(absent)}")
     skipped = skipped_dbs(ref)
     if skipped:
         lines.append(f"- Not asked: {', '.join(skipped)} -- skipped, with nothing to ask (a title "
@@ -482,9 +502,10 @@ def cmd_worklist(out_dir: Path, pending: bool = False, paper_id: str | None = No
                 # same whether the mirror came back empty or was never asked; over the 55-paper
                 # corpus 123 of 788 residue references had never been put to the mirror.
                 "skipped_dbs": skipped_dbs(ref),
-                # Cited authors that no author of the matched publication accounts for. The
-                # reference is here *because* of them, so they travel with the entry.
-                "authors_absent": dv.get("authors_absent", []),
+                # Cited authors that no author of the matched record accounts for, read off the
+                # record the verdict rests on. The reference is here *because* of them, so they
+                # travel with the entry.
+                "authors_absent": authors_absent(ref),
                 # DBLP's own record metadata for this title: year, venue, volume/pages, DOI.
                 # Evidence to weigh, not a verdict -- see dblp_check.record_context.
                 "dblp_record": dv.get("dblp_record"),
@@ -685,9 +706,6 @@ def cmd_report(out_dir: Path) -> None:
                     + " did not answer -- not a clean negative)**" if is_degraded(r) else ""
                 lines.append(f"- DB status: {dv['status']}{degraded}")
                 lines += _evidence_lines(r)
-                if dv.get("authors_absent"):
-                    lines.append(f"- Cited author(s) not on the matched publication: "
-                                 f"{', '.join(dv['authors_absent'])}")
                 for m in _matched_records(dv):
                     lines.append(f"- Matched by {m['db']} ({m['status']}): {m['paper_url'] or '-'}"
                                  + (f" -- authors there: {', '.join(m['found_authors'])}"

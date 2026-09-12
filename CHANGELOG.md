@@ -654,6 +654,60 @@ All notable changes to hallucite are documented here. The format follows
   record accounting for most of them. 17% of corpus references carry a shared title, and the record
   chosen is the one a triager is shown.
 
+- **Among records that all match, the year the citation prints picks the one shown.** Where
+  several records share a title and every one carries the cited authors, `paper_url` pointed at
+  whichever row order put first, CoRR last: Fowler's *Refactoring* at the XP 2002 talk rather than
+  the 1999 book, Tokuda and Batory's 2001 journal article at their 1999 conference paper, Wohlin's
+  2012 book at its 2024 edition. Measured first, over an `--offline` audit of the 55-paper corpus:
+  2106 references verify through the mirror, 679 of them on a title more than one record matches,
+  and for 631 the other records are all CoRR preprints, which the published-first order already
+  settles. 48 share their title with another published record. For 21 of those the record shown
+  carries a year the citation does not print while another matching record does -- five
+  journal-first papers shown as their re-presentation at the SE conference, Fagan's 1976 and
+  Brooks's 1977 articles shown as their 1999 reprints, Zimmermann's TSE 2010 article as the FSE
+  2008 paper, the three examples above -- and in all 21 the cited year names the right record.
+  `title_candidates` now orders records of the same standing by whether the citation prints their
+  year, read off the entry's raw text (`dblp_check.cited_years`: an IEEE DOI's year segment and an
+  arXiv identifier are not years the citation prints; a page range that looks like one is the
+  documented cost). The published record stays ahead of the preprint whatever the years say. A
+  rule that preferred the cited year outright would also have moved 51 references from the
+  published record to the CoRR one -- 39 that cite the arXiv version with its year, and 12 whose
+  journal issue DBLP dates a year after the online-first year the citation prints -- and the
+  published record is the one a triager needs to see. Diffed reference by reference against the
+  audit before it: no status moves, and the record shown changes for exactly the 21 verified
+  references and three `mismatch` near misses (Wohlin's book, Fowler's, and an encyclopedia entry
+  on support vector machines) that tie on matched authors and now break the tie the same way. The
+  harness stand-ins carry no raw text, so the corruption harness and the head-to-head cannot see
+  the rule and come back identical by construction.
+
+  Measured and turned down: preferring a book record for an entry that names a publisher. Of the
+  27 shared-title references the year leaves to row order, ten are two records that both carry a
+  cited year -- a conference paper and its journal version from one year, an ICSE tutorial and the
+  book it presents, a DBLP duplicate -- where only the venue could decide, and venue comparison was
+  measured and rejected under 1.19.0; eleven the row order already shows right; five are Fowler's
+  *Refactoring* cited as the 2018 second edition, which DBLP does not hold, so no record carries
+  the cited year and the 1999 book loses to the 2002 talk; one is a TSE article cited with its
+  online-first year. The publisher rule would move the five, and the list of publisher names it
+  needs fired, in the same measurement, on a co-author surnamed Pearson. Every record among the 27
+  is the cited work under the cited authors; what differs is the edition or venue the URL lands
+  on. Guarded by smoke tier 5c through `Verifier.check`, with three mutation entries; the mutation
+  run fails for each.
+
+- **`authors_absent` was read and never written.** The audit pass that filled it went with the
+  cutover, so every worklist entry carried an empty list, the report line it fed never printed,
+  and `SKILL.md` went on telling the triager the audit had found signal (A) for them. It is now
+  derived where it is read, from the record the verdict rests on: `dblp_check.absent_authors`
+  lists the cited people that the pairing behind `authors_match` puts on no author of the matched
+  record, so a middle initial, a particle, a diacritic or a homonym suffix never lands a real
+  author there, and `triage.authors_absent` reads it off `found_authors` for any unverified
+  reference a backend found a record for. The worklist entry carries it, and the per-paper report
+  and the verification sheet print it beside the other evidence. Over the corpus's offline residue
+  it names at least one person for every one of the 46 `mismatch` references the mirror decides:
+  the name forms and the real discrepancies `TODO.md` reads, the reviewer's name where a
+  statistics book reached triage against the Technometrics review of it, and the four
+  contributing authors DBLP does not list on Fowler's *Refactoring*. Guarded by smoke tier 3k
+  through `cmd_worklist` and `cmd_report`, with a mutation entry; the mutation run fails for it.
+
 - `triage.py` read a backend `timeout` as a matched record. The exclusion list named the other four
   non-answers; the replacement emits `timeout`, so it would have reported a backend that never
   answered as one that found something.

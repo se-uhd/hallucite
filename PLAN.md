@@ -54,7 +54,9 @@ article, a 1997 survey and a 2008 conference paper, and comparing a citation aga
 comes back first is how a real work gets reported missing. Retrieval is generous -- both readings
 of a hyphen, both foldings of a stroked letter, a word-wise AND, and a fragment-gluing fallback for
 a word the layout split with no hyphen -- and the decision is strict: exact normalized-title
-equality plus a match of every cited name that reads as a person. The audit also retries a failed
+equality plus a match of every cited name that reads as a person. Where several records match,
+the one reported is a published record before its preprint and, among those, the record whose
+year the citation prints. The audit also retries a failed
 reference with its line-break-join hyphens removed, since the kept-hyphen form defeats FTS phrase
 matching.
 

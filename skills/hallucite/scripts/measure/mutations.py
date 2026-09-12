@@ -32,6 +32,7 @@ R = SCRIPTS / "reference_parser.py"
 D = SCRIPTS / "dblp_check.py"
 A = SCRIPTS / "audit_references.py"
 T = SCRIPTS / "triage.py"
+V = SCRIPTS / "verifier.py"
 
 # (label, file, the text as fixed, the text reverted)
 MUTATIONS = [
@@ -102,6 +103,18 @@ MUTATIONS = [
      "        if True:"),
     ("dblp: the nearest title may be three word edits away", D,
      "_NEAREST_EDITS = 2", "_NEAREST_EDITS = 3"),
+    ("dblp: the year the citation prints does not choose among shared-title records", D,
+     '    out.sort(key=lambda c: ((c.venue or "").strip().lower() == "corr", str(c.year) not in years))',
+     '    out.sort(key=lambda c: (c.venue or "").strip().lower() == "corr")'),
+    ("dblp: the preprint may come before the published record", D,
+     '    out.sort(key=lambda c: ((c.venue or "").strip().lower() == "corr", str(c.year) not in years))',
+     '    out.sort(key=lambda c: str(c.year) not in years)'),
+    ("verifier: the citation's years never reach the mirror", V,
+     '        candidates = title_candidates(self.dblp_path, title,\n                                      cited_years(getattr(ref, "raw_citation", "") or ""))',
+     '        candidates = title_candidates(self.dblp_path, title)'),
+    ("triage: authors_absent is not read off the matched record", T,
+     '    return absent_authors((ref.get("parsed") or {}).get("authors") or [], dv["found_authors"])',
+     '    return []'),
     ("audit: the nearest title is asked for whatever the mirror said", A,
      '        if any(r.get("db") == DBLP and r.get("status") == NO_MATCH\n'
      '               for r in v.get("db_results") or []):',

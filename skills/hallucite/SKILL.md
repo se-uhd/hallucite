@@ -196,8 +196,9 @@ For each entry (references whose `db_verification.status` is anything other than
 `not_found`, `mismatch`, or `unparsed`), investigate with parallel web queries and classify it:
 
 - **Start from the evidence the audit already gathered.** A worklist entry carries `candidates`
-  (CrossRef's closest real records, with their DOIs and a title similarity) and `matched` (what a
-  backend matched, and the authors it holds). Check those before searching: a high-similarity
+  (CrossRef's closest real records, with their DOIs and a title similarity), `matched` (what a
+  backend matched, and the authors it holds) and, for a `mismatch`, `authors_absent` (the cited
+  names no author of that record accounts for). Check those before searching: a high-similarity
   candidate usually *is* the cited work, and confirming or rejecting it is faster and more reliable
   than a blank-page search. For a `mismatch`, open the matched record first and diff it field by
   field -- and confirm it is even the same work, since a backend can match a thesis, preprint, or
@@ -291,9 +292,10 @@ even when the authors and venue are otherwise real (a real author group on an in
 hardest case to catch); A, V, and D strengthen the case but are not required. Do not push borderline
 cases to `real-*` to make the report look clean.
 
-An `author_mismatch` status with an `authors_absent` list is signal (A) already found for you: the
-audit matched the work, and the names in that list belong to no author of it. Confirm them against
-the publication itself, then say in the finding which cited authors are not on the paper. A wrong
+A `mismatch` whose `authors_absent` list names people is signal (A) already found for you: a
+backend matched the cited title (`matched` carries the record and the authors it holds), and the
+names in that list pair with no author of it. Confirm them against the publication itself, then say
+in the finding which cited authors are not on the paper. A wrong
 first name or a missing co-author is the ordinary slip behind a `partial-match`; a cited author who
 did not write the work at all -- next to a real author group, a correct title, and correct volume
 and pages -- is a fabricated author constellation, and the finding has to name it as one rather

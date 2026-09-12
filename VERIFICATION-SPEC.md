@@ -49,6 +49,10 @@ Each result carries: `status`, `source` (the backend that decided it), `found_au
 record's author list), `paper_url`, `doi_info`, `arxiv_info`, `retraction_info`, `failed_dbs`, and
 `db_results[]` of `{db, status, elapsed_ms, found_authors, paper_url}`.
 
+`check` reads `title`, `authors`, `doi` and `arxiv_id` off each reference, and `raw_citation` where
+the reference carries it. The raw text never decides whether a record matches; it only chooses
+which of several matching records `paper_url` and `found_authors` report (see *Title matching*).
+
 Batching matters: backends are asked only about references an earlier backend has not already
 matched, so the hard residue — exactly the references a human will be asked to judge — is where rate
 limiting concentrates.
@@ -137,6 +141,10 @@ the title alone; that is the limit of what a bibliographic database can say abou
   Software Engineering` is three book editions, a 1986 TSE article, a 1997 survey and a 2008
   conference paper. Comparing against whichever ranks first is how a real work gets reported
   missing.
+- Where several of them match the cited authors too, the one reported is the one a human will be
+  pointed at: a published record before its preprint, and among those the record whose year the
+  citation prints, read off the entry's raw text. A reference handed in without its text gets the
+  published-first order alone. The choice never changes a status.
 
 ## Non-goals
 

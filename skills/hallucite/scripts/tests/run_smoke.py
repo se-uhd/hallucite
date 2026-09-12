@@ -1053,6 +1053,68 @@ def tier3j_residue_evidence() -> None:
                "a verified reference gets no evidence attached")
 
 
+def tier3k_authors_absent() -> None:
+    """`authors_absent` was read by triage and written by nothing since the cutover: the audit pass
+    that filled it is gone, and a `mismatch` carries the matched record's authors instead. The
+    field is now derived from that record -- the cited names no author of it accounts for, under
+    the same pairing that refused the citation -- and travels with the worklist entry, the
+    per-paper report and the verification sheet."""
+    print("Tier 3k: the cited authors the matched record does not account for (no network)")
+    import triage
+    from dblp_check import absent_authors
+
+    cited = ["Keila L. Lucas", "Elvys S. Soares", "Marcio Ribeiro", "Rohit Gheyi", "Ivan Machado"]
+    record = ["Elvys Soares", "Márcio Ribeiro", "Rohit Gheyi", "Guilherme Amaral", "André Santos"]
+    C.eq(absent_authors(cited, record), ["Keila L. Lucas", "Ivan Machado"],
+         "REGRESSION GUARD: the two cited people on no author of the matched work are named, in "
+         "the citation's order")
+    C.eq(absent_authors(["Dave Binkley", "A. Przybyłek", "Marcelo Amorim", "Emiliano De Cristofaro"],
+                        ["Dave W. Binkley", "Adam Przybylek", "Marcelo d'Amorim", "Cristofaro, E."]),
+         [], "a middle initial, a stroke, an elided particle and a particle on one side are not "
+             "absences")
+    C.eq(absent_authors(["J. Smith"], ["Alice Smith"]), ["J. Smith"],
+         "REGRESSION GUARD: a contradicted given initial is an absence")
+    C.eq(absent_authors(["Hammond Pearce", "Privacy (SP)", "et al."], ["Hammond Pearce", "Baleegh Ahmad"]),
+         [], "venue text and an et al. are not people, so they are never reported absent")
+
+    def ref(n, status, authors, found=None, source=None):
+        dv = {"status": status, "failed_dbs": [], "source": source,
+              "found_authors": list(found or []),
+              "db_results": [{"db": "DBLP", "status": {"verified": "match", "mismatch":
+                              "author_mismatch"}.get(status, "no_match"),
+                              "found_authors": list(found or []),
+                              "paper_url": "https://dblp.org/rec/x/y" if found else None}]}
+        return {"original_number": n, "raw_citation": f"Someone. Title {n}. Venue, 2020.",
+                "db_verification": dv, "parsed": {"title": f"Title {n}", "authors": authors}}
+
+    mismatch = ref(1, "mismatch", cited, record, "DBLP")
+    verified = ref(2, "verified", ["Claes Wohlin", "Per Runeson"], ["Claes Wohlin", "Per Runeson"],
+                   "DBLP")
+    missing = ref(3, "not_found", ["Ada Byte"])
+    C.eq(triage.authors_absent(mismatch), ["Keila L. Lucas", "Ivan Machado"],
+         "REGRESSION GUARD: derived from the record the verdict rests on")
+    C.eq(triage.authors_absent(verified), [], "a verified reference has no absent author to report")
+    C.eq(triage.authors_absent(missing), [], "and neither has one no backend found a record for")
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td)
+        refs = [mismatch, verified, missing]
+        (out / "p.json").write_text(json.dumps(
+            {"paper_id": "p", "pdf_path": "p.pdf", "num_references": len(refs),
+             "references": refs}))
+        triage.cmd_worklist(out)
+        wl = {e["number"]: e for e in json.loads((out / "triage_worklist.json").read_text())}
+        C.eq(wl[1]["authors_absent"], ["Keila L. Lucas", "Ivan Machado"],
+             "REGRESSION GUARD: the worklist entry names the absent authors")
+        C.eq(wl[3]["authors_absent"], [], "and names none where no record was matched")
+        triage.cmd_record(out, "p", "1", "unclear", "two cited authors are not on the paper")
+        triage.cmd_report(out)
+        line = "- Cited author(s) no author of the matched record accounts for: Keila L. Lucas, Ivan Machado"
+        check = (out / "reports" / "reference-check-p.md").read_text()
+        sheet = (out / "reports" / "verify-p.md").read_text()
+        C.true(line in check, "REGRESSION GUARD: the per-paper report names the absent authors")
+        C.true(line in sheet, "and so does the verification sheet")
+
+
 def tier3g_stale_verdicts() -> None:
     """A verdict is keyed by paper_id:number, but author-year numbers are extraction-order: a
     re-audit can renumber the bibliography and leave a verdict pointing at a different reference.
@@ -2395,6 +2457,109 @@ def tier5b_verifier() -> None:
     C.eq(result.source, None, "an unconfirmed reference names no deciding backend")
 
 
+def tier5c_shared_title_record() -> None:
+    """Which of several matching records `paper_url` points at.
+
+    Where several DBLP records share a title and every one carries the cited authors, the audit
+    showed whichever row order put first, CoRR last: Fowler's "Refactoring" pointed at the XP 2002
+    talk rather than the 1999 book, Tokuda and Batory's 2001 journal article at their 1999
+    conference paper, Wohlin's 2012 book at its 2024 edition. The year the citation prints names
+    the right record; measured over the 55-paper corpus it moves 21 verified references and every
+    one to the record whose year the citation prints. The published record stays ahead of the
+    preprint whatever the years say, and nothing here ever changes a status."""
+    print("Tier 5c: the record shown among several that match (fixture DBLP, no network)")
+    import dblp_check as D
+    import verifier as V
+
+    with tempfile.TemporaryDirectory() as td:
+        db = Path(td) / "dblp.db"
+        con = sqlite3.connect(str(db))
+        c = con.cursor()
+        c.executescript("""
+            CREATE TABLE authors (id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL);
+            CREATE TABLE publication_authors (pub_id INTEGER NOT NULL, author_id INTEGER NOT NULL,
+                PRIMARY KEY (pub_id, author_id));
+            CREATE TABLE publications (id INTEGER PRIMARY KEY, key TEXT UNIQUE NOT NULL,
+                title TEXT NOT NULL, year INTEGER, venue TEXT, ee TEXT, kind TEXT);
+            CREATE VIRTUAL TABLE publications_fts USING fts5(title, content='publications', content_rowid='id');
+        """)
+        book = "A placeholder book about fictional refactoring"
+        paper = "Evolving placeholder designs with fictional refactorings"
+        # Row order puts the talk before the book and the conference paper before the journal
+        # article, which is the order the audit used to show.
+        pubs = [
+            (1, "conf/xpu/November02", book, 2002, "XP/Agile Universe", "inproceedings", ["Mike November"]),
+            (2, "books/daglib/0000001", book, 1999, "Addison-Wesley", "book", ["Mike November"]),
+            (3, "journals/corr/abs-9901-00001", book, 1999, "CoRR", "article", ["Mike November"]),
+            (4, "conf/kbse/TangoUniform99", paper, 1999, "ASE", "inproceedings",
+             ["Tango Uniform", "Victor Whiskey"]),
+            (5, "journals/ase/TangoUniform01", paper, 2001, "Autom. Softw. Eng.", "article",
+             ["Tango Uniform", "Victor Whiskey"]),
+            (6, "journals/corr/abs-0001-00002", paper, 2000, "CoRR", "article",
+             ["Tango Uniform", "Victor Whiskey"]),
+        ]
+        aid: dict[str, int] = {}
+        for pid, key, title, year, venue, kind, authors in pubs:
+            c.execute("INSERT INTO publications(id,key,title,year,venue,ee,kind) VALUES(?,?,?,?,?,?,?)",
+                      (pid, key, title, year, venue, None, kind))
+            for a in authors:
+                if a not in aid:
+                    c.execute("INSERT INTO authors(name) VALUES(?)", (a,))
+                    aid[a] = c.lastrowid
+                c.execute("INSERT INTO publication_authors(pub_id,author_id) VALUES(?,?)",
+                          (pid, aid[a]))
+        c.execute("INSERT INTO publications_fts(publications_fts) VALUES('rebuild')")
+        con.commit()
+        con.close()
+        db = str(db)
+        offline = {"dblp_path": db, "disabled_dbs": (V.CROSSREF, V.DOI, V.ARXIV, V.SEMANTIC_SCHOLAR)}
+
+        def url(raw, title=book, authors=("Mike November",)):
+            got = V.check([V.Reference(title=title, authors=list(authors), raw_citation=raw)],
+                          **offline)[0]
+            return got.status, (got.paper_url or "").rsplit("/rec/", 1)[-1]
+
+        C.eq(url("M. November, A placeholder book about fictional refactoring, Addison-Wesley, 1999."),
+             ("verified", "books/daglib/0000001"),
+             "REGRESSION GUARD: of several records sharing the cited title and authors, the one "
+             "whose year the citation prints is shown -- the 1999 book, not the 2002 talk")
+        C.eq(url("M. November. A placeholder book about fictional refactoring. In XP/Agile "
+                 "Universe, 2002."),
+             ("verified", "conf/xpu/November02"),
+             "and the talk when the citation prints its year")
+        C.eq(url(""), ("verified", "conf/xpu/November02"),
+             "a reference handed in without its text gets the published-first order alone")
+        C.eq(url("T. Uniform, V. Whiskey, Evolving placeholder designs with fictional "
+                 "refactorings, Automated Software Engineering 8 (1) (2001) 89-120.",
+                 paper, ("Tango Uniform", "Victor Whiskey")),
+             ("verified", "journals/ase/TangoUniform01"),
+             "REGRESSION GUARD: the journal article the citation dates, not the conference paper "
+             "row order puts first")
+        C.eq(url("T. Uniform and V. Whiskey. Evolving placeholder designs with fictional "
+                 "refactorings. CoRR abs/0001.00002, 2000.",
+                 paper, ("Tango Uniform", "Victor Whiskey")),
+             ("verified", "conf/kbse/TangoUniform99"),
+             "REGRESSION GUARD: the published record stays ahead of the preprint even where only "
+             "the preprint carries the cited year -- 51 corpus references cite the arXiv version "
+             "with its year, and each is shown the published one")
+        near = V.check([V.Reference(title=book, authors=["Mike November", "Papa Invented"],
+                                    raw_citation="Addison-Wesley, 1999.")], **offline)[0]
+        C.eq((near.status, (near.paper_url or "").rsplit("/rec/", 1)[-1]),
+             ("mismatch", "books/daglib/0000001"),
+             "the near miss a mismatch shows follows the same order, and the choice never "
+             "changes a status")
+        C.eq([c.key for c in D.title_candidates(db, book, {"1999"})],
+             ["books/daglib/0000001", "conf/xpu/November02", "journals/corr/abs-9901-00001"],
+             "the candidate list carries the order: the cited year first, the preprint last")
+
+    C.eq(D.cited_years("A. Author, Title, in: Proc. ICSE, pp. 1965-1985, 2018. "
+                       "doi:10.1109/ICSE.2017.42 arXiv:2005.14165 v. 2001.12345"),
+         {"1965", "1985", "2018"},
+         "REGRESSION GUARD: the year of an IEEE DOI segment and an arXiv identifier's are not "
+         "years the citation prints; a page range that looks like one is the documented cost")
+    C.eq(D.cited_years(""), set(), "no text, no years")
+
+
 def tier6_measured_values() -> None:
     """The measurements themselves, pinned as literals.
 
@@ -2803,6 +2968,7 @@ def main() -> int:
     tier3c_title_first_gate()
     tier3g_stale_verdicts()
     tier3j_residue_evidence()
+    tier3k_authors_absent()
     tier3h_author_absence()
     tier3i_dblp_author_encoding()
     tier4_end_to_end()
@@ -2816,6 +2982,7 @@ def main() -> int:
     tier4i_hanging_indent_author_first()
     tier5_reference_parser()
     tier5b_verifier()
+    tier5c_shared_title_record()
     tier6_measured_values()
     tier6b_completeness_tier()
     tier6c_answers_and_parsing()
