@@ -22,6 +22,14 @@ All notable changes to hallucite are documented here. The format follows
 
 ### Changed
 
+- **Each fact is stated in one document.** The `run.sh` bootstrap contract, the plugin packaging
+  layout, the triage protocol and the fan-out example were each written out in three or four of
+  README, PLAN, CLAUDE.md and SKILL.md, which is how the resolver came to be documented with four
+  branches in one file and five in another. `SKILL.md` holds the triage protocol and the wrapper's
+  promises, `PLAN.md` the packaging, and CLAUDE.md points at them. The two inventories of what the
+  smoke suite covers, in README and PLAN, had both gone stale; the suite's own docstring is the list
+  now.
+
 - **The remaining measurement tools and their files are named for what they are.**
   `characterize.py` is `verification_results.py`, and the three files it records and replays are
   `verification-results-offline.json`, `verification-results-online.json` and

@@ -255,12 +255,9 @@ confirm 0. Score the built file, never rebuild it, because a rebuild on a newer 
 different records. The offline results file is what a code change is diffed against; a change
 that moves no verdict replays with no status move.
 
-A dependency-light smoke suite, also run in CI by `.github/workflows/smoke.yml`: version and
-Claude/Codex packaging consistency, the `run.sh` bootstrap contract, an optional Codex CLI
-marketplace check, logic-contract checks on the per-paper JSON (including a guard that a
-`mismatch` reference reaches triage), and an offline end-to-end audit against a tiny generated
-fixture DBLP database and a synthetic fixture PDF. Markdown lint runs as a separate CI step;
-locally, run `mise run lint-md` (below).
+`run_smoke.py` is the suite CI runs on every push; its docstring lists what each tier covers. It
+needs `pdftotext` for the extraction tiers and nothing else. Markdown lint runs as a separate CI
+step; locally, `mise run lint-md` (below).
 
 The repo's Markdown is checked with a vendored PyMarkdown (synced from
 [se-uhd/pymarkdown-skill](https://github.com/se-uhd/pymarkdown-skill); self-contained under

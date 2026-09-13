@@ -18,13 +18,9 @@ external `hallucinator` package, which is AGPL-3.0-or-later where this repo is M
 it, and no code was copied across -- they were written against a black-box recording of it, kept
 as `~/hallucite/verification-results-hallucinator.json`.
 
-One repo, two roles: it is the runnable project (mise tasks) and an installable plugin for Claude
-Code and Codex CLI. Claude Code uses `.claude-plugin/plugin.json` plus
-`.claude-plugin/marketplace.json` (name `hallucite`, plugin `source: "./"`). Codex CLI uses
-`.codex-plugin/plugin.json`, `.agents/plugins/marketplace.json`, `plugins/hallucite -> ..`, and
-`.agents/skills/hallucite -> ../../skills/hallucite`. The pipeline scripts live once in
-`skills/hallucite/scripts/`, used by mise and by the bundled skill (`skills/hallucite/SKILL.md`).
-No separate plugin repo, no submodule.
+One repo, two roles: the runnable project (mise tasks) and an installable plugin for Claude Code
+and Codex CLI, sharing one copy of the scripts in `skills/hallucite/scripts/`. The manifests and
+symlinks that make that work are listed in `PLAN.md` under Packaging.
 
 `~/hallucite/` holds everything too large or too mutable to commit, and the document below names
 its contents constantly:
@@ -42,14 +38,11 @@ its contents constantly:
 ## Running things
 
 - The bundled skill drives the pipeline through `skills/hallucite/scripts/run.sh`, the single entry
-  point (`check-env | audit | triage | lint | python`). It resolves the wrapper from a Claude Code
-  plugin install, a Codex repo-local skill shim, a direct repo clone, the Claude Code plugin cache,
-  or the Codex plugin cache. The wrapper resolves a Python 3.10+ with `sqlite3`, never relying on a
-  bare `python`/`uv`/`mise` being on the plugin shell's PATH (the failure that made the plugin
-  silently un-runnable). There is nothing to install. The wrapper fails loud with a
-  `HALLUCITE_BOOTSTRAP_FAILED:` sentinel and a non-zero exit, and its probe reads the interpreter's
-  *output* rather than its exit status, because `/bin/echo` accepts `-c` and exits 0.
-  `$HALLUCITE_PYTHON` pins an interpreter. `run.sh check-env` is the preflight.
+  point (`check-env | audit | triage | lint | python`). `SKILL.md` documents how it is found and
+  what it promises: there is nothing to install, it resolves a Python 3.10+ with `sqlite3` itself
+  (`$HALLUCITE_PYTHON` pins one), and on any failure it prints a `HALLUCITE_BOOTSTRAP_FAILED:`
+  line and exits non-zero rather than running half-configured. Its interpreter probe reads what
+  the candidate prints, not its exit status, because `/bin/echo -c '...'` exits 0.
 - In a repo clone you can equivalently use mise tasks: `mise run install | fetch-dblp-dump |
   build-dblp | audit | lint-md`. Both paths run the same scripts in `skills/hallucite/scripts/`.
 - The offline DBLP database defaults to `~/hallucite/dblp.db`, outside this repo (large, not
@@ -100,60 +93,19 @@ its contents constantly:
   `pdf_references.py`, parses it with `reference_parser.py`, then runs `verifier.check`). The
   target is 0 unparsed references.
 - Stage 3: `triage.py worklist | status | record | report`. Verdicts persist in
-  `out/triage_verdicts.json` (keyed `paper_id:number`, resumable), so triage can run on finished
-  papers while the audit is still going: `worklist --pending` lists only un-recorded references and
-  `status` shows per-paper progress. To fan out, give each worker its own `worklist --paper <id>`
-  slice (exact id match, errors on an unknown id) so it never self-filters the shared worklist and
-  grabs the wrong paper (`paper6` vs `paper66`); `record` takes an `fcntl` lock on the verdicts file
-  so concurrent workers don't lose updates. `record --signals '<json>'` carries the structured
-  fabrication signals and enforces the title-first rule (`partial-match` needs `title_match=yes`+
-  `matched_title` or `na`; `likely-hallucinated` needs `title_match=no`). `report` writes the
-  per-paper checks, the `potential-hallucinations.md` rollup (severity table + a **Desk-reject
-  candidates** section keyed on `is_fabrication`), and `verify-<paper>.md` sheets, and auto-lints
-  every file it writes. A worklist entry, the per-paper check and the sheet all carry what the
-  audit knew about the reference: `skipped_dbs` (backends never asked -- a `not_found` with the
-  mirror in that list was never put to it), `matched`, `dblp_record`, `dblp_nearest` (the mirror's
-  nearest title, offered only with every cited author on it) and `identifiers` (what each cited
-  DOI or arXiv id resolves to, and whether that is the cited title).
+  `out/triage_verdicts.json`, keyed `paper_id:number`, under an `fcntl` lock, so triage can run on
+  finished papers while the audit continues and workers can share the file; `worklist --paper <id>`
+  is an exact-id slice for fanning out. `record --signals` enforces the title-first rule and
+  `report` writes the per-paper checks, the rollup and the verification sheets, then lints them.
+  What a worklist entry carries, and how to judge it, is in `SKILL.md`.
 
-## Triage conventions (Stage 3)
+## Triage (Stage 3)
 
-- Never fabricate a verdict. A verdict may rest only on a Stage 1+2 `db_verification` record the
-  audit wrote or Stage 3 web evidence you actually gathered -- never on reading the
-  `.bib`/`.bbl`/PDF by eye. If `run.sh` exits non-zero or prints `HALLUCITE_BOOTSTRAP_FAILED:`, or
-  output starts coming back empty, stop and report it verbatim; "the tool would not run" is the
-  correct outcome, not a hand-written report. This rule lives in full in `SKILL.md` ("Stop
-  conditions"); smoke tier 1 asserts SKILL.md carries it, and tier 1b guards the fail-loud `run.sh`
-  contract the rule keys on.
-- Investigate with parallel web queries; resolve DOIs via `api.crossref.org/works/<doi>`. If a
-  narrow query (title + author) finds nothing, broaden to the bare title (unquoted) and screen the
-  results before judging; obscure/predatory venues are poorly indexed, so "not found" on a narrow
-  query is not fabrication evidence.
-- Classify title-first, and keep two questions separate: (1) does a publication bearing the cited
-  *title* exist (matching on title, not on a same-authors/same-venue paper with a different title)?
-  (2) only if yes, do the metadata fields match? Match the title on meaning: formatting, subtitle,
-  hyphen/spacing/spelling/OCR differences are the same title; a wrong content word counts as found
-  only when a resolving DOI or an exact author+venue+year match pins it to one real publication.
-  `partial-match` requires question 1 to be *yes* -- a real, locatable work with the cited title but
-  a slipped field (wrong year/DOI digit/venue/co-author). If no work bears the cited title, the
-  cited work does not exist: `likely-hallucinated`
-  (thorough search + fabrication signals) or `unclear`. Never rescue a non-existent title to
-  `partial-match` just because the authors or venue match some *other* real paper -- that conflation
-  is what misfiled a fabricated reference as a citation error and forced a long correction.
-- Honest human mistakes do not invent titles; they slip a metadata field on a real, findable work.
-  Independent fabrication signals: **(T) no publication has the cited title** (decisive); **(A)** an
-  author set/order that never co-published, or initials-only generic authors; **(V)** an impossible
-  or non-existent venue/year/volume (e.g. a proceedings entry + page range that do not exist, a
-  defunct journal); **(D)** a dead/mismatched DOI or placeholder arXiv id (`2310.XXXX`). A
-  non-existent title (T) is itself a fabrication and grounds to desk-reject -- even with real
-  authors and a real venue (the hardest case); A/V/D strengthen it but are not required. The
-  non-existent title is what `is_fabrication` keys on.
-- Categories: `real-published`, `real-grey-literature`, `real-preprint-or-unpublished` (low);
-  `partial-match` (citation error, medium); `likely-hallucinated` (high); `unclear`.
-- Do not push borderline cases into `real-*` to make a report look clean. `unclear` is a valid,
-  useful verdict, and a "hallucinated" call against named authors is serious: flag it for review,
-  do not accuse. Equally, do not downgrade a fabricated title to a citation error to avoid the
-  accusation -- record what the evidence shows.
+The protocol is in `skills/hallucite/SKILL.md` and nowhere else: the stop conditions, the
+title-first classification, the T/A/V/D fabrication signals, the categories and the rule against
+pushing a borderline case either way. Smoke tier 1 asserts `SKILL.md` carries the stop conditions
+and tier 1b guards the fail-loud `run.sh` contract they key on, so a change to that protocol is a
+change to `SKILL.md` and to those tests together. Do not restate it here.
 
 ## Conventions
 

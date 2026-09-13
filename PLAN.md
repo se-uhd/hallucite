@@ -120,19 +120,14 @@ the same fields (`skipped_dbs`, `dblp_record`, `dblp_nearest`, `identifiers`, `m
 
 ## Tests
 
-`skills/hallucite/scripts/tests/run_smoke.py` is a dependency-light smoke suite (run by
-`.github/workflows/smoke.yml` on push and pull request, and locally before a release): version and
-Claude/Codex packaging consistency (including that `SKILL.md` drives the pipeline via `run.sh`,
-carries the stop conditions, and documents every runner resolver branch); the `run.sh` bootstrap
-contract (syntax, unknown-command rejection, fail-loud with the sentinel when its Python is
-unusable, and subcommand+argument forwarding); logic-contract unit tests on synthetic
-per-paper records (a `mismatch` reference reaches triage; the title-first record gate; the verdicts
-lock under concurrent writes; per-paper worklist slice isolation, including the `paper6`/`paper66`
-prefix case; and the desk-reject heuristic); an optional isolated Codex CLI
-marketplace-list check when `codex` is installed; and an offline end-to-end audit (driven through
-`run.sh`) against a generated fixture DBLP database and a synthetic fixture PDF. Markdown lint
-runs as a separate CI step (`lint_markdown.py` over the tracked Markdown files; locally,
-`mise run lint-md`). The full DBLP database and the online backends are not exercised in CI.
+`skills/hallucite/scripts/tests/run_smoke.py` is the suite `.github/workflows/smoke.yml` runs on
+every push, and its docstring lists the tiers. In kind: version and packaging consistency across
+both plugin manifests and `SKILL.md`; the `run.sh` bootstrap contract; `--help` on every entry
+point; the per-paper JSON contract; extraction over every bibliography shape the corpus contains,
+through synthetic fixtures derived from the real papers; the verification contract and the
+record-choice rules on a fixture mirror; the measured constants, pinned as literals; and the
+DBLP ingest. Markdown lint runs as a separate CI step. The full DBLP database and the online
+backends are not exercised in CI.
 
 ## Packaging
 
