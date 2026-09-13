@@ -78,6 +78,19 @@ the raw citation, so nothing that reads the entry's text is exercised. A change 
 shown is confirmed by an `--offline` audit of `~/hallucite/corpus` before and after, diffed per
 reference, which is how the cited year and the locator were each measured.
 
+A verdict baseline over the corpus was run on 2026-09-12 against the shipped 2.0.0 code and the
+current mirror, with the Semantic Scholar key and without `--mailto`:
+
+    mise run audit -- ~/hallucite/corpus --out out
+
+2857 references: 2351 verified, 465 `not_found`, 41 `mismatch`, 506 left for triage. The mirror
+decides 2133, CrossRef 185, Semantic Scholar 52, the DOI resolver 13, arXiv 9. 162 references are
+degraded -- Semantic Scholar refused 151 and arXiv 15 -- so their status is not a clean negative
+and triage is told so. Against `cases-online.json`, recorded the day before the parser and
+record-choice work landed, that is 2351 verified where 2290 were and 465 not found where 536 were.
+It lives in `out/`, which is gitignored, so it is a run to reproduce rather than an artifact to
+trust; `--mailto` puts CrossRef in its faster pool and is worth adding next time.
+
 `cases-online.json` is the recording of the four online backends: 2857 references, all backends,
 recorded on 2026-09-11 from 17:40 to 19:22 with the parser as of `9f8fd8f`, log in
 `cases-online.log`. 2290 verified (DBLP 2070, CrossRef 175, arXiv 16, Semantic Scholar 16, the DOI
@@ -117,65 +130,15 @@ entry. The same reading of the residue still shows:
   an ACM `10.5555` pseudo-DOI, which doi.org has never resolved. Each is a verified reference, so
   the identifier evidence that would show a reader the dead DOI is not printed for it.
 
-## The corpus is 55 papers and still thin
-
-| venue | papers |
-|---|---|
-| ICSE | 9 |
-| ESEM | 8 |
-| EMSE | 7 |
-| JSS | 7 |
-| FSE | 6 |
-| ASE | 6 |
-| TSE | 6 |
-| TOSEM | 6 |
-
-EMSE and JSS were added on 2026-09-11 and broke five papers on their first run: the unnumbered
-hanging-indent author-first bibliography both journals use had never been seen, because the ACM and
-IEEE templates of the original 41 papers number their entries, and the one ACM author-year paper
-among them passed on the parenthesised years its journal entries carry while silently losing every
-two-author entry. That is the argument for widening it again: the faults this repo has found were
-all found by adding a template nobody had tried, not by looking harder at the ones already there.
-
-Two things to keep doing when it grows. Check for duplicate arXiv ids across venue labels before
-adding -- `2608.27125` arrived twice, as `fse-` and `emse-`, because its comments name both, and
-the same paper under two labels double-counts its references in every measurement. And record each
-paper in `MANIFEST.tsv` (`file`, `venue_note`, `title`) as it is pulled; three ICSE papers sat on
-disk unrecorded for weeks.
-
-The differences a change makes are a handful of references. At 55 papers a single bibliography
-still moves them, so re-run whatever a change touches -- the head-to-head against the old DBLP
-path, the corruption harness, the author-rule table in CHANGELOG -- against the whole corpus rather
-than the part that was convenient.
-
-## Rebuild the measurement baseline
-
-`~/hallucite/corpus` (55 papers: ICSE, FSE, ASE, ESEM, TSE, TOSEM, EMSE and JSS, ACM, IEEE,
-Springer and Elsevier templates, with `MANIFEST.tsv`) is the sample. Its *extraction* baseline now
-lives in the repo as well, as the synthetic fixtures smoke tier 4j drives, so a clone and CI hold
-it too; the old `out/` tree of verdicts, built against a mirror missing 285,000 authors and from
-PDFs that are gone, has been deleted rather than left to look like a baseline. A verdict baseline
-still needs an audit run over the corpus:
-
-    S2_API_KEY=... mise run audit -- ~/hallucite/corpus --out out-corpus --mailto <you>
-
-Set the key first. Without it Semantic Scholar rate-limits and a chunk of the run comes back
-degraded, which is the noise that moved the worklist by one reference between otherwise identical
-runs.
-
 ## Smaller
 
-- `fetch-dblp-dump` has not been run as the shipped task -- only its scratch equivalent. It needs a
-  headed browser and a 1 GB download to prove, or a dry-run mode.
-- The DOI, year and venue checks were measured and rejected as automatic demotions; the table is
-  in CHANGELOG under 1.19.0. Do not revisit without a fresh measurement on a corpus with
-  trustworthy verdicts.
-- `titles_match` strips an edition suffix from a record's title (`(2. ed.)`, `, 3rd Edition`) but
-  not a `(Reprint)` one. Boehm's *Software Engineering Economics*, cited as the Springer 2002
-  reprint, therefore cannot match `books/sp/02/Boehm02a` ("Software Engineering Economics
-  (Reprint).") and matches an ICSE 2002 tutorial of the same title instead, which carries Boehm
-  among five authors. One corpus reference. It is a title-matching question rather than a
-  record-choice one, and any widening gets measured on both corruption sets first.
+- Boehm's *Software Engineering Economics*, cited as the Springer 2002 reprint, still shows the
+  ICSE 2002 tutorial of that title rather than `books/sp/02/Boehm02a`. `titles_match` now strips a
+  `(Reprint)` suffix as well as an edition one, so the reprint is a candidate where it was not, but
+  both records carry the cited year and the citation prints no DOI, page range or volume, so row
+  order decides between them. What would separate them is the record's kind or its author count,
+  and both were measured over the 679 shared-title references and turned down (CHANGELOG, 2.0.0).
+  One corpus reference, and it is `verified` either way.
 
 ## Last, once the verifier is replaced
 

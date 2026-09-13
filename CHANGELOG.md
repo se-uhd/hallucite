@@ -4,6 +4,31 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- **`titles_match` strips a `(Reprint)` suffix from a record's title**, as it already stripped an
+  edition one. Boehm's *Software Engineering Economics*, cited as the Springer 2002 reprint, could
+  not reach `books/sp/02/Boehm02a` ("Software Engineering Economics (Reprint).") at all. It is a
+  candidate now, though still not the record shown: the ICSE 2002 tutorial of that title carries
+  the cited year too, and the citation prints no DOI, page range or volume, so row order decides.
+  Both corruption harness sets come back identical and the offline anchor replays with no parse
+  difference and no status move, so the widening costs nothing.
+
+- **`fetch-dblp-dump` no longer spends the dump you have before checking what arrived.** It saved
+  the download straight over `~/hallucite/dblp.xml.gz` and read the gzip magic afterwards, so the
+  one failure the script exists to catch -- dblp.org's proof-of-work challenge page saved under a
+  `.gz` name -- destroyed a working 1 GB dump on its way to reporting itself. It downloads to a
+  `.part` file beside the destination and swaps only after the check, which is what `build-dblp`
+  already does with the database it builds. Run as the shipped task for the first time rather than
+  as a scratch equivalent: Playwright's bundled Chromium, headed, answers dblp.org's proof-of-work
+  challenge and saves 1.10 GB of valid gzip.
+
+- `requirements.txt` still said `characterize.py record` needs `hallucinator` to make a new
+  recording. Nothing imports that package any more. The file now names the one dependency the repo
+  does have, Playwright, and the single task that wants it.
+
 ## [2.0.0] - 2026-09-12
 
 hallucite no longer depends on the package it was built around. Stages 1 and 2 are its own

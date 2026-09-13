@@ -5,8 +5,10 @@
 # use only the standard library, except that `pdf_references.py` shells out to `pdftotext`
 # (poppler) for PDF text extraction.
 #
-# `hallucinator` is no longer imported by anything the audit runs. `characterize.py record` needs
-# it only to make a *new* recording of the behaviour the modules were written against; install it
-# for that alone:
+# `hallucinator` is not imported by anything, `characterize.py record` included: a new recording is
+# made from hallucite's own modules.
 #
-#     uv pip install hallucinator
+# One task has a dependency, and only that task: `mise run fetch-dblp-dump` drives a real browser,
+# because dblp.org fronts the dump with a proof-of-work challenge no plain HTTP client answers.
+#
+#     pip install playwright && playwright install chromium
