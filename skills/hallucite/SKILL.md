@@ -11,7 +11,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.10 or newer (standard library only), pdftotext (poppler), and an offline DBLP database at ~/hallucite/dblp.db, built by `mise run build-dblp` (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
-  version: "2.0.0"
+  version: "2.0.1"
 ---
 
 # hallucite

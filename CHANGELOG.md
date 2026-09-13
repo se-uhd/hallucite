@@ -4,9 +4,23 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
-## [Unreleased]
+## [2.0.1] - 2026-09-13
 
 ### Fixed
+
+- **Fourteen claims in the four documents no longer matched the code, and a straight-through read
+  found what two mechanical passes could not.** `VERIFICATION-SPEC.md` named the `db_results` field
+  `db` where the code has `db_name`, and described a lenient author tier that counts unmatched names
+  where the code requires one matched one. `README.md` documented the `run.sh` resolver with four
+  branches where it has five, promised a `/hallucite` command that does not ship, said a
+  marketplace-installed plugin reads the clone's `.env.local` when it cannot, sent the plugin
+  reader to build the mirror with mise tasks they do not have, and never mentioned the closing
+  warnings that separate an audit from a silent no-op. `CLAUDE.md` said nothing imports
+  `hallucinator` when `measure/head_to_head.py` does, called `--` an em dash, never named
+  `pdftotext`, and named things in `~/hallucite/` throughout without saying what is there; its
+  Conventions had grown to 21 flat bullets, four pairs of them saying one thing twice, and are now
+  18 under four subheadings with every measurement kept. `PLAN.md` described a `run.sh`
+  auto-provision path that no longer exists.
 
 - **`titles_match` strips a `(Reprint)` suffix from a record's title**, as it already stripped an
   edition one. Boehm's *Software Engineering Economics*, cited as the Springer 2002 reprint, could
@@ -42,14 +56,7 @@ All notable changes to hallucite are documented here. The format follows
   recording. Nothing imports that package any more. The file now names the one dependency the repo
   does have, Playwright, and the single task that wants it.
 
-## [2.0.0] - 2026-09-12
-
-hallucite no longer depends on the package it was built around. Stages 1 and 2 are its own
-extraction, parsing, verification and DBLP ingest, written against a black-box recording of the
-external verifier rather than from its source, which is what lets this MIT repo drop an
-AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
-
-### Added
+### Removed
 
 - **`TODO.md` is gone**, its last item closed. What it carried that outlives a task list went
   where the conventions say it goes. The inventory of `~/hallucite/`, and what each recording can
@@ -59,6 +66,15 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   the 22-author CoRR record with no `et al.` row, the five grey-literature references one JSS
   paper keeps, and the three DOIs wrong as printed. Earlier entries still name the file; they
   describe what it said at the time.
+
+## [2.0.0] - 2026-09-12
+
+hallucite no longer depends on the package it was built around. Stages 1 and 2 are its own
+extraction, parsing, verification and DBLP ingest, written against a black-box recording of the
+external verifier rather than from its source, which is what lets this MIT repo drop an
+AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
+
+### Added
 
 - **The audit runs on hallucite's own modules.** `audit_references.py` builds a `Verifier` and
   parses through `reference_parser`; nothing on the audit path imports `hallucinator`.
@@ -1454,6 +1470,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[2.0.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.0.1
 [2.0.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.0.0
 [1.21.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.21.0
 [1.20.0]: https://github.com/se-uhd/hallucite/releases/tag/v1.20.0
