@@ -27,7 +27,8 @@ uv = "latest"
 # Auto-create and activate the repo's .venv whenever mise loads this dir.
 _.python.venv = { path = ".venv", create = true }
 # API keys for the online verification backends, if this clone has any. Gitignored, optional, and
-# read by run.sh as well, so the mise tasks and the installed plugin see the same values.
+# read by run.sh as well, so the mise tasks and a plugin run out of this tree see the same values.
+# A plugin installed from the marketplace is a different tree: export the key in its shell instead.
 _.file = { path = ".env.local", redact = true }
 
 [tasks.install]
@@ -41,7 +42,7 @@ description = "Download dblp.xml.gz with a real browser (dblp.org fronts it with
 run = "python skills/hallucite/scripts/fetch_dblp_dump.py"
 
 [tasks.build-dblp]
-description = "Build the offline DBLP database at ~/hallucite/dblp.db from the dump (~4 min)"
+description = "Build the offline DBLP database at ~/hallucite/dblp.db from the dump (~5 min)"
 # Builds to a scratch file and swaps only after the result is checked, because a mirror that is
 # wrong in either of the two ways that matter looks right from the outside: the publication counts
 # and the titles are fine whether or not the download returned the dump, and whether or not the

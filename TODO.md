@@ -147,8 +147,9 @@ words in `SKILL.md`, the negative parallelism the project's own convention names
 where "silently" is meant, and figurative phrasing in assertion messages a reader sees on failure.
 The rest were taste rather than defect and were left. The report is `ai-slop-report.md`, gitignored.
 
-What is still open is the other half:
-
-- Reread `README.md` and `CLAUDE.md` end to end. Both were revised with the cutover and both have
-  now been through two mechanical passes, but a straight-through read is a different check and
-  nobody has done one.
+The straight-through read of `README.md` and `CLAUDE.md` is done too, and it earned its place:
+two mechanical passes had missed a false claim about the `hallucinator` dependency, `--` described
+as an em dash, a resolver documented with four branches where it has five, an `.env.local` that a
+marketplace install never sees, a `/hallucite` command that does not ship, a plugin reader sent to
+build the mirror with mise tasks they do not have, and no mention anywhere of `pdftotext` or of
+what `~/hallucite/` contains. The prose item is closed.

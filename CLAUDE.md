@@ -11,12 +11,14 @@ flight.
 
 Extraction, parsing, verification and the DBLP ingest are all hallucite's own and use only the
 standard library: `pdf_references.py`, `reference_parser.py`, `verifier.py`, `dblp_check.py`,
-`build_dblp.py`. `VERIFICATION-SPEC.md` is the contract the parse and check halves meet, and
+`build_dblp.py`. One outside program is required and is not a Python package: `pdf_references.py`
+shells out to `pdftotext -layout` (poppler), and without it extraction cannot run at all. `VERIFICATION-SPEC.md` is the contract the parse and check halves meet, and
 `characterize.py` holds them to a recording of the external `hallucinator` package they replaced.
 That package is AGPL-3.0-or-later and this repo is MIT; it is no longer a dependency of anything
 the audit runs, and no code was copied across -- the modules were written against a black-box
-recording. Nothing imports it any more, `characterize.py record` included: a new recording is made
-from hallucite's own modules.
+recording. One file still imports it and none of it is on the audit path:
+`measure/head_to_head.py run` needs the package for the old half of its comparison.
+`characterize.py record` no longer does, and makes a new recording from hallucite's own modules.
 
 One repo, two roles: it is the runnable project (mise tasks) and an installable plugin for Claude
 Code and Codex CLI. Claude Code uses `.claude-plugin/plugin.json` plus
@@ -26,17 +28,31 @@ Code and Codex CLI. Claude Code uses `.claude-plugin/plugin.json` plus
 `skills/hallucite/scripts/`, used by mise and by the bundled skill (`skills/hallucite/SKILL.md`).
 No separate plugin repo, no submodule.
 
+`~/hallucite/` holds everything too large or too mutable to commit, and the document below names
+its contents constantly:
+
+| path | what it is |
+|---|---|
+| `dblp.db` | the offline mirror, ~3.5 GB, rebuilt from the dump; `$HALLUCITE_DBLP` overrides |
+| `dblp.xml.gz` | the DBLP dump `build-dblp` ingests |
+| `corpus/` | the 55 measurement papers, with `MANIFEST.tsv` (`file`, `venue_note`, `title`) |
+| `census.json` | the extraction baseline `extraction_census.py --baseline` diffs against |
+| `corruptions.json`, `corruptions-truncated.json` | the built corruption sets: scored, never rebuilt |
+| `cases.json` | frozen: what `hallucinator` returned for the 41-paper corpus |
+| `cases-hallucite.json` | the offline regression anchor, replayed by `characterize.py compare` |
+| `cases-online.json` | the four online backends, recorded once |
+
 ## Running things
 
-- The bundled skill drives the pipeline through `skills/hallucite/scripts/run.sh`, the single
-  entry point (`check-env | audit | triage | lint | python`). It resolves the wrapper from a Claude
-  Code plugin install, a Codex repo-local skill shim, a direct repo clone, the Claude Code plugin
-  cache, or the Codex plugin cache. The wrapper resolves a Python 3.10+ with `sqlite3`, never relying on a bare
-  `python`/`uv`/`mise` being on the plugin shell's PATH (the failure that made the plugin silently
-  un-runnable). There is nothing to install. The wrapper fails loud with a `HALLUCITE_BOOTSTRAP_FAILED:`
-  sentinel and a non-zero exit, and its probe reads the interpreter's *output* rather than its exit
-  status, because `/bin/echo` accepts `-c` and exits 0. `$HALLUCITE_PYTHON` pins an interpreter.
-  `run.sh check-env` is the preflight.
+- The bundled skill drives the pipeline through `skills/hallucite/scripts/run.sh`, the single entry
+  point (`check-env | audit | triage | lint | python`). It resolves the wrapper from a Claude Code
+  plugin install, a Codex repo-local skill shim, a direct repo clone, the Claude Code plugin cache,
+  or the Codex plugin cache. The wrapper resolves a Python 3.10+ with `sqlite3`, never relying on a
+  bare `python`/`uv`/`mise` being on the plugin shell's PATH (the failure that made the plugin
+  silently un-runnable). There is nothing to install. The wrapper fails loud with a
+  `HALLUCITE_BOOTSTRAP_FAILED:` sentinel and a non-zero exit, and its probe reads the interpreter's
+  *output* rather than its exit status, because `/bin/echo` accepts `-c` and exits 0.
+  `$HALLUCITE_PYTHON` pins an interpreter. `run.sh check-env` is the preflight.
 - In a repo clone you can equivalently use mise tasks: `mise run install | fetch-dblp-dump |
   build-dblp | audit | lint-md`. Both paths run the same scripts in `skills/hallucite/scripts/`.
 - The offline DBLP database defaults to `~/hallucite/dblp.db`, outside this repo (large, not
@@ -94,12 +110,12 @@ No separate plugin repo, no submodule.
 ## Triage conventions (Stage 3)
 
 - Never fabricate a verdict. A verdict may rest only on a Stage 1+2 `db_verification` record the
-  audit wrote or Stage 3 web evidence you actually gathered -- never on reading the `.bib`/`.bbl`/PDF
-  by eye. If `run.sh` exits non-zero or prints `HALLUCITE_BOOTSTRAP_FAILED:`, or output starts
-  coming back empty, stop and report it verbatim; "the tool would not run" is the correct outcome,
-  not a hand-written report. This rule lives in full in `SKILL.md` ("Stop conditions"); smoke
-  tier 1 asserts SKILL.md carries it, and tier 1b guards the fail-loud `run.sh` contract the rule
-  keys on.
+  audit wrote or Stage 3 web evidence you actually gathered -- never on reading the
+  `.bib`/`.bbl`/PDF by eye. If `run.sh` exits non-zero or prints `HALLUCITE_BOOTSTRAP_FAILED:`, or
+  output starts coming back empty, stop and report it verbatim; "the tool would not run" is the
+  correct outcome, not a hand-written report. This rule lives in full in `SKILL.md` ("Stop
+  conditions"); smoke tier 1 asserts SKILL.md carries it, and tier 1b guards the fail-loud `run.sh`
+  contract the rule keys on.
 - Investigate with parallel web queries; resolve DOIs via `api.crossref.org/works/<doi>`. If a
   narrow query (title + author) finds nothing, broaden to the bare title (unquoted) and screen the
   results before judging; obscure/predatory venues are poorly indexed, so "not found" on a narrow
@@ -121,8 +137,8 @@ No separate plugin repo, no submodule.
   or non-existent venue/year/volume (e.g. a proceedings entry + page range that do not exist, a
   defunct journal); **(D)** a dead/mismatched DOI or placeholder arXiv id (`2310.XXXX`). A
   non-existent title (T) is itself a fabrication and grounds to desk-reject -- even with real
-  authors and a real venue (the hardest case); A/V/D strengthen it but are not required. The non-existent title is
-  what `is_fabrication` keys on.
+  authors and a real venue (the hardest case); A/V/D strengthen it but are not required. The
+  non-existent title is what `is_fabrication` keys on.
 - Categories: `real-published`, `real-grey-literature`, `real-preprint-or-unpublished` (low);
   `partial-match` (citation error, medium); `likely-hallucinated` (high); `unclear`.
 - Do not push borderline cases into `real-*` to make a report look clean. `unclear` is a valid,
@@ -132,6 +148,8 @@ No separate plugin repo, no submodule.
 
 ## Conventions
 
+### Repo, release and lint
+
 - Editing a script under `skills/hallucite/scripts/` updates it for mise, Claude Code, and Codex
   CLI (one copy). On a real release, bump the version in `.claude-plugin/plugin.json`,
   `.codex-plugin/plugin.json`, and `skills/hallucite/SKILL.md` (`metadata.version`), add a
@@ -139,21 +157,55 @@ No separate plugin repo, no submodule.
   existing `v*` tags and the CHANGELOG link footers). Run the smoke tests
   (`python skills/hallucite/scripts/tests/run_smoke.py`) and do not consider a release done until
   it is tagged and they pass.
+
 - Commit messages follow Conventional Commits: `type(scope): imperative summary`. Types: `feat`,
   `fix`, `docs`, `test`, `ci`, `chore`, `refactor`; the scope is the pipeline area (`audit`,
   `extract`, `triage`) or tooling, and is omitted for cross-cutting changes. Keep the summary short
   and imperative and put detail in the body. Do not put the release version in the message -- the
   `v*` tag records the release.
-- Verification `status` and `db_name` strings are `verifier`'s, and `VERIFICATION-SPEC.md` is
-  where they are fixed; treat them as a contract that can drift. Define "needs triage" by negation (`status != "verified"`),
-  never by an allow-list of failure strings, and keep the invariant that every reference is
-  verified, unverified, or pending (none silently dropped). Validate any hard-coded backend name
-  against what `verifier` actually emits: `run_smoke.py` covers the status strings, and the
-  audit validates backend names at run time -- online runs warn about configured names that never
-  appear (`DEFAULT_ONLINE_DBS`); `--offline` runs warn about live backends that are not known-local
-  (`KNOWN_LOCAL_DBS`). A silent name mismatch is what caused both the `mismatch` and the
-  `DOI Resolver` bugs. `VERIFICATION-SPEC.md` states the vocabulary a verifier has to emit;
+
+- Keep Markdown lint-clean: `mise run lint-md` (`MD_FIX=1` to auto-fix). The vendored PyMarkdown
+  in `skills/hallucite/scripts/` is synced from se-uhd/pymarkdown-skill; do not hand-edit
+  `_vendor/`, `lint_markdown.py`, or `check_baseline.py` (re-sync instead). The hallucite-owned
+  files are `schema_checks.py` and `lint_markdown.yaml`.
+
+### Rules and contracts
+
+- Verification `status` and `db_name` strings are `verifier`'s, and `VERIFICATION-SPEC.md` is where
+  they are fixed; treat them as a contract that can drift. Define "needs triage" by negation
+  (`status != "verified"`), never by an allow-list of failure strings, and keep the invariant that
+  every reference is verified, unverified, or pending (none silently dropped). Validate any
+  hard-coded backend name against what `verifier` actually emits: `run_smoke.py` covers the status
+  strings, and the audit validates backend names at run time -- online runs warn about configured
+  names that never appear (`DEFAULT_ONLINE_DBS`); `--offline` runs warn about live backends that are
+  not known-local (`KNOWN_LOCAL_DBS`). A silent name mismatch is what caused both the `mismatch` and
+  the `DOI Resolver` bugs. `VERIFICATION-SPEC.md` states the vocabulary a verifier has to emit;
   `characterize.py` records the current behaviour on real references and holds a replacement to it.
+
+- Prefer a check the input already supports over one you have to tune. A numbered bibliography
+  numbers itself consecutively, so a printed `[N]` that no extracted reference carries is one that
+  never reached verification, and nothing downstream can report a reference that never arrived.
+  That invariant surfaced all three of the extraction faults fixed in `_gutter`, `_linearize` and
+  `_segment`; `extract_references` reports the gaps and the audit warns about them. The printed
+  numbering cost nothing to check and needed no threshold. Look for the same shape elsewhere
+  before writing a detector.
+
+- A lenient rule needs a floor. A record that cannot refute must still be able to *confirm*
+  something: the people a truncated record lists have to account for at least one cited name, or
+  the tier is a wildcard that clears any author list on any title one incomplete record shares.
+
+- A threshold expressed as a proportion behaves differently on small inputs. `_gutter` tolerated a
+  fraction of lines crossing the column band, so one running head was 1% of a full page and 3% of a
+  short final one -- the same head, passing on one page and losing the column split on the other.
+  Where a rule has to survive a fixed amount of noise, count the noise.
+
+- Decide from the data in hand, not from a name. Hard-coding DBLP out of the complete-author set
+  because the mirror was broken survived the mirror being repaired, and a reference with two
+  invented authors verified again. `mirror_authors_complete` and `record_authors_complete` decide
+  per run and per record instead.
+
+### Measuring a change, and guarding it
+
 - Measure a detection rule against a corpus before shipping it, and read the flags rather than the
   count. A rule that looks right on the case that motivated it can be almost entirely false
   positives at scale: demoting a verified reference on a backend's own `author_mismatch` flagged 22
@@ -167,6 +219,7 @@ No separate plugin repo, no submodule.
   CHANGELOG under 1.19.0; do not revisit one without a fresh measurement on a corpus whose verdicts
   you trust. Choosing among records that have already matched is a different use of those same
   fields, and is what the locator key does.
+
 - Widen the corpus by adding a template nobody has tried, not by adding more of what is there.
   Every extraction fault this repo has found came that way: EMSE and JSS broke five papers on their
   first run because the unnumbered hanging-indent bibliography both journals use had never been
@@ -178,34 +231,28 @@ No separate plugin repo, no submodule.
   moves a measurement, so re-run whatever a change touches over the whole corpus rather than the
   part that was convenient, and add a synthetic fixture for the new shape
   (`tests/fixtures/make_corpus_fixtures.py`).
-- Prefer a check the input already supports over one you have to tune. A numbered bibliography
-  numbers itself consecutively, so a printed `[N]` that no extracted reference carries is one that
-  never reached verification, and nothing downstream can report a reference that never arrived.
-  That invariant surfaced all three of the extraction faults fixed in `_gutter`, `_linearize` and
-  `_segment`; `extract_references` reports the gaps and the audit warns about them. The printed
-  numbering cost nothing to check and needed no threshold. Look for the same shape elsewhere
-  before writing a detector.
+
 - Compare two implementations against an arbiter, not against each other. Holding a new parser to
   an old one's output measures agreement, not correctness, and most of the disagreements are the
   old one's defects. Asking instead which reading a real DBLP record confirms settles each case on
   its merits: it is what showed the new parser at 1480 confirmations against 1399 for the recorded
   one, and what identified the three references where the recording was right.
+
 - Measure precision on corruptions built from real records, not on hand-picked cases. Take a
   sample of DBLP publications, cite them correctly, then cite them again with an author appended,
   an author swapped, a title word changed, a given initial contradicted -- the truth is known by
   construction, so a rule's cost and its benefit come from the same run. That harness is what
   caught the phantom-author hole (250 of 250 padded citations confirmed) and what stopped two
   later loosenings that looked like recall wins.
+
 - Build the harness from the population the change touches, not from the population that is
   convenient. The 250-record corruption harness samples titles of three or more tokens, so it
-  could not see `_MIN_TOKENS = 2` at all; a second sample of two-token titles showed three padded
+  could not see a `_MIN_TOKENS` of 2 at all (it stayed at 3; the measurement is under 2.0.0); a second sample of two-token titles showed three padded
   citations confirmed, every one through a record carrying an `et al.` row, and a third sample of
   such truncated records showed the lenient tier confirming a wholly invented author list 90 times
   in 90. Neither hole was visible from the sample the constraint is stated over. Keep the original
   set byte-identical, add a set, and score both.
-- A lenient rule needs a floor. A record that cannot refute must still be able to *confirm*
-  something: the people a truncated record lists have to account for at least one cited name, or
-  the tier is a wildcard that clears any author list on any title one incomplete record shares.
+
 - A throttled backend tells you about the throttle rather than about its own coverage. Semantic
   Scholar looked worth 2 confirmations in 510 when asked without a key, and was worth 24 in 1669
   with one. Never size a backend, or drop it, from a sample where it was refusing. The same mistake
@@ -217,43 +264,38 @@ No separate plugin repo, no submodule.
   To bound a slow backend, cap the retrying rather than the asking: a refusal costs 31 s with the
   ladder and about a second without it, and capping the asking instead cost five confirmations no
   other backend reaches.
-- A threshold expressed as a proportion behaves differently on small inputs. `_gutter` tolerated a
-  fraction of lines crossing the column band, so one running head was 1% of a full page and 3% of a
-  short final one -- the same head, passing on one page and losing the column split on the other.
-  Where a rule has to survive a fixed amount of noise, count the noise.
-- Decide from the data in hand, not from a name. Hard-coding DBLP out of the complete-author set
-  because the mirror was broken survived the mirror being repaired, and a reference with two
-  invented authors verified again. `mirror_authors_complete` and `record_authors_complete` decide
-  per run and per record instead.
+
+- Keep a measurement off the network. It is the same rule for a run and for an anchor. Re-running
+  the whole corpus online to see the effect of one rule exhausted the Semantic Scholar quota in an
+  afternoon and made the run that mattered unusable -- 334 refusals against 6 answers, which says
+  nothing about the code -- where asking the 49 references that actually moved took four minutes
+  and settled it. An anchor recorded across the network likewise bakes in whoever's rate limit was
+  in force that afternoon, where `--offline` is reproducible, takes half a minute, and covers the
+  91.5% of confirmations the mirror decides.
+
+- A guard has to be able to fail. Two ways one cannot: asserting a helper the pipeline is free to
+  ignore, and pinning a constant by reading it back from the module. `_longest_blank_run` and
+  `_page_furniture` were asserted directly while `_gutter` and `_linearize` could ignore them, so
+  reverting either extraction fix left the suite green; and `C.eq(x, MODULE.THE_CONSTANT)` passes
+  whichever value the constant holds, guarding the shape and not the finding, when the value is the
+  whole point of the measurement. A mutation run found seven fixes revertible with the tests still
+  passing, one of them the fix that release had just announced. Assert through the function the
+  pipeline calls, pin the number as a literal, and re-run `measure/mutations.py` after adding a
+  fix: every entry must fail.
+
+### Prose
+
 - Plans and READMEs describe only the current approach. Do not narrate dropped or superseded
   ideas, or "out of scope" history. After a scope change, rewrite the doc as if the final
   approach were always the plan.
+
 - Check prose you write -- docs, README, PLAN, CHANGELOG, commit and PR messages, the triage
   reports -- against the AI-slop tropes in
   <https://gist.github.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1>. The frequent offenders here:
   "it's not X, it's Y" negative parallelism, filler transitions ("it's worth noting",
   "importantly"), grandiose stakes, vague attributions ("experts say") instead of a named source,
-  invented concept labels, and inflated verbs (`use`, not `utilize`/`leverage`). Em dashes (`--`)
-  and bold-lead bullets already appear in these files; do not pile on more than the surrounding
-  text uses. Plain, specific, and varied beats ornate.
-- Assert a test through the function the pipeline calls. `_longest_blank_run` and `_page_furniture`
-  were both asserted directly while `_gutter` and `_linearize` were free to ignore them, so
-  reverting either extraction fix left the suite green.
-- Pin a measured constant as a literal. `C.eq(x, MODULE.THE_CONSTANT)` passes whichever value
-  the constant holds, which guards the shape and not the finding -- and the value is what somebody
-  measured. A mutation run (revert one fix, run the suite) found seven fixes that could be undone
-  with the tests still passing, including the one the release had just announced. Re-run it after
-  adding a fix: `for each fix: revert it; python .../run_smoke.py` should fail every time.
-- Probe an interpreter by what it prints. `/bin/echo -c '...'` exits 0 without running anything,
-  and `run.sh` accepted it as a Python.
-- Measure a change on the population it changes. Re-running the whole corpus through the network to
-  see the effect of one rule exhausted the Semantic Scholar quota in an afternoon and made the run
-  that mattered unusable -- 334 refusals against 6 answers, which says nothing about the code.
-  Asking the 49 references that actually moved took four minutes and settled it.
-- Record an anchor offline. One made across the network bakes in whoever's rate limit was in force
-  that afternoon, where `--offline` is reproducible, takes half a minute, and covers the 91.5% of
-  confirmations the mirror decides.
-- Keep Markdown lint-clean: `mise run lint-md` (`MD_FIX=1` to auto-fix). The vendored PyMarkdown
-  in `skills/hallucite/scripts/` is synced from se-uhd/pymarkdown-skill; do not hand-edit
-  `_vendor/`, `lint_markdown.py`, or `check_baseline.py` (re-sync instead). The hallucite-owned
-  files are `schema_checks.py` and `lint_markdown.yaml`.
+  invented concept labels, and inflated verbs (`use`, not `utilize`/`leverage`). The house dash is
+  `--`, two ASCII hyphens, and a literal em dash is not house style: the repo holds 186 of the
+  former and, after the 2.0.0 prose pass, none of the latter. Those and bold-lead bullets already
+  appear throughout, so do not pile on more than the surrounding text uses. Plain, specific, and
+  varied beats ornate.

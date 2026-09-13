@@ -32,7 +32,7 @@ Run from this directory.
 ```sh
 mise install               # provision Python + uv (auto-venv)
 mise run fetch-dblp-dump   # download dblp.xml.gz with a real browser (~1 GB)
-mise run build-dblp        # build ~/hallucite/dblp.db from it (~4 min)
+mise run build-dblp        # build ~/hallucite/dblp.db from it (~5 min)
 ```
 
 The pipeline itself has no Python dependencies: extraction, parsing, verification and the DBLP
@@ -44,8 +44,13 @@ The offline DBLP database lives at `~/hallucite/dblp.db`, outside this repo, whi
 ### API keys
 
 Put them in `.env.local` in the repo root, one `NAME=value` per line. The file is gitignored, and
-both mise and `skills/hallucite/scripts/run.sh` read it, so the tasks below and the installed
-plugin see the same values. A variable already set in the environment wins.
+both mise and `skills/hallucite/scripts/run.sh` read it from the tree they run in, so the tasks
+below and a plugin installed from a local checkout see the same values. A variable already set in
+the environment wins.
+
+A plugin installed from the marketplace is a different tree and never sees your clone's
+`.env.local`. Export `S2_API_KEY` in the shell that starts Claude Code or Codex CLI, or pass
+`--s2-api-key`.
 
 ```sh
 S2_API_KEY=s2k-...   # Semantic Scholar: https://www.semanticscholar.org/product/api
@@ -76,7 +81,15 @@ The DBLP backend checks the cited title and authors against every record sharing
 where several match it reports the published record the citation locates -- the one whose DOI,
 page range or volume it prints, and failing those the one whose year it prints. A
 reference needs triage when its `db_verification.status` is anything other than `verified`
-(`not_found`, `mismatch`, or `unparsed`). Re-running into the same `--out` is idempotent (`triage_verdicts.json` accumulates by `paper_id:number`).
+(`not_found`, `mismatch`, or `unparsed`). Re-running into the same `--out` is idempotent
+(`triage_verdicts.json` accumulates by `paper_id:number`).
+
+Read the warnings the run ends with, because the audit exits 0 either way. A paper that yielded 0
+references was not checked at all, usually a bibliography layout the extractor does not read. An
+entry number the bibliography prints that no reference carries is a reference that never reached
+verification, and nothing downstream can report one that never arrived. The per-backend failure
+tally says how many references came back degraded: their `not_found` is a weaker claim than a
+clean negative, and `--retry-degraded` re-checks them.
 
 ## Triage the residue (Stage 3, an interactive LLM agent)
 
@@ -87,7 +100,8 @@ mise exec -- python skills/hallucite/scripts/triage.py status --out out         
 ```
 
 Stage 3 reads the per-paper JSON the audit has already written, so it can run on finished papers
-while the audit is still processing the rest. There is no need to wait for the whole corpus. Verdicts
+while the audit is still processing the rest. There is no need to wait for the whole corpus.
+Verdicts
 accumulate, and `worklist --pending` surfaces only references not yet recorded. Each worklist entry
 carries what the audit knew about the reference: which backends matched it and which were never
 asked, CrossRef's closest records, DBLP's record for the cited title or its nearest title under the
@@ -97,7 +111,8 @@ worklist, so a worker can't grab the wrong paper (e.g. `paper6` vs `paper66`); `
 verdicts file, so concurrent workers don't lose each other's verdicts.
 
 Hand the worklist to an interactive LLM agent such as Claude Code or Codex CLI ("triage the
-unverified references in `out`"), or use the installed plugin (below). The agent classifies each reference
+unverified references in `out`"), or use the installed plugin (below). The agent classifies each
+reference
 **title-first**: a `partial-match` is a real, locatable publication with the cited title but a
 slipped metadata field (a citation error); a title that matches no real publication is
 `likely-hallucinated`, not a partial-match, even when a different paper by the same authors exists.
@@ -192,17 +207,31 @@ The local path install uses the `plugins/hallucite -> ..` compatibility shim and
 current working tree into Codex's plugin cache, including ignored local directories. Use a clean
 checkout when testing local installs.
 
-Then in any session: "check the references in `<dir>` for hallucinations" (or `/hallucite` in
-Claude Code). The skill (`skills/hallucite/SKILL.md`) resolves the bundled
+Then in any session, ask for it in words: "check the references in `<dir>` for hallucinations".
+Claude Code also lists the bundled skill as `hallucite:hallucite`. The skill
+(`skills/hallucite/SKILL.md`) resolves the bundled
 `skills/hallucite/scripts/run.sh` from a Claude plugin install, a Codex repo-local skill shim, a
-direct repo clone, or the Codex plugin cache. That wrapper is the single entry point
+direct repo clone, the Claude Code plugin cache, or the Codex plugin cache. That wrapper is the single entry point
 (`check-env | audit | triage | lint | python`). Installed plugins do not need mise:
 `run.sh` finds a Python 3.10 or newer with `sqlite3` -- searching PATH and the places a
 plugin's non-interactive shell tends to miss -- and fails loud with a
 `HALLUCITE_BOOTSTRAP_FAILED:` line rather than running half-configured. There is nothing to
 install: the pipeline is standard library only. Set `$HALLUCITE_PYTHON` to pin an interpreter.
-You still build the offline DBLP database once (see Setup). `run.sh check-env` reports whether the
-environment is ready, including a warning when `pdftotext` is missing.
+`run.sh check-env` reports whether the environment is ready, including a warning when `pdftotext`
+is missing.
+
+You still build the offline DBLP database once, and without a clone there are no mise tasks to do
+it with. Get `dblp.xml.gz` (on a machine with a display, `fetch_dblp_dump.py`; otherwise download
+it on a desktop and copy it over), then run the ingest through the wrapper:
+
+```sh
+RUN=<plugin>/skills/hallucite/scripts/run.sh
+"$RUN" python <plugin>/skills/hallucite/scripts/build_dblp.py ~/hallucite/dblp.xml.gz \
+  --out ~/hallucite/dblp.db
+```
+
+`mise run build-dblp` also checks the result before installing it, which this path does not, so
+confirm it yourself: over a million publications, and author names carrying a diacritic.
 
 ## Tests and linting
 
@@ -219,9 +248,13 @@ python skills/hallucite/scripts/measure/head_to_head.py run --source corpus --re
 python skills/hallucite/scripts/measure/mutations.py
 ```
 
-The corruption harness has to come back unchanged from any change to the author or title rules:
-250 correct citations confirmed, one, two or three invented names appended confirmed 0. The
-head-to-head needs `pip install hallucinator` and nothing else does.
+The corruption harness has to come back unchanged from any change to the author or title rules.
+It is three sets across two files: 250 records with titles of three or more tokens and 250 with
+two-token titles in `corruptions.json`, and 90 records carrying an `et al.` row in
+`corruptions-truncated.json`. Correct citations confirm; one, two or three invented names appended
+confirm 0. Score the built sets, never rebuild them, because a rebuild on a newer dump samples
+different records. `head_to_head.py run` needs `uv pip install hallucinator` and nothing else in
+the repo does.
 
 A dependency-light smoke suite, also run in CI by `.github/workflows/smoke.yml`: version and
 Claude/Codex packaging consistency, the `run.sh` bootstrap contract, an optional Codex CLI
