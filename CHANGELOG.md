@@ -4,6 +4,29 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- **The offline anchor is re-recorded against a rebuilt mirror, and a rebuild is now a measured
+  operation.** `build-dblp` ran against the 2026-09-12 dump: 8,732,550 publications and 4,301,275
+  authors, 246,600 of them with a non-ASCII name, against 8,720,206, 4,295,062 and 246,351 in the
+  mirror it replaced, which is kept as `dblp.db.previous`. Before anything else was touched, the
+  old recording was replayed against the new mirror and the corpus audited offline against both.
+  Both corruption harness sets come back byte-identical, so the rules are unchanged by the data.
+  Exactly three references move, all `not_found` to `verified`, and all three are August-2026
+  arXiv preprints DBLP indexed between the two dumps; two are cited as conference papers whose
+  published records DBLP does not hold yet, so they land on the CoRR record, which is the
+  published-first rule with no published record to prefer. Four already-verified references change
+  only their reported byline, because DBLP added a homonym suffix to an author on their record
+  ("Rishabh Singh" became "Rishabh Singh 0001"), with the record key and the status untouched --
+  the name matcher ignoring the suffix as it should. Nothing else moves. `cases-hallucite.json` is
+  then re-recorded offline at v2.0.1 (63 s; 2857 cases, 2109 verified through the mirror, 702
+  `not_found`, 46 `mismatch`) and replays against itself with no parse difference and no move; the
+  recording it replaces is kept beside it as `cases-hallucite-2026-09-11-mirror-09-10.json`.
+  `cases-online.json` is not re-recorded -- that is a network run -- so a replay of it will show
+  the same three references as moves until it is.
+
 ## [2.0.1] - 2026-09-13
 
 ### Fixed
