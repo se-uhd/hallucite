@@ -6,19 +6,20 @@
 (extract, then verify against DBLP, CrossRef, arXiv, and others) use no LLM; verification queries
 the online databases unless `--offline` restricts it to the offline DBLP mirror.
 Stage 3 (triage the database-unverified residue) is the LLM step, done interactively by you. See
-`PLAN.md` for the design and architecture, `README.md` for commands, `TODO.md` for what is in
-flight.
+`PLAN.md` for the design and architecture, `README.md` for commands, `CHANGELOG.md` for what was
+measured and why.
 
 Extraction, parsing, verification and the DBLP ingest are all hallucite's own and use only the
 standard library: `pdf_references.py`, `reference_parser.py`, `verifier.py`, `dblp_check.py`,
 `build_dblp.py`. One outside program is required and is not a Python package: `pdf_references.py`
-shells out to `pdftotext -layout` (poppler), and without it extraction cannot run at all. `VERIFICATION-SPEC.md` is the contract the parse and check halves meet, and
-`characterize.py` holds them to a recording of the external `hallucinator` package they replaced.
-That package is AGPL-3.0-or-later and this repo is MIT; it is no longer a dependency of anything
-the audit runs, and no code was copied across -- the modules were written against a black-box
-recording. One file still imports it and none of it is on the audit path:
-`measure/head_to_head.py run` needs the package for the old half of its comparison.
-`characterize.py record` no longer does, and makes a new recording from hallucite's own modules.
+shells out to `pdftotext -layout` (poppler), and without it extraction cannot run at all.
+`VERIFICATION-SPEC.md` is the contract the parse and check halves meet, and `characterize.py` holds
+them to a recording of the external `hallucinator` package they replaced. That package is
+AGPL-3.0-or-later and this repo is MIT; it is no longer a dependency of anything the audit runs, and
+no code was copied across -- the modules were written against a black-box recording. One file still
+imports it and none of it is on the audit path: `measure/head_to_head.py run` needs the package for
+the old half of its comparison. `characterize.py record` no longer does, and makes a new recording
+from hallucite's own modules.
 
 One repo, two roles: it is the runnable project (mise tasks) and an installable plugin for Claude
 Code and Codex CLI. Claude Code uses `.claude-plugin/plugin.json` plus
@@ -69,24 +70,37 @@ its contents constantly:
   that accented names survived. The audit reads the same property off whatever mirror it is handed
   and drops to the lenient author tier when the mirror cannot support an absence claim.
   `fetch-dblp-dump` gets the dump with a real browser when the bot check is up.
-- Measuring a change: `skills/hallucite/scripts/measure/`. `extraction_census.py` tabulates what
-  every corpus paper extracts and what moved against a baseline; `corruptions.py` builds the
-  corruption harness once and scores an implementation against it; `head_to_head.py` scores the
-  old and new parser and DBLP check over the recorded cases or the corpus, offline by
-  construction; `mutations.py` reverts one fix at a time and requires the suite to fail, and does
-  so in the working tree, which it owns until it finishes: no other measurement, and no edit to any
-  tracked file, Markdown included. The suite reads the CHANGELOG, the manifests and `SKILL.md` as
-  well as the modules reverted, so an edit landing inside a run is read half-written and fails a
-  check indistinguishable from the revert's -- which reports an unguarded fix as guarded. It
-  fingerprints the tracked tree between entries and stops if anything moved; work in a snapshot
-  (`git ls-files -z | xargs -0 tar cf -`) instead. The
-  built harness sets live with the other anchors in `~/hallucite/` (`corruptions.json`,
-  `corruptions-truncated.json`) and are scored, never rebuilt, because a rebuild on a newer dump
-  samples different records. `--scripts DIR` on the scorers imports a snapshot of the modules, so
-  a before-and-after needs no stash. `residue_evidence.py` reads an `--offline` audit's output and
-  prints, per residue reference, the backends never asked, the mirror's nearest title ungated and
-  gated, and (its one network step, DOI and arXiv only, a few hundred requests) what each cited
-  identifier resolves to.
+- Measuring a change: `skills/hallucite/scripts/measure/`, and `characterize.py` beside it.
+  `extraction_census.py` tabulates what every corpus paper extracts and what moved against a
+  baseline; `corruptions.py` builds the corruption harness once and scores an implementation
+  against it; `head_to_head.py` scores the old and new parser and DBLP check over the recorded
+  cases or the corpus, offline by construction; `residue_evidence.py` reads an `--offline` audit's
+  output and prints, per residue reference, the backends never asked, the mirror's nearest title
+  ungated and gated, and (its one network step, DOI and arXiv only, a few hundred requests) what
+  each cited identifier resolves to. `--scripts DIR` on the scorers imports a snapshot of the
+  modules, so a before-and-after needs no stash. The built harness sets are scored, never rebuilt,
+  because a rebuild on a newer dump samples different records.
+
+  The three recordings answer different questions. `cases.json` is the specification the modules
+  were written against and stays frozen. `cases-hallucite.json` is the regression anchor:
+  `characterize.py compare ~/hallucite/cases-hallucite.json --impl verifier` replays it offline in
+  about a minute and reports a parse difference and any reference crossing the verified line, and
+  nothing else -- `paper_url` is recorded but never compared, and the replay hands `check` the
+  parsed fields without the raw citation, so nothing that reads the entry's text runs. A change to
+  the record shown is therefore confirmed by an `--offline` audit of the corpus before and after,
+  diffed per reference, and the anchor is re-recorded offline after a change meant to move a
+  verdict. `cases-online.json` anchors CrossRef, the DOI resolver and arXiv, whose statuses replay
+  identically, and is only a record of one afternoon's Semantic Scholar, which refused 458 of the
+  583 references it was asked about even with a key; re-recording it is a corpus replay of about
+  100 minutes, done with `--mailto`, on a day the quota is fresh, and never twice in an afternoon.
+
+  `mutations.py` reverts one fix at a time and requires the suite to fail, and does so in the
+  working tree, which it owns until it finishes: no other measurement, and no edit to any tracked
+  file, Markdown included. The suite reads the CHANGELOG, the manifests and `SKILL.md` as well as
+  the modules reverted, so an edit landing inside a run is read half-written and fails a check
+  indistinguishable from the revert's, which reports an unguarded fix as guarded. It fingerprints
+  the tracked tree between entries and stops if anything moved; work in a snapshot
+  (`git ls-files -z | xargs -0 tar cf -`) instead.
 - Stage 1/2 driver: `skills/hallucite/scripts/audit_references.py` (segments each reference via
   `pdf_references.py`, parses it with `reference_parser.py`, then runs `verifier.check`). The
   target is 0 unparsed references.
@@ -204,6 +218,11 @@ its contents constantly:
   invented authors verified again. `mirror_authors_complete` and `record_authors_complete` decide
   per run and per record instead.
 
+- Several widenings of name and title matching were measured and rejected -- name forms beyond the
+  umlaut transliteration, `_MIN_TOKENS` at 2, a `?` as a subtitle mark, a book-before-article
+  record key -- and the 2.0.0 entry lists each with its numbers. Read that list before widening
+  either, and measure the widening on both corruption sets before it ships.
+
 ### Measuring a change, and guarding it
 
 - Measure a detection rule against a corpus before shipping it, and read the flags rather than the
@@ -246,12 +265,12 @@ its contents constantly:
   later loosenings that looked like recall wins.
 
 - Build the harness from the population the change touches, not from the population that is
-  convenient. The 250-record corruption harness samples titles of three or more tokens, so it
-  could not see a `_MIN_TOKENS` of 2 at all (it stayed at 3; the measurement is under 2.0.0); a second sample of two-token titles showed three padded
-  citations confirmed, every one through a record carrying an `et al.` row, and a third sample of
-  such truncated records showed the lenient tier confirming a wholly invented author list 90 times
-  in 90. Neither hole was visible from the sample the constraint is stated over. Keep the original
-  set byte-identical, add a set, and score both.
+  convenient. The 250-record corruption harness samples titles of three or more tokens, so it could
+  not see a `_MIN_TOKENS` of 2 at all (it stayed at 3; the measurement is under 2.0.0); a second
+  sample of two-token titles showed three padded citations confirmed, every one through a record
+  carrying an `et al.` row, and a third sample of such truncated records showed the lenient tier
+  confirming a wholly invented author list 90 times in 90. Neither hole was visible from the sample
+  the constraint is stated over. Keep the original set byte-identical, add a set, and score both.
 
 - A throttled backend tells you about the throttle rather than about its own coverage. Semantic
   Scholar looked worth 2 confirmations in 510 when asked without a key, and was worth 24 in 1669

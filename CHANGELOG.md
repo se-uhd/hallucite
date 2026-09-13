@@ -51,6 +51,15 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
 
 ### Added
 
+- **`TODO.md` is gone**, its last item closed. What it carried that outlives a task list went
+  where the conventions say it goes. The inventory of `~/hallucite/`, and what each recording can
+  and cannot answer, is in `CLAUDE.md` beside the measurement scripts. The widenings of name and
+  title matching that were measured and rejected are a three-line pointer there and their numbers
+  are in the 2.0.0 entry, which also gains the three facts that had lived only in the task list:
+  the 22-author CoRR record with no `et al.` row, the five grey-literature references one JSS
+  paper keeps, and the three DOIs wrong as printed. Earlier entries still name the file; they
+  describe what it said at the time.
+
 - **The audit runs on hallucite's own modules.** `audit_references.py` builds a `Verifier` and
   parses through `reference_parser`; nothing on the audit path imports `hallucinator`.
   `DEFAULT_ONLINE_DBS` is the four backends `verifier` emits and `KNOWN_LOCAL_DBS` is `["DBLP"]`,
@@ -375,6 +384,15 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   - `Al` is a name particle and the tokenizer was deleting it as the tail of "et al." -- 3,999 DBLP
     authors carry it, and "Fahmid Al Rifat" could not match a citation of itself.
 
+  Two shapes stay as they are, by decision. Five references in one JSS paper keep a comma-joined
+  field the parser has no name for -- `, GitHub repository` on three tool citations, a working-paper
+  field, and a NIST special publication whose corporate author reads as the title -- and all five
+  are grey literature no database holds, so each reaches triage as `not_found` with a title a human
+  can read. And three corpus DOIs are wrong as printed and now travel whole rather than as a dead
+  front half, a TVCG identifier, a TPAMI one and an ACM `10.5555` pseudo-DOI doi.org has never
+  resolved; each reference verifies by other means, so the identifier evidence that would show a
+  reader the dead DOI never prints.
+
 - **A DOI broken across a line was emitted as the half before the break.** At one of its own
   hyphens, after a period, between `10.48550/arXiv` and the identifier, or at an underscore.
   Eighteen corpus references carried a DOI that resolves to nothing, which triage reads as
@@ -511,7 +529,10 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   "Getting Started" against a 1991 keynote of that name, and a standards body's "Security Framework
   1.1" against a 1988 paper called "A Security Framework"; a record-side prefix tolerance would
   reproduce both, and they stay unverified. Over the whole 55-paper corpus, where the recovered
-  bibliographies count, the new path confirms 2068 against 2009.
+  bibliographies count, the new path confirms 2068 against 2009. One refusal is neither a name
+  form nor a defect: DBLP's CoRR record for a 22-author preprint lists 19 people and no `et al.`
+  row, so the completeness tier cannot see the gap and the three missing names refute. Correct by
+  the contract, and nothing short of counting the authors on arXiv could say otherwise.
 
   `_MIN_TOKENS` was measured at 2 and stays at 3, scored on corruptions built once and handed to
   both settings -- the same 250 real records, plus a second set of 250 with two-token titles, which
