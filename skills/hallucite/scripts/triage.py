@@ -128,7 +128,8 @@ def is_fabrication(verdict: dict) -> bool:
     (D) strengthen the case and are shown in the report, but are not required. The category gate
     matters too: only a verdict that *asserts* fabrication may desk-reject -- a hedged verdict
     must never be escalated past what its own category claims. Distinct from an honest slipped
-    field on a real, locatable work (title_match=yes): a citation error, not a fabrication."""
+    field on a real, locatable work (title_match=yes), which is a citation error rather than
+    a fabrication."""
     return (verdict.get("category") == "likely-hallucinated"
             and (verdict.get("signals") or {}).get("title_match") == "no")
 
@@ -605,7 +606,7 @@ def _lint_reports(paths):
 def _signal_report_lines(verdict: dict | None) -> list[str]:
     """Markdown lines exposing the discriminating facts for a flagged reference: the matched real
     title (or its absence) and the one-line signal summary. This is what makes a fabricated-title
-    verdict legible at a glance instead of buried in prose."""
+    verdict readable from its own report line rather than only from the finding text."""
     if not verdict:
         return []
     s = verdict.get("signals")
@@ -616,7 +617,7 @@ def _signal_report_lines(verdict: dict | None) -> list[str]:
     if tm == "yes" and (s.get("matched_title") or "").strip():
         out.append(f"- Matched title: {s['matched_title'].strip()}")
     elif tm == "no":
-        out.append("- Matched title: none — no publication bears the cited title")
+        out.append("- Matched title: none -- no publication bears the cited title")
     line = _signals_line(s)
     if line:
         out.append(f"- Signals: {line}")
@@ -849,8 +850,9 @@ def cmd_report(out_dir: Path) -> None:
         if fab:
             fab_papers = sorted({p["paper_id"] for p, _, _ in fab}, key=_natural_key)
             roll += [f"## Desk-reject candidates ({len(fab_papers)})", "",
-                     "References whose cited **title matches no real publication** -- a fabrication "
-                     "signature, not a citation error. The signal line shows any compounding author, "
+                     "References whose cited **title matches no real publication**, which is the "
+                     "fabrication signature rather than a citation error. The signal line shows "
+                     "any compounding author, "
                      "venue, or DOI problems. Confirm each before acting.", ""]
             for paper, ref, v in sorted(fab, key=lambda x: (_natural_key(x[0]["paper_id"]), ref_num(x[1]))):
                 title = (ref["parsed"] or {}).get("title") or ref["raw_citation"][:80]

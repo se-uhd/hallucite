@@ -14,7 +14,7 @@ Three stages: extract and verify use no LLM (verification queries the online dat
 which can be a cloud or a local model. See [PLAN.md](PLAN.md) for the design and architecture.
 
 One repo serves as the runnable project (the mise tasks below) and one shared plugin tree for
-Claude Code and Codex CLI. The Claude metadata lives under `.claude-plugin/`; the Codex metadata
+Claude Code and Codex CLI. The Claude metadata is under `.claude-plugin/`; the Codex metadata
 lives under `.codex-plugin/` and `.agents/plugins/marketplace.json`. The bundled skill in
 `skills/hallucite/` drives the same scripts for both tools.
 
@@ -115,7 +115,7 @@ mise exec -- python skills/hallucite/scripts/triage.py report --out out
 (plus a `matched_title`) or `na`; `likely-hallucinated` needs `title_match=no`. `report` writes to
 `out/reports/`: `reference-check-<paper>.md` (per paper), `potential-hallucinations.md` (corpus
 rollup for review: a severity table, then a **Desk-reject candidates** section listing references
-whose cited title matches no real publication, compounded by a fabricated author constellation,
+whose cited title matches no real publication, compounded by a fabricated author set,
 venue, or DOI), and `verify-<paper>.md` (a manual-check sheet for each flagged paper, with a
 per-reference verdict line, the matched title, the signals, and one-click Scholar/Google/DOI/arXiv
 links). Triage is the slow step that calls an LLM; do one paper at a time unless you ask for the

@@ -16,7 +16,7 @@ All notable changes to hallucite are documented here. The format follows
   Both corruption harness sets come back identical and the offline anchor replays with no parse
   difference and no status move, so the widening costs nothing.
 
-- **`fetch-dblp-dump` no longer spends the dump you have before checking what arrived.** It saved
+- **`fetch-dblp-dump` no longer overwrites the dump you have before checking what arrived.** It saved
   the download straight over `~/hallucite/dblp.xml.gz` and read the gzip magic afterwards, so the
   one failure the script exists to catch -- dblp.org's proof-of-work challenge page saved under a
   `.gz` name -- destroyed a working 1 GB dump on its way to reporting itself. It downloads to a
@@ -24,6 +24,19 @@ All notable changes to hallucite are documented here. The format follows
   already does with the database it builds. Run as the shipped task for the first time rather than
   as a scratch equivalent: Playwright's bundled Chromium, headed, answers dblp.org's proof-of-work
   challenge and saves 1.10 GB of valid gzip.
+
+- **A repo-wide prose pass.** `/ai-slop:review-repo` over the Markdown, the comments and
+  docstrings of the scripts, the config comments and the ten commit messages since `4dff7bc`,
+  against the general rules and the 49-trope catalog. 114 findings, of which the 52 worth applying
+  were applied. The one repo-wide pattern was dash convention: 186 ASCII `--` against 10 real em
+  dashes, every one of them in `VERIFICATION-SPEC.md`, which alone did not follow the house style.
+  The rest were local -- an arrow standing in for words in `SKILL.md`, negative parallelism in the
+  triage report's own output and in four docstrings, "quietly" where "silently" is meant, and
+  figurative phrasing in assertion messages a reader only ever sees on a failure. The vendored
+  tree, the three files synced with it, and the 55 generated corpus fixtures were excluded; the
+  fixtures' words are a same-length cipher, not prose. All 39 mutation entries still anchor after
+  the edits, which is the check that matters when a prose pass rewrites comments the runner keys
+  on.
 
 - `requirements.txt` still said `characterize.py record` needs `hallucinator` to make a new
   recording. Nothing imports that package any more. The file now names the one dependency the repo
@@ -212,7 +225,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
 
 ### Fixed
 
-- **Five corpus papers lost their whole bibliography, and three more were losing entries quietly.**
+- **Five corpus papers lost their whole bibliography, and three more were losing entries silently.**
   Adding EMSE and JSS put the unnumbered hanging-indent author-first bibliography in front of the
   extractor for the first time -- Elsevier's Harvard style, ending the author list with a bare year
   (`Cao, S., Sun, X., 2024.`), and Springer's plainnat, putting the year in the venue field hundreds

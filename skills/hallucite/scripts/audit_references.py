@@ -173,7 +173,7 @@ def dblp_build_info(dblp_path: Path) -> dict:
 
 DBLP_STALE_DAYS = 30
 
-# Below this an offline mirror is a failed build, not a bibliography: the real one holds
+# Below this an offline mirror is a failed build: the real DBLP holds
 # millions of authors.
 _DBLP_MIN_AUTHORS = 1000
 
@@ -709,7 +709,7 @@ def main() -> int:
                   json.dumps(summary, indent=2, ensure_ascii=False))
 
     if all_failures:
-        # Say it out loud: a backend that answered nothing is invisible in the per-paper counts,
+        # Warn explicitly: a backend that answered nothing is invisible in the per-paper counts,
         # yet it silently weakens every "not_found" it should have had a say in.
         worst = ", ".join(f"{db} ({n})" for db, n in
                           sorted(all_failures.items(), key=lambda kv: -kv[1]))

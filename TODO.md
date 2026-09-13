@@ -6,7 +6,7 @@ Measured head to head over the same 2065 citations of `~/hallucite/cases.json`, 
 DBLP only and nothing else asked, the new path now confirms 1509 against the old path's 1519; over
 the whole 55-paper corpus it confirms 2106 against 2009. The CHANGELOG entry carries the numbers,
 the rules that were measured and rejected, and the reading of every reference that moved. What is
-left on the losing side is deliberate, and each item is a judgment call rather than a defect:
+left on the losing side is a deliberate judgment call in each case, not a defect:
 
 - **Seven name forms.** A real person written two ways: a nickname ("Rick Schlichting" for "Richard
   D. Schlichting", "Tom Zimmermann", "Mike Van Emmerik"), an eszett a PDF rendered as a lowercase b
@@ -50,8 +50,7 @@ paper of the same title), and moves six references from `not_found` to `mismatch
 of different works that share a generic two-word title ("Github copilot", "Continuous integration",
 "Virtual threads"). A false confirmation is the one outcome the tool must not produce, and the
 three real two-word titles it would have recovered ("Reproducible containers", "Random Forests",
-"Sampling Techniques") reach triage as `skipped`, which the worklist and the report now say in so
-many words: 123 of the corpus residue's 788 references were never put to the mirror.
+"Sampling Techniques") reach triage as `skipped`, which the worklist and the report now state outright: 123 of the corpus residue's 788 references were never put to the mirror.
 
 ## The anchors
 
@@ -87,7 +86,7 @@ current mirror, with the Semantic Scholar key and without `--mailto`:
 decides 2133, CrossRef 185, Semantic Scholar 52, the DOI resolver 13, arXiv 9. 162 references are
 degraded -- Semantic Scholar refused 151 and arXiv 15 -- so their status is not a clean negative
 and triage is told so. Against `cases-online.json`, recorded the day before the parser and
-record-choice work landed, that is 2351 verified where 2290 were and 465 not found where 536 were.
+record-choice work was committed, that is 2351 verified where 2290 were and 465 not found where 536 were.
 It lives in `out/`, which is gitignored, so it is a run to reproduce rather than an artifact to
 trust; `--mailto` puts CrossRef in its faster pool and is worth adding next time.
 
@@ -115,10 +114,7 @@ day the quota is fresh, and never two in one afternoon.
 
 ## Parser gaps the residue evidence still shows
 
-The six that reading the corpus residue's `skipped` list and its identifier resolutions first
-surfaced -- the `URL https://...` title, the `!` and closing-quote cuts, the comma-joined venue,
-`VII` and `editors`, the DOI broken after a period -- are fixed and measured in the CHANGELOG
-entry. The same reading of the residue still shows:
+Reading the corpus residue's `skipped` list and its identifier resolutions first showed six gaps -- the `URL https://...` title, the `!` and closing-quote cuts, the comma-joined venue, `VII` and `editors`, the DOI broken after a period -- and all six are fixed and measured in the CHANGELOG entry. The same reading of the residue still shows:
 
 - Five references in `jss-2605.26146v1` keep a comma-joined field the parser has no name for:
   `, GitHub repository` on three tool citations, `, Working Paper v3.1, Capitol Technology
@@ -142,13 +138,17 @@ entry. The same reading of the residue still shows:
 
 ## Last, once the verifier is replaced
 
-Prose pass, in this order:
+The repo-wide pass is done. `/ai-slop:review-repo` ran over the Markdown, the comments and
+docstrings of the scripts, the config comments and the ten commit messages since `4dff7bc`,
+excluding the vendored tree, the three files synced with it, and the 55 generated corpus fixtures,
+whose words are a cipher rather than prose. 114 findings; the 52 worth applying were applied -- the
+em dashes that made `VERIFICATION-SPEC.md` the one file not using `--`, an arrow standing in for
+words in `SKILL.md`, the negative parallelism the project's own convention names first, "quietly"
+where "silently" is meant, and figurative phrasing in assertion messages a reader sees on failure.
+The rest were taste rather than defect and were left. The report is `ai-slop-report.md`, gitignored.
 
-1. `/ai-slop:review-repo` over the whole repo -- the Markdown, the comments in the scripts and the
-   config, and the commit messages. `/ai-slop:revise` applies the report.
-2. Then reread `README.md` and `CLAUDE.md` end to end. Both were revised with the cutover, and
-   `/ai-slop:review` has been run over the two of them (17 findings, all applied), but a paragraph
-   at a time -- nobody has read either straight through since.
+What is still open is the other half:
 
-Step 1 is still outstanding: the repo-wide pass covers the script comments and the commit messages,
-which the two-file review did not.
+- Reread `README.md` and `CLAUDE.md` end to end. Both were revised with the cutover and both have
+  now been through two mechanical passes, but a straight-through read is a different check and
+  nobody has done one.

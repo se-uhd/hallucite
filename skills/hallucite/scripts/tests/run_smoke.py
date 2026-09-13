@@ -364,7 +364,7 @@ def tier1b_runner() -> None:
     # FAIL-LOUD, exercised deterministically regardless of the host's Pythons: a HALLUCITE_PYTHON
     # that is not even executable can never be a Python, so resolve_python must `die` with
     # the sentinel rather than fall through to a silent run. This is the guarantee that stops a
-    # broken environment from masquerading as a clean audit.
+    # broken environment from being reported as a clean audit.
     r = run(["check-env"], env_add={"HALLUCITE_PYTHON": str(TESTS / "no-such-python")})
     C.true(r.returncode != 0 and SENTINEL in r.stderr,
            "REGRESSION GUARD: run.sh fails loud (sentinel) when HALLUCITE_PYTHON is unusable")
@@ -850,7 +850,7 @@ def tier3i_dblp_author_encoding() -> None:
     DBLP is carefully curated and full of accented names, so their total absence is a property of
     the local build, not of DBLP. On a 4.0M-author mirror every such author was missing outright --
     Márcio Ribeiro, Martin Höst, Björn Regnell, Petr Tuma and Jácome Cunha appeared in no record --
-    which quietly strips them from the author list of every paper they wrote and makes DBLP
+    which silently strips them from the author list of every paper they wrote and makes DBLP
     disagree with correctly cited references. Nothing else surfaces it: counts and titles look
     right."""
     print("Tier 3i: offline DBLP mirror that dropped accented authors (no network)")
@@ -1328,7 +1328,7 @@ def tier4d_dblp_second_opinion() -> None:
                "REGRESSION GUARD: a padded author list is refuted, not rescued by one real name")
         # The phantom-author pattern: the record's own authors, correct and complete, with one
         # invented name spliced in. Every other field of such a citation is right, so this rule is
-        # the only thing standing between it and a clean verification.
+        # the only check that keeps it from a clean verification.
         C.true(D.second_opinion(db, "A shared placeholder title about fictional pipelines",
                                 ["Carla Chen", "Magnus D. Delta", "Quentin Fabrikant"]) is None,
                "REGRESSION GUARD: one invented name appended to a correct author list refutes")
@@ -1818,8 +1818,8 @@ def tier4h_extraction_furniture() -> None:
     A running head spans both columns, so the column gap is not blank on its line, and `_gutter`
     weighs such lines as a *proportion* -- which means the same head passes on a full page and
     fails on a short one. A band found at 97% tolerance still contains lines that run into it, so
-    its midpoint cuts through a word. And a reference can wear a head's two disguises at once, a
-    wide justification gap and digits that `_head_norm` strips."""
+    its midpoint cuts through a word. And a reference can carry both of a running head's
+    signals at once, a wide justification gap and digits that `_head_norm` strips."""
     print("Tier 4h: page furniture, gutter placement and entry recovery (no network/DB)")
     import pdf_references as P
 
@@ -1884,7 +1884,7 @@ def tier4i_hanging_indent_author_first() -> None:
     """The unnumbered hanging-indent author-first bibliography: Elsevier's Harvard style, Springer's
     plainnat, ACM author-year. Five corpus papers lost their whole bibliography to it -- two read as
     no style at all and three as numeric on a handful of continuation lines that open with digits
-    -- and three more were quietly losing every entry the author-year gate could not match. The
+    -- and three more were silently losing every entry the author-year gate could not match. The
     hanging indent is the structural signal: an entry starts at the left edge, its continuations
     are indented. Driven through `extract_references` with `_pages` standing in for pdftotext, so
     the guard covers the column alignment, the style vote, the entry gate and the biography stop
@@ -2714,8 +2714,9 @@ def tier6_measured_values() -> None:
     C.eq(V._S2_TIMEOUT, 45.0,
          "REGRESSION GUARD: Semantic Scholar keeps its longer ceiling; a timeout claims nothing")
     C.eq(D._MAX_CANDIDATES, 20000,
-         "REGRESSION GUARD: the FTS ceiling stays off the row-order cliff -- at 50 it dropped 3 "
-         "corpus confirmations, one of them a record at row 2,507")
+         "REGRESSION GUARD: the FTS ceiling stays above the row depth where confirmations "
+         "are lost -- at 50 it dropped 3 corpus confirmations, one of them a record at "
+         "row 2,507")
     C.true(D._author_matches("O\u2019Donoghue, P.", "Paul O'Donoghue"),
            "a curly apostrophe and a straight one are one surname")
     C.true(D._author_matches("P. ODonoghue", "Paul O'Donoghue"),
@@ -3027,7 +3028,7 @@ def tier6e_dblp_ingest() -> None:
     ingest that cannot resolve the dump's own character entities drops every author whose name
     carries a diacritic, which makes the mirror disagree with correctly cited references; and one
     that splices UTF-8 into a document declaring ISO-8859-1 turns "Jürgen" into "JÃ¼rgen", which is
-    the same failure wearing a different mask. The dump is 4.5 GB, so both are guarded here on
+    the same failure in a different form. The dump is 4.5 GB, so both are guarded here on
     twenty lines of it."""
     print("Tier 6e: hallucite's own DBLP ingest (no network)")
     import build_dblp

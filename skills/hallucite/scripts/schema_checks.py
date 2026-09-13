@@ -1,7 +1,7 @@
 """schema_checks.py - hallucite schema rules consumed by lint_markdown.py.
 
 One check, against the skill manifest `SKILL.md`: the agentskills.io frontmatter
-constraint PyMarkdown does not know about - the `name` field must be present,
+constraint PyMarkdown does not know about -- the `name` field must be present,
 <=64 chars, lowercase letters/digits/hyphens (no leading, trailing, or doubled
 hyphen), and must match the skill's directory name.
 

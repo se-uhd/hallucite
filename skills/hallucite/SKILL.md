@@ -27,7 +27,7 @@ This skill exists to catch fabricated references; it must never produce one. A h
 verdict is a serious accusation against named authors, so every claim you make must trace to real
 tool output, not to your own reading of a `.bib`/`.bbl`/PDF.
 
-- **No script output ⇒ no verdict.** A reference may be called real, partial-match,
+- **No script output, no verdict.** A reference may be called real, partial-match,
   likely-hallucinated, or unclear **only** on the basis of (a) a Stage 1+2 `db_verification` record
   the audit actually wrote, or (b) Stage 3 web-search evidence you actually gathered. Eyeballing a
   bibliography is not a verification method and never yields a verdict.
@@ -39,8 +39,8 @@ tool output, not to your own reading of a `.bib`/`.bbl`/PDF.
 - **A paper that yields 0 references was not checked.** The audit still exits 0 and warns, so read
   the warning: `section_found: false` or 0 references on a paper that visibly has a bibliography is
   an extraction failure (an unrecognized heading or layout), never "this paper has no references"
-  and never a clean bill of health. Say so plainly, and fix the extraction rather than reading the
-  bibliography yourself -- a hand-read yields no verdict, whatever the tool is doing.
+  and never a statement that its references are sound. Say so plainly, and fix the extraction rather than reading the
+  bibliography yourself -- reading it by hand yields no verdict, whatever the tool is doing.
 - If commands start erroring or returning empty output, **halt and say so.** Do not begin
   assembling findings from memory or from the source files while the pipeline is broken.
 
