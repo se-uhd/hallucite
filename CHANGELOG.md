@@ -6,26 +6,55 @@ All notable changes to hallucite are documented here. The format follows
 
 ## [Unreleased]
 
+### Removed
+
+- **Three measurement scripts whose job was done, and the last import of the AGPL package with
+  them.** `measure/head_to_head.py` scored hallucite's parser and DBLP path against the external
+  verifier it replaced; the cutover shipped in 2.0.0 and the comparison is recorded there, and the
+  script was the last file importing `hallucinator`. Nothing does now. `measure/
+  residue_evidence.py` was the measurement tool for the evidence that every triage worklist entry
+  now carries as `skipped_dbs`, `dblp_nearest` and `identifiers`. `measure/extraction_census.py`
+  and its `census.json` held the same five numbers per corpus paper as the committed
+  `tests/fixtures/corpus/EXPECTED.tsv`, which CI checks and which `make_corpus_fixtures.py` refuses
+  to write unless the real paper agrees. Gone with them from `~/hallucite/`: the previous offline
+  recording, kept after the mirror rebuild although its three-move diff was already in this file,
+  and the online run's log.
+
 ### Changed
 
-- **The offline anchor is re-recorded against a rebuilt mirror, and a rebuild is now a measured
-  operation.** `build-dblp` ran against the 2026-09-12 dump: 8,732,550 publications and 4,301,275
-  authors, 246,600 of them with a non-ASCII name, against 8,720,206, 4,295,062 and 246,351 in the
-  mirror it replaced, which is kept as `dblp.db.previous`. Before anything else was touched, the
-  old recording was replayed against the new mirror and the corpus audited offline against both.
-  Both corruption harness sets come back byte-identical, so the rules are unchanged by the data.
-  Exactly three references move, all `not_found` to `verified`, and all three are August-2026
-  arXiv preprints DBLP indexed between the two dumps; two are cited as conference papers whose
-  published records DBLP does not hold yet, so they land on the CoRR record, which is the
-  published-first rule with no published record to prefer. Four already-verified references change
-  only their reported byline, because DBLP added a homonym suffix to an author on their record
-  ("Rishabh Singh" became "Rishabh Singh 0001"), with the record key and the status untouched --
-  the name matcher ignoring the suffix as it should. Nothing else moves. `cases-hallucite.json` is
-  then re-recorded offline at v2.0.1 (63 s; 2857 cases, 2109 verified through the mirror, 702
-  `not_found`, 46 `mismatch`) and replays against itself with no parse difference and no move; the
-  recording it replaces is kept beside it as `cases-hallucite-2026-09-11-mirror-09-10.json`.
-  `cases-online.json` is not re-recorded -- that is a network run -- so a replay of it will show
-  the same three references as moves until it is.
+- **The remaining measurement tools and their files are named for what they are.**
+  `characterize.py` is `verification_results.py`, and the three files it records and replays are
+  `verification-results-offline.json`, `verification-results-online.json` and
+  `verification-results-hallucinator.json`: hallucite's result for every corpus reference with the
+  mirror only, with every backend, and the old external tool's result, frozen, which nothing reads
+  and which is kept as the black-box recording the modules were written against. `corruptions.py`
+  is `fabricated_citations.py`, and `corruptions.json` and `corruptions-truncated.json` are one
+  file, `fabricated-citations.json`: real citations and fabricated variants of them, three sets
+  with their seeds, which scores byte-identically to the two files it replaces. The corpus
+  manifest is `MANIFEST.csv`; nothing reads it, and TSV only avoided quoting three titles.
+
+- **The mirror is rebuilt from the 2026-09-12 dump, and the rebuild was measured before anything
+  depended on it.** 8,732,550 publications and 4,301,275 authors, 246,600 of them with a non-ASCII
+  name, against 8,720,206, 4,295,062 and 246,351 in the mirror it replaced. The fabricated-citation
+  set scores byte-identically, so the rules are unchanged by the data. Replaying the old results
+  file against the new mirror moves exactly three references, all `not_found` to `verified`, and
+  all three are August-2026 arXiv preprints DBLP indexed between the two dumps; two are cited as
+  conference papers whose published records DBLP does not hold yet, so they land on the CoRR
+  record. Four already-verified references change only their reported byline, because DBLP added a
+  homonym suffix to an author on their record ("Rishabh Singh" became "Rishabh Singh 0001"), with
+  the record key and the status untouched. Nothing else moves. `verification-results-offline.json`
+  is re-recorded offline at v2.0.1 (63 s; 2857 cases, 2109 verified through the mirror, 702
+  `not_found`, 46 `mismatch`) and replays against itself with no parse difference and no move.
+  `verification-results-online.json` is not re-recorded, since that is a network run, so a replay
+  of it will show those three references as moves until it is.
+
+### Fixed
+
+- `characterize.py record --help` crashed inside argparse with `%o format: an integer is
+  required`, because the `--offline` help text carried a bare `91.5%` and argparse formats help
+  strings with `%`. Escaped, and the smoke suite now runs `--help` on every argparse entry point
+  and subcommand in the repo and requires a usage line and a zero exit, so the next one cannot
+  ship.
 
 ## [2.0.1] - 2026-09-13
 
@@ -50,13 +79,13 @@ All notable changes to hallucite are documented here. The format follows
   not reach `books/sp/02/Boehm02a` ("Software Engineering Economics (Reprint).") at all. It is a
   candidate now, though still not the record shown: the ICSE 2002 tutorial of that title carries
   the cited year too, and the citation prints no DOI, page range or volume, so row order decides.
-  Both corruption harness sets come back identical and the offline anchor replays with no parse
-  difference and no status move, so the widening costs nothing.
+  Both fabricated-citation sets come back identical and the offline results file replays with no
+  parse difference and no status move, so the widening costs nothing.
 
 - **`fetch-dblp-dump` no longer overwrites the dump you have before checking what arrived.** It saved
   the download straight over `~/hallucite/dblp.xml.gz` and read the gzip magic afterwards, so the
-  one failure the script exists to catch -- dblp.org's proof-of-work challenge page saved under a
-  `.gz` name -- destroyed a working 1 GB dump on its way to reporting itself. It downloads to a
+  failure the script exists to catch -- dblp.org's proof-of-work challenge page saved under a
+  `.gz` name -- overwrote a working 1 GB dump before it was detected. It downloads to a
   `.part` file beside the destination and swaps only after the check, which is what `build-dblp`
   already does with the database it builds. Run as the shipped task for the first time rather than
   as a scratch equivalent: Playwright's bundled Chromium, headed, answers dblp.org's proof-of-work
@@ -71,13 +100,12 @@ All notable changes to hallucite are documented here. The format follows
   triage report's own output and in four docstrings, "quietly" where "silently" is meant, and
   figurative phrasing in assertion messages a reader only ever sees on a failure. The vendored
   tree, the three files synced with it, and the 55 generated corpus fixtures were excluded; the
-  fixtures' words are a same-length cipher, not prose. All 39 mutation entries still anchor after
-  the edits, which is the check that matters when a prose pass rewrites comments the runner keys
-  on.
+  fixtures' words are a same-length cipher, not prose. All 39 mutation entries are still found
+  after the edits, since a prose pass rewrites the comments the runner keys on.
 
 - `requirements.txt` still said `characterize.py record` needs `hallucinator` to make a new
-  recording. Nothing imports that package any more. The file now names the one dependency the repo
-  does have, Playwright, and the single task that wants it.
+  recording; it had not for a release. The file now names the one script that still imported it,
+  `measure/head_to_head.py`, and Playwright as the one task-level dependency.
 
 ### Removed
 

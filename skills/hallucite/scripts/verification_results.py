@@ -2,7 +2,7 @@
 
 Two recordings, and they answer different questions.
 
-`~/hallucite/cases.json` is the original anchor: what the external `hallucinator` package returned
+`~/hallucite/verdicts-hallucinator.json` is the original anchor: what the external `hallucinator` package returned
 for 2065 references, captured through its public API rather than by reading its source. That is
 the specification `reference_parser` and `verifier` were written against, and the boundary that
 keeps an AGPL package and an MIT repo apart. It is frozen, and `compare` still replays it.
@@ -12,8 +12,8 @@ characterised is the thing that runs, the recording stops being a specification 
 regression test: a difference is a change *this repo* made, and the question is whether it was
 meant.
 
-    characterize.py record <pdf-or-dir> --out cases.json [--offline]
-    characterize.py compare cases.json --impl <module>
+    characterize.py record <pdf-or-dir> --out verdicts.json [--offline]
+    characterize.py compare verdicts.json --impl <module>
 
 `--impl` names an importable module exposing `parse_reference(text, prev_authors)` and
 `check(refs)`. `compare` reports every parse field that differs, and for the verdicts a movement
@@ -262,14 +262,14 @@ def main() -> int:
 
     r = sub.add_parser("record", help="capture the current implementation's behaviour")
     r.add_argument("target", type=Path, help="a PDF file or a directory of them")
-    r.add_argument("--out", type=Path, default=Path("cases.json"))
+    r.add_argument("--out", type=Path, default=Path("verdicts.json"))
     r.add_argument("--dblp", default=DEFAULT_DBLP)
     r.add_argument("--mailto", default="")
     r.add_argument("--s2-api-key", default="",
                    help="Semantic Scholar API key ($S2_API_KEY). Without one the recording is "
                         "rate-limited into taking hours")
     r.add_argument("--offline", action="store_true",
-                   help="verify against the offline mirror only -- reproducible, and the 91.5% of "
+                   help="verify against the offline mirror only -- reproducible, and the 91.5%% of "
                         "confirmations it decides do not depend on anyone's rate limit")
     r.add_argument("--no-check", action="store_true", help="record the parse only")
 

@@ -292,6 +292,31 @@ def tier1c_codex_cli_marketplace() -> None:
                "codex plugin list shows hallucite@hallucite")
 
 
+def tier1d_help_answers() -> None:
+    """Every argparse entry point, and every subcommand, answers `--help` with a usage line and
+    exit 0. argparse formats help text with `%`, so a bare percent sign in a help string -- the
+    `91.5%` that `verification_results.py record` carried -- is a TypeError the moment anyone asks what
+    the command does. A script's help is the first thing a new user runs, and it must not be the
+    first thing that crashes. The list is explicit: a new entry point is added here by hand."""
+    print("Tier 1d: every entry point answers --help (no network/DB)")
+    entry_points = [
+        ("audit_references.py", []),
+        ("triage.py", ["worklist", "status", "record", "report"]),
+        ("verification_results.py", ["record", "compare"]),
+        ("build_dblp.py", []),
+        ("measure/fabricated_citations.py", ["build", "build-truncated", "score"]),
+    ]
+    for script, subs in entry_points:
+        for argv in [[]] + [[sub] for sub in subs]:
+            label = " ".join([script] + argv)
+            proc = subprocess.run([sys.executable, str(SCRIPTS / script)] + argv + ["--help"],
+                                  capture_output=True, text=True)
+            tail = proc.stderr.strip().splitlines()[-1][:80] if proc.stderr.strip() else ""
+            C.true(proc.returncode == 0 and "usage:" in proc.stdout,
+                   f"`{label} --help` answers with a usage line and exit 0"
+                   + ("" if proc.returncode == 0 else f" (exit {proc.returncode}: {tail})"))
+
+
 def tier1b_runner() -> None:
     """The run.sh bootstrap contract, without needing a network or a built venv: it must
     syntax-check, reject an unknown command, fail loud (sentinel + non-zero) on a Python that
@@ -3088,6 +3113,7 @@ def tier6e_dblp_ingest() -> None:
 def main() -> int:
     tier1_packaging()
     tier1b_runner()
+    tier1d_help_answers()
     tier1c_codex_cli_marketplace()
     tier3_logic()
     tier3d_duplicate_entries()

@@ -41,6 +41,7 @@ D = SCRIPTS / "dblp_check.py"
 A = SCRIPTS / "audit_references.py"
 T = SCRIPTS / "triage.py"
 V = SCRIPTS / "verifier.py"
+VR = SCRIPTS / "verification_results.py"
 
 # (label, file, the text as fixed, the text reverted)
 MUTATIONS = [
@@ -145,6 +146,8 @@ MUTATIONS = [
      '        candidates = title_candidates(self.dblp_path, title, cited_years(raw), raw,\n'
      '                                      getattr(ref, "doi", None))',
      "        candidates = title_candidates(self.dblp_path, title, cited_years(raw))"),
+    ("verification_results: a bare percent sign in argparse help text", VR,
+     "reproducible, and the 91.5%% of ", "reproducible, and the 91.5% of "),
     ("triage: authors_absent is not read off the matched record", T,
      '    return absent_authors((ref.get("parsed") or {}).get("authors") or [], dv["found_authors"])',
      '    return []'),

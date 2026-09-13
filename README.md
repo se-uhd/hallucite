@@ -242,19 +242,18 @@ python skills/hallucite/scripts/tests/run_smoke.py
 Measuring a change to extraction or verification, all offline (`measure/` in the same directory):
 
 ```bash
-python skills/hallucite/scripts/measure/extraction_census.py ~/hallucite/corpus --out ~/hallucite/census.json
-python skills/hallucite/scripts/measure/corruptions.py score ~/hallucite/corruptions.json
-python skills/hallucite/scripts/measure/head_to_head.py run --source corpus --refs refs.json out.json
+python skills/hallucite/scripts/verification_results.py compare ~/hallucite/verification-results-offline.json --impl verifier
+python skills/hallucite/scripts/measure/fabricated_citations.py score ~/hallucite/fabricated-citations.json
 python skills/hallucite/scripts/measure/mutations.py
 ```
 
-The corruption harness has to come back unchanged from any change to the author or title rules.
-It is three sets across two files: 250 records with titles of three or more tokens and 250 with
-two-token titles in `corruptions.json`, and 90 records carrying an `et al.` row in
-`corruptions-truncated.json`. Correct citations confirm; one, two or three invented names appended
-confirm 0. Score the built sets, never rebuild them, because a rebuild on a newer dump samples
-different records. `head_to_head.py run` needs `uv pip install hallucinator` and nothing else in
-the repo does.
+The fabricated-citation set has to come back unchanged from any change to the author or title rules.
+It is three sets in one file: 250 real records with titles of three or more words and 250 with
+two-word titles, and 90 whose DBLP row carries an `et al.` marker, each cited correctly and then
+with known fabrications. Correct citations confirm; one, two or three invented names appended
+confirm 0. Score the built file, never rebuild it, because a rebuild on a newer dump samples
+different records. The offline results file is what a code change is diffed against; a change
+that moves no verdict replays with no status move.
 
 A dependency-light smoke suite, also run in CI by `.github/workflows/smoke.yml`: version and
 Claude/Codex packaging consistency, the `run.sh` bootstrap contract, an optional Codex CLI

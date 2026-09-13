@@ -1,4 +1,4 @@
-"""The corruption harness: real DBLP records cited correctly, then corrupted, scored through
+"""The fabricated-citation set: real DBLP records cited correctly, then corrupted, scored through
 `Verifier.check` with the online backends disabled.
 
 The truth is known by construction. A record cited under its own title and authors must confirm;
@@ -18,9 +18,9 @@ names per setting reports holes that are not there.
 * `truncated_records` (a separate file): records whose byline DBLP cut short with an `et al.` row,
   the population the lenient author tier decides about.
 
-    corruptions.py build            [--out ~/hallucite/corruptions.json]
-    corruptions.py build-truncated  [--out ~/hallucite/corruptions-truncated.json]
-    corruptions.py score FILE [--scripts DIR] [--label NAME]
+    fabricated citations.py build            [--out ~/hallucite/fabricated citations.json]
+    fabricated citations.py build-truncated  [--out ~/hallucite/fabricated citations-truncated.json]
+    fabricated citations.py score FILE [--scripts DIR] [--label NAME]
 
 The record keys are those of the mirror the set was built from; a rebuild on a newer dump samples
 different records, so keep the built file with the other anchors in `~/hallucite/` and score
@@ -42,8 +42,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 DEFAULT_SCRIPTS = HERE.parent
 DEFAULT_DBLP = os.environ.get("HALLUCITE_DBLP", os.path.expanduser("~/hallucite/dblp.db"))
-DEFAULT_OUT = os.path.expanduser("~/hallucite/corruptions.json")
-DEFAULT_TRUNCATED_OUT = os.path.expanduser("~/hallucite/corruptions-truncated.json")
+DEFAULT_OUT = os.path.expanduser("~/hallucite/fabricated-citations.json")
 ONLINE = ("CrossRef", "DOI", "arXiv", "Semantic Scholar")
 SEED = 20260911
 TRUNCATED_SEED = 20260912
@@ -134,9 +133,10 @@ def build(a) -> int:
     fold = s.D._fold
     long = s.sample(250, lambda t: len(_tokens(t, fold)) >= 3)
     two = s.sample(250, lambda t: len(_tokens(t, fold)) == 2)
-    data = {"seed": SEED, "sets": {
+    data = {"seeds": {}, "sets": {
         "three_plus_tokens": [{"record": r, "variants": s.corrupt(r)} for r in long],
         "two_tokens": [{"record": r, "variants": s.corrupt(r)} for r in two]}}
+    data["seeds"] = {name: SEED for name in data["sets"]}
     json.dump(data, open(a.out, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
     print(f"built {len(long)} + {len(two)} records -> {a.out}")
     return 0
@@ -169,8 +169,11 @@ def build_truncated(a) -> int:
             "first_swapped": {"title": title, "authors": [invented[0]] + people[1:3]}}})
         if len(out) >= a.count:
             break
-    json.dump({"seed": TRUNCATED_SEED, "sets": {"truncated_records": out}},
-              open(a.out, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
+    # Added to the same file as the other sets, so one file holds every set and its seed.
+    data = json.load(open(a.out, encoding="utf-8")) if os.path.exists(a.out) else {"seeds": {}, "sets": {}}
+    data["sets"]["truncated_records"] = out
+    data["seeds"]["truncated_records"] = TRUNCATED_SEED
+    json.dump(data, open(a.out, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
     print(f"built {len(out)} truncated records (of {len(pids)} in the mirror) -> {a.out}")
     return 0
 
@@ -218,7 +221,7 @@ def main() -> int:
     b.add_argument("--out", default=DEFAULT_OUT)
     b.set_defaults(func=build)
     t = sub.add_parser("build-truncated", help="sample records DBLP truncated with an et al. row")
-    t.add_argument("--out", default=DEFAULT_TRUNCATED_OUT)
+    t.add_argument("--out", default=DEFAULT_OUT)
     t.add_argument("--count", type=int, default=100)
     t.set_defaults(func=build_truncated)
     s = sub.add_parser("score", help="score an implementation against a built set")

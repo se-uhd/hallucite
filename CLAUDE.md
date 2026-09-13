@@ -13,13 +13,10 @@ Extraction, parsing, verification and the DBLP ingest are all hallucite's own an
 standard library: `pdf_references.py`, `reference_parser.py`, `verifier.py`, `dblp_check.py`,
 `build_dblp.py`. One outside program is required and is not a Python package: `pdf_references.py`
 shells out to `pdftotext -layout` (poppler), and without it extraction cannot run at all.
-`VERIFICATION-SPEC.md` is the contract the parse and check halves meet, and `characterize.py` holds
-them to a recording of the external `hallucinator` package they replaced. That package is
-AGPL-3.0-or-later and this repo is MIT; it is no longer a dependency of anything the audit runs, and
-no code was copied across -- the modules were written against a black-box recording. One file still
-imports it and none of it is on the audit path: `measure/head_to_head.py run` needs the package for
-the old half of its comparison. `characterize.py record` no longer does, and makes a new recording
-from hallucite's own modules.
+`VERIFICATION-SPEC.md` is the contract the parse and check halves meet. The modules replaced the
+external `hallucinator` package, which is AGPL-3.0-or-later where this repo is MIT; nothing imports
+it, and no code was copied across -- they were written against a black-box recording of it, kept
+as `~/hallucite/verification-results-hallucinator.json`.
 
 One repo, two roles: it is the runnable project (mise tasks) and an installable plugin for Claude
 Code and Codex CLI. Claude Code uses `.claude-plugin/plugin.json` plus
@@ -36,12 +33,11 @@ its contents constantly:
 |---|---|
 | `dblp.db` | the offline mirror, ~3.5 GB, rebuilt from the dump; `$HALLUCITE_DBLP` overrides |
 | `dblp.xml.gz` | the DBLP dump `build-dblp` ingests |
-| `corpus/` | the 55 measurement papers, with `MANIFEST.tsv` (`file`, `venue_note`, `title`) |
-| `census.json` | the extraction baseline `extraction_census.py --baseline` diffs against |
-| `corruptions.json`, `corruptions-truncated.json` | the built corruption sets: scored, never rebuilt |
-| `cases.json` | frozen: what `hallucinator` returned for the 41-paper corpus |
-| `cases-hallucite.json` | the offline regression anchor, replayed by `characterize.py compare` |
-| `cases-online.json` | the four online backends, recorded once |
+| `corpus/` | the 55 measurement papers, with `MANIFEST.csv` (`file`, `venue_note`, `title`) |
+| `fabricated-citations.json` | real citations and fabricated variants of them, three sets: scored, never rebuilt |
+| `verification-results-hallucinator.json` | frozen; nothing reads it: what `hallucinator` returned for the 41-paper corpus |
+| `verification-results-offline.json` | hallucite's result for every corpus reference, mirror only; `verification_results.py compare` diffs against it |
+| `verification-results-online.json` | the same with every backend, recorded once |
 
 ## Running things
 
@@ -70,29 +66,28 @@ its contents constantly:
   that accented names survived. The audit reads the same property off whatever mirror it is handed
   and drops to the lenient author tier when the mirror cannot support an absence claim.
   `fetch-dblp-dump` gets the dump with a real browser when the bot check is up.
-- Measuring a change: `skills/hallucite/scripts/measure/`, and `characterize.py` beside it.
-  `extraction_census.py` tabulates what every corpus paper extracts and what moved against a
-  baseline; `corruptions.py` builds the corruption harness once and scores an implementation
-  against it; `head_to_head.py` scores the old and new parser and DBLP check over the recorded
-  cases or the corpus, offline by construction; `residue_evidence.py` reads an `--offline` audit's
-  output and prints, per residue reference, the backends never asked, the mirror's nearest title
-  ungated and gated, and (its one network step, DOI and arXiv only, a few hundred requests) what
-  each cited identifier resolves to. `--scripts DIR` on the scorers imports a snapshot of the
-  modules, so a before-and-after needs no stash. The built harness sets are scored, never rebuilt,
-  because a rebuild on a newer dump samples different records.
+- Measuring a change. `measure/fabricated_citations.py score` runs the verifier over the fabricated
+  set and must come back unchanged from any change to the title or author rules; `--scripts DIR`
+  imports a snapshot of the modules, so a before-and-after needs no stash. The built set is scored,
+  never rebuilt, because a rebuild on a newer dump samples different records. A change to
+  extraction is checked by `tests/fixtures/make_corpus_fixtures.py`, which refuses to write a
+  fixture whose extraction differs from the real paper's, and by smoke tier 4j over the committed
+  fixtures.
 
-  The three recordings answer different questions. `cases.json` is the specification the modules
-  were written against and stays frozen. `cases-hallucite.json` is the regression anchor:
-  `characterize.py compare ~/hallucite/cases-hallucite.json --impl verifier` replays it offline in
-  about a minute and reports a parse difference and any reference crossing the verified line, and
-  nothing else -- `paper_url` is recorded but never compared, and the replay hands `check` the
-  parsed fields without the raw citation, so nothing that reads the entry's text runs. A change to
-  the record shown is therefore confirmed by an `--offline` audit of the corpus before and after,
-  diffed per reference, and the anchor is re-recorded offline after a change meant to move a
-  verdict. `cases-online.json` anchors CrossRef, the DOI resolver and arXiv, whose statuses replay
-  identically, and is only a record of one afternoon's Semantic Scholar, which refused 458 of the
-  583 references it was asked about even with a key; re-recording it is a corpus replay of about
-  100 minutes, done with `--mailto`, on a day the quota is fresh, and never twice in an afternoon.
+  The three recordings answer different questions. `verification-results-hallucinator.json` is the
+  specification the modules were written against and stays frozen.
+  `verification-results-offline.json` is what a code change is diffed against:
+  `verification_results.py compare ~/hallucite/verification-results-offline.json --impl verifier`
+  replays it offline in about a minute and reports a parse difference and any reference crossing the
+  verified line, and nothing else -- `paper_url` is recorded but never compared, and the replay
+  hands `check` the parsed fields without the raw citation, so nothing that reads the entry's text
+  runs. A change to the record shown is therefore confirmed by an `--offline` audit of the corpus
+  before and after, diffed per reference, and the file is re-recorded offline after a change meant
+  to move a verdict. `verification-results-online.json` covers CrossRef, the DOI resolver and arXiv,
+  whose statuses replay identically, and is only a record of one afternoon's Semantic Scholar, which
+  refused 458 of the 583 references it was asked about even with a key; re-recording it is a corpus
+  replay of about 100 minutes, done with `--mailto`, on a day the quota is fresh, and never twice in
+  an afternoon.
 
   `mutations.py` reverts one fix at a time and requires the suite to fail, and does so in the
   working tree, which it owns until it finishes: no other measurement, and no edit to any tracked
@@ -194,7 +189,8 @@ its contents constantly:
   names that never appear (`DEFAULT_ONLINE_DBS`); `--offline` runs warn about live backends that are
   not known-local (`KNOWN_LOCAL_DBS`). A silent name mismatch is what caused both the `mismatch` and
   the `DOI Resolver` bugs. `VERIFICATION-SPEC.md` states the vocabulary a verifier has to emit;
-  `characterize.py` records the current behaviour on real references and holds a replacement to it.
+  `verification_results.py` records the current behaviour on real references and holds a replacement
+  to it.
 
 - Prefer a check the input already supports over one you have to tune. A numbered bibliography
   numbers itself consecutively, so a printed `[N]` that no extracted reference carries is one that
@@ -245,7 +241,7 @@ its contents constantly:
   seen. Two things to get right when it grows. Check for a duplicate arXiv id across venue labels
   before adding -- `2608.27125` arrived twice, as `fse-` and `emse-`, because its comments name
   both, and one paper under two labels double-counts its references in every measurement. And
-  record each paper in `~/hallucite/corpus/MANIFEST.tsv` (`file`, `venue_note`, `title`) as it is
+  record each paper in `~/hallucite/corpus/MANIFEST.csv` (`file`, `venue_note`, `title`) as it is
   pulled; three ICSE papers sat on disk unrecorded for weeks. At this size one bibliography still
   moves a measurement, so re-run whatever a change touches over the whole corpus rather than the
   part that was convenient, and add a synthetic fixture for the new shape
@@ -257,12 +253,12 @@ its contents constantly:
   its merits: it is what showed the new parser at 1480 confirmations against 1399 for the recorded
   one, and what identified the three references where the recording was right.
 
-- Measure precision on corruptions built from real records, not on hand-picked cases. Take a
-  sample of DBLP publications, cite them correctly, then cite them again with an author appended,
+- Measure precision on fabricated citations built from real records, not on hand-picked cases. Take
+  a sample of DBLP publications, cite them correctly, then cite them again with an author appended,
   an author swapped, a title word changed, a given initial contradicted -- the truth is known by
-  construction, so a rule's cost and its benefit come from the same run. That harness is what
-  caught the phantom-author hole (250 of 250 padded citations confirmed) and what stopped two
-  later loosenings that looked like recall wins.
+  construction, so a rule's cost and its benefit come from the same run. That harness is what caught
+  the phantom-author hole (250 of 250 padded citations confirmed) and what stopped two later
+  loosenings that looked like recall wins.
 
 - Build the harness from the population the change touches, not from the population that is
   convenient. The 250-record corruption harness samples titles of three or more tokens, so it could
@@ -284,20 +280,20 @@ its contents constantly:
   ladder and about a second without it, and capping the asking instead cost five confirmations no
   other backend reaches.
 
-- Keep a measurement off the network. It is the same rule for a run and for an anchor. Re-running
-  the whole corpus online to see the effect of one rule exhausted the Semantic Scholar quota in an
-  afternoon and made the run that mattered unusable -- 334 refusals against 6 answers, which says
-  nothing about the code -- where asking the 49 references that actually moved took four minutes
-  and settled it. An anchor recorded across the network likewise bakes in whoever's rate limit was
-  in force that afternoon, where `--offline` is reproducible, takes half a minute, and covers the
-  91.5% of confirmations the mirror decides.
+- Keep a measurement off the network. It is the same rule for a run and for a results file.
+  Re-running the whole corpus online to see the effect of one rule exhausted the Semantic Scholar
+  quota in an afternoon and made the run that mattered unusable -- 334 refusals against 6 answers,
+  which says nothing about the code -- where asking the 49 references that actually moved took four
+  minutes and settled it. A results file recorded across the network likewise bakes in whoever's
+  rate limit was in force that afternoon, where `--offline` is reproducible, takes half a minute,
+  and covers the 91.5% of confirmations the mirror decides.
 
 - A guard has to be able to fail. Two ways one cannot: asserting a helper the pipeline is free to
   ignore, and pinning a constant by reading it back from the module. `_longest_blank_run` and
   `_page_furniture` were asserted directly while `_gutter` and `_linearize` could ignore them, so
   reverting either extraction fix left the suite green; and `C.eq(x, MODULE.THE_CONSTANT)` passes
-  whichever value the constant holds, guarding the shape and not the finding, when the value is the
-  whole point of the measurement. A mutation run found seven fixes revertible with the tests still
+  whichever value the constant holds, guarding the shape and not the finding, when the value is what
+  was measured. A mutation run found seven fixes revertible with the tests still
   passing, one of them the fix that release had just announced. Assert through the function the
   pipeline calls, pin the number as a literal, and re-run `measure/mutations.py` after adding a
   fix: every entry must fail.

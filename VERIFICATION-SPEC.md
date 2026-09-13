@@ -4,7 +4,7 @@ What hallucite needs from a reference verifier, written as a contract rather tha
 of any particular implementation. It exists so the verifier can be replaced without changing the
 audit, the triage rules, or the reports.
 
-`skills/hallucite/scripts/characterize.py` records these operations on real references and holds a
+`skills/hallucite/scripts/verification_results.py` records these operations on real references and holds a
 candidate implementation to the recording, so this document and the differential test stay in step.
 
 ## Surface
@@ -160,7 +160,7 @@ are what the audit depends on:
 
 ## Coverage, for sizing an implementation
 
-Which backend actually decides a verdict, over the 1669 confirmations `characterize.py` records
+Which backend actually decides a verdict, over the 1669 confirmations `verification_results.py` records
 across the 41-paper corpus, against a mirror whose accented authors survived its ingest and with an
 authenticated Semantic Scholar:
 

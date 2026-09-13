@@ -2,7 +2,7 @@
 
 hallucite reads and segments the bibliography itself (`pdf_references.py`); this module takes one
 finished entry and reads its fields. `VERIFICATION-SPEC.md` states what it has to get right, and
-`characterize.py` holds it to real references.
+`verification_results.py` holds it to real references.
 
 The corpus styles it has to cover, and how each is recognised:
 
