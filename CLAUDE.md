@@ -169,7 +169,7 @@ change to `SKILL.md` and to those tests together. Do not restate it here.
 - Several widenings of name and title matching were measured and rejected -- name forms beyond the
   umlaut transliteration, `_MIN_TOKENS` at 2, a `?` as a subtitle mark, a book-before-article
   record key -- and the 2.0.0 entry lists each with its numbers. Read that list before widening
-  either, and measure the widening on both corruption sets before it ships.
+  either, and measure the widening on every fabricated-citation set before it ships.
 
 ### Measuring a change, and guarding it
 
@@ -213,7 +213,7 @@ change to `SKILL.md` and to those tests together. Do not restate it here.
   loosenings that looked like recall wins.
 
 - Build the harness from the population the change touches, not from the population that is
-  convenient. The 250-record corruption harness samples titles of three or more tokens, so it could
+  convenient. The 250-record fabricated-citation set samples titles of three or more tokens, so it could
   not see a `_MIN_TOKENS` of 2 at all (it stayed at 3; the measurement is under 2.0.0); a second
   sample of two-token titles showed three padded citations confirmed, every one through a record
   carrying an `et al.` row, and a third sample of such truncated records showed the lenient tier

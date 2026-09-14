@@ -281,7 +281,7 @@ def main() -> int:
         (out / "EXPECTED.tsv").write_text(
             "# paper\tstyle\treferences\tunparsed\tmissing_numbers\n"
             "# Written from the REAL papers, not from the fixtures, so the committed net is\n"
-            "# anchored to what the corpus actually extracts. Regenerate with this script.\n"
+            "# tied to what the corpus actually extracts. Regenerate with this script.\n"
             + "\n".join(expected) + "\n", encoding="utf-8")
     print(f"\n{ok} reproduced, {bad} failed")
     return 1 if bad else 0

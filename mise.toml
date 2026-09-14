@@ -19,7 +19,7 @@
 
 [tools]
 # The pipeline is standard library only and runs on 3.10 or newer; the pin just keeps a dev clone
-# on one version, and matches what the recording in ~/hallucite/verdicts-hallucinator.json was made under.
+# on one version, and matches what the recording in ~/hallucite/verification-results-hallucinator.json was made under.
 python = "3.12"
 uv = "latest"
 

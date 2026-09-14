@@ -23,7 +23,7 @@ names per setting reports holes that are not there.
     fabricated citations.py score FILE [--scripts DIR] [--label NAME]
 
 The record keys are those of the mirror the set was built from; a rebuild on a newer dump samples
-different records, so keep the built file with the other anchors in `~/hallucite/` and score
+different records, so keep the built file with the results files in `~/hallucite/` and score
 against it rather than rebuilding.
 """
 

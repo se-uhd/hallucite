@@ -2,7 +2,7 @@
 
 Two recordings, and they answer different questions.
 
-`~/hallucite/verdicts-hallucinator.json` is the original anchor: what the external `hallucinator` package returned
+`~/hallucite/verification-results-hallucinator.json` is the original recording: what the external `hallucinator` package returned
 for 2065 references, captured through its public API rather than by reading its source. That is
 the specification `reference_parser` and `verifier` were written against, and the boundary that
 keeps an AGPL package and an MIT repo apart. It is frozen, and `compare` still replays it.
@@ -12,8 +12,8 @@ characterised is the thing that runs, the recording stops being a specification 
 regression test: a difference is a change *this repo* made, and the question is whether it was
 meant.
 
-    characterize.py record <pdf-or-dir> --out verdicts.json [--offline]
-    characterize.py compare verdicts.json --impl <module>
+    verification_results.py record <pdf-or-dir> --out verification-results.json [--offline]
+    verification_results.py compare verification-results.json --impl <module>
 
 `--impl` names an importable module exposing `parse_reference(text, prev_authors)` and
 `check(refs)`. `compare` reports every parse field that differs, and for the verdicts a movement
@@ -83,7 +83,7 @@ def record(target: Path, out: Path, dblp: str, mailto: str, offline: bool, check
         # Without a key Semantic Scholar rate-limits the residue hard, and the residue is most of
         # the wall clock: a 41-paper recording runs for hours and the references it is slowest
         # about are exactly the ones a replacement most needs a verdict for. An offline recording
-        # has neither problem, and being reproducible is most of what an anchor is for.
+        # has neither problem, and being reproducible is most of what a results file is for.
         if not offline and not s2_key:
             print("note: no Semantic Scholar API key (--s2-api-key or $S2_API_KEY). "
                   "Unauthenticated callers are rate-limited, and this recording will take hours "
@@ -110,7 +110,7 @@ def record(target: Path, out: Path, dblp: str, mailto: str, offline: bool, check
     out.write_text(json.dumps({
         "schema": SCHEMA,
         # What made this recording, so two of them can never be mistaken for each other: the
-        # hallucinator anchor says what the modules were written against, and this one says what
+        # hallucinator recording says what the modules were written against, and this one says what
         # they currently do.
         "recorded_by": "hallucite (reference_parser + verifier)",
         "mode": "parse-only" if not check else ("offline" if offline else "all backends"),
@@ -262,7 +262,7 @@ def main() -> int:
 
     r = sub.add_parser("record", help="capture the current implementation's behaviour")
     r.add_argument("target", type=Path, help="a PDF file or a directory of them")
-    r.add_argument("--out", type=Path, default=Path("verdicts.json"))
+    r.add_argument("--out", type=Path, default=Path("verification-results.json"))
     r.add_argument("--dblp", default=DEFAULT_DBLP)
     r.add_argument("--mailto", default="")
     r.add_argument("--s2-api-key", default="",

@@ -926,7 +926,7 @@ def tier3i_dblp_author_encoding() -> None:
              "a missing database has no publication count")
 
 
-def tier3j_residue_evidence() -> None:
+def tier3j_triage_evidence() -> None:
     """Three things the audit knew about an unverified reference and threw away before they reached
     a human: which backends were never asked (123 of the 788 corpus residue references had never
     been put to the mirror, and read as a clean `not_found`), what a cited identifier resolved to
@@ -2754,7 +2754,7 @@ def tier6_measured_values() -> None:
            "REGRESSION GUARD: an eszett a PDF renders as a capital B is read as one")
     C.true(D.authors_match(["Stefan Buettcher"], ["Stefan B\u00fcttcher"]),
            "REGRESSION GUARD: the German transliteration of an umlaut pairs with the letter -- "
-           "two corpus references, and the corruption harness unchanged")
+           "two corpus references, and the fabricated-citation set unchanged")
     C.true(D.authors_match(["Juergens, E."], ["Elmar J\u00fcrgens"]),
            "in either author order")
     C.true(not D.authors_match(["Miguel Roe"], ["Migul Roe"]),
@@ -3122,7 +3122,7 @@ def main() -> int:
     tier3b_triage_concurrency()
     tier3c_title_first_gate()
     tier3g_stale_verdicts()
-    tier3j_residue_evidence()
+    tier3j_triage_evidence()
     tier3k_authors_absent()
     tier3h_author_absence()
     tier3i_dblp_author_encoding()
