@@ -1,6 +1,6 @@
 # paper	style	references	unparsed	missing_numbers
 # Written from the REAL papers, not from the fixtures, so the committed net is
-# anchored to what the corpus actually extracts. Regenerate with this script.
+# tied to what the corpus actually extracts. Regenerate with this script.
 ase-2608.28364v1	bracket-numeric	55	0	
 ase-2609.00568v1	bracket-numeric	16	0	
 ase-2609.01669v1	bracket-numeric	31	0	

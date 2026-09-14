@@ -11,9 +11,10 @@ All notable changes to hallucite are documented here. The format follows
 - **Three measurement scripts whose job was done, and the last import of the AGPL package with
   them.** `measure/head_to_head.py` scored hallucite's parser and DBLP path against the external
   verifier it replaced; the cutover shipped in 2.0.0 and the comparison is recorded there, and the
-  script was the last file importing `hallucinator`. Nothing does now. `measure/
-  residue_evidence.py` was the measurement tool for the evidence that every triage worklist entry
-  now carries as `skipped_dbs`, `dblp_nearest` and `identifiers`. `measure/extraction_census.py`
+  script was the last file importing `hallucinator`. Nothing does now.
+  `measure/residue_evidence.py` was the measurement tool for the evidence that every triage
+  worklist entry now carries as `skipped_dbs`, `dblp_nearest` and `identifiers`.
+  `measure/extraction_census.py`
   and its `census.json` held the same five numbers per corpus paper as the committed
   `tests/fixtures/corpus/EXPECTED.tsv`, which CI checks and which `make_corpus_fixtures.py` refuses
   to write unless the real paper agrees. Gone with them from `~/hallucite/`: the previous offline
