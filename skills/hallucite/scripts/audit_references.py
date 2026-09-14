@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Stages 1+2 of the hallucinated-reference audit: extract references from paper
 PDF files and verify them against academic databases (offline DBLP + CrossRef/
-arXiv/Semantic Scholar/...), with no LLM involvement.
+arXiv/OpenAlex/Semantic Scholar/...), with no LLM involvement.
 
 Reference extraction is `lineno`-aware (see pdf_references.py); each extracted
 reference is parsed by `reference_parser` and verified by `verifier`, both of which implement
-`VERIFICATION-SPEC.md` against the offline DBLP mirror plus CrossRef, DOI resolution, arXiv
-and Semantic Scholar.
+`VERIFICATION-SPEC.md` against the offline DBLP mirror plus CrossRef, DOI resolution, arXiv,
+OpenAlex and Semantic Scholar.
 
 Writes one JSON record per paper to the output directory, plus a corpus-level
 summary.json. References the databases did not confirm (any status other than
@@ -23,6 +23,9 @@ Options:
     --mailto EMAIL      CrossRef polite-pool contact (optional; recommended for CrossRef)
     --s2-api-key KEY    Semantic Scholar key ($S2_API_KEY). Without one S2 rate-limits,
                         leaving references degraded and the worklist varying between runs
+    --openalex-api-key KEY
+                        OpenAlex key ($OPENALEX_API_KEY). Optional: without one OpenAlex
+                        answers a hundred searches a day, with a free one a thousand
     --offline           No network: disable the online database backends.
                         The offline DBLP mirror stays live.
     --disable-dbs LIST  Comma-separated DB names to disable
@@ -71,7 +74,7 @@ def _atomic_write(path: Path, text: str) -> None:
 # silently ignored, so a typo leaves that backend live in --offline mode (this is what let the
 # old "DOI Resolver" entry never disable the real "DOI" backend). The names below are validated
 # at run time against the db names actually seen (see main()); use --disable-dbs to add more.
-DEFAULT_ONLINE_DBS = ["CrossRef", "DOI", "arXiv", "Semantic Scholar"]
+DEFAULT_ONLINE_DBS = ["CrossRef", "DOI", "arXiv", "OpenAlex", "Semantic Scholar"]
 
 # The only backend that makes no network call, so the only one expected to appear in an --offline
 # run's db_results. Any other name there means an online backend survived the disable list -- the
@@ -289,9 +292,19 @@ def build_verifier(args) -> Verifier:
               "callers are rate-limited, which leaves references degraded and makes the worklist "
               "vary between runs. Free key: https://www.semanticscholar.org/product/api",
               file=sys.stderr)
+    # OpenAlex is asked with or without a key, and meters the day rather than the second: a
+    # hundred searches for an anonymous caller, a thousand under a free key. A paper's residue fits
+    # the first; a corpus does not, and the backend then reports the rest of the run as never
+    # asked, which the closing tally shows.
+    openalex_key = args.openalex_api_key or os.environ.get("OPENALEX_API_KEY", "")
+    if not openalex_key and not args.offline:
+        print("note: no OpenAlex API key (--openalex-api-key or $OPENALEX_API_KEY). Anonymous "
+              "callers get a hundred searches a day, a free key a thousand: "
+              "https://openalex.org/", file=sys.stderr)
     if args.disable_dbs:
         disabled += [d.strip() for d in args.disable_dbs.split(",") if d.strip()]
     return Verifier(dblp_path=dblp_path, mailto=args.mailto, s2_api_key=s2_key,
+                    openalex_api_key=openalex_key,
                     rate_limit_retries=(2 if args.rate_limit_retries is None
                                         else args.rate_limit_retries),
                     disabled_dbs=tuple(disabled))
@@ -606,6 +619,9 @@ def main() -> int:
                    help="Offline DBLP SQLite DB ($HALLUCITE_DBLP, else ~/hallucite/dblp.db)")
     p.add_argument("--out", default="out", help="Output directory")
     p.add_argument("--mailto", default="", help="CrossRef polite-pool contact (recommended)")
+    p.add_argument("--openalex-api-key", default="",
+                   help="OpenAlex API key ($OPENALEX_API_KEY). Optional: an anonymous caller gets "
+                        "a hundred searches a day, a free key a thousand")
     p.add_argument("--s2-api-key", default="",
                    help="Semantic Scholar API key ($S2_API_KEY). Without one S2 rate-limits and "
                         "its references stay degraded")

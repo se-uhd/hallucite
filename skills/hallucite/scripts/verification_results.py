@@ -79,7 +79,7 @@ def record(target: Path, out: Path, dblp: str, mailto: str, offline: bool, check
                           "raw_citation": e.raw_text, "parse": _parsed(e.reference)})
 
     if check and cases:
-        disabled = ("CrossRef", "DOI", "arXiv", "Semantic Scholar") if offline else ()
+        disabled = ("CrossRef", "DOI", "arXiv", "OpenAlex", "Semantic Scholar") if offline else ()
         # Without a key Semantic Scholar rate-limits the residue hard, and the residue is most of
         # the wall clock: a 41-paper recording runs for hours and the references it is slowest
         # about are exactly the ones a replacement most needs a verdict for. An offline recording
@@ -155,7 +155,7 @@ def _parse_diffs(cases: list[dict], impl) -> tuple[list[str], int]:
 
 # The backends an offline recording did not ask. Replaying one against a run that *does* ask them
 # compares two different questions and reports the difference as a regression.
-_ONLINE = ("CrossRef", "DOI", "arXiv", "Semantic Scholar")
+_ONLINE = ("CrossRef", "DOI", "arXiv", "OpenAlex", "Semantic Scholar")
 
 
 def _check_report(cases: list[dict], impl, limit: int | None,

@@ -10,7 +10,8 @@ Papers are identified by their id, the PDF file name (a file `paper1.pdf` has id
 
 1. Extract (`pdf_references.py`): pull every reference from a paper's PDF file.
 2. Verify (`audit_references.py`): check each against DBLP (local offline database), CrossRef,
-   DOI resolution, arXiv and Semantic Scholar. Anything a database confirms is cleared. No LLM.
+   DOI resolution, arXiv, OpenAlex and Semantic Scholar. Anything a database confirms is cleared.
+   No LLM.
 3. Triage (`triage.py` with an interactive LLM agent): investigate only the database-unverified
    residue (DOI and publisher pages, Google Scholar, web search) and classify each **title-first** --
    first ask whether a publication bearing the cited title exists at all, then whether its metadata
@@ -32,9 +33,10 @@ entry carries on its first line -- then hand each clean reference string to
 `reference_parser.parse_reference`, which reliably yields 0 unparsed references. A numbered
 bibliography reports the entry numbers it prints that no reference carries.
 
-`verifier.py` then asks five backends, cheapest first, each only about the references the ones
+`verifier.py` then asks six backends, cheapest first, each only about the references the ones
 before it did not match: the offline DBLP mirror through `dblp_check.py`, CrossRef's bibliographic
-search, DOI resolution, arXiv by identifier, and Semantic Scholar where a key is configured.
+search, DOI resolution, arXiv by identifier, OpenAlex's works search by title, and Semantic
+Scholar where a key is configured.
 Nothing is decided on a similarity score: a backend confirms only when a record's title matches
 after normalisation and its authors match on an initial-and-surname fingerprint. `build_dblp.py`
 builds the mirror from the DBLP dump. `VERIFICATION-SPEC.md` is the contract the parse and check

@@ -5,8 +5,8 @@
 # hallucite
 
 Finds fabricated ("hallucinated") references in academic paper PDF files. Each reference is checked
-against academic databases (the offline DBLP mirror, then CrossRef, DOI resolution, arXiv and
-Semantic Scholar); references that no database can confirm are escalated to an interactive
+against academic databases (the offline DBLP mirror, then CrossRef, DOI resolution, arXiv,
+OpenAlex and Semantic Scholar); references that no database can confirm are escalated to an interactive
 LLM triage step, which writes a report for human review.
 
 Three stages: extract and verify use no LLM (verification queries the online databases unless
@@ -49,17 +49,20 @@ below and a plugin installed from a local checkout see the same values. A variab
 the environment wins.
 
 A plugin installed from the marketplace is a different tree and never sees your clone's
-`.env.local`. Export `S2_API_KEY` in the shell that starts Claude Code or Codex CLI, or pass
-`--s2-api-key`.
+`.env.local`. Export the keys in the shell that starts Claude Code or Codex CLI, or pass
+`--s2-api-key` and `--openalex-api-key`.
 
 ```sh
-S2_API_KEY=s2k-...   # Semantic Scholar: https://www.semanticscholar.org/product/api
+S2_API_KEY=s2k-...     # Semantic Scholar: https://www.semanticscholar.org/product/api
+OPENALEX_API_KEY=...   # OpenAlex, optional: https://openalex.org/
 ```
 
-Only Semantic Scholar needs one. Anonymous callers share a small quota, and a rate-limited lookup
-leaves a reference degraded rather than cleanly negative, which moves the boundary between
-`verified` and "needs triage" between otherwise identical runs. CrossRef wants no key, only the
-`--mailto` contact that puts a caller in its faster pool.
+Semantic Scholar is not asked without a key. Anonymous callers share a small quota, and a
+rate-limited lookup leaves a reference degraded rather than cleanly negative, which moves the
+boundary between `verified` and "needs triage" between otherwise identical runs. OpenAlex is asked
+either way and meters the day rather than the second: a hundred searches without a key, a thousand
+under a free one, reset at midnight UTC. A paper's residue fits the first; a corpus needs the
+second. CrossRef wants no key, only the `--mailto` contact that puts a caller in its faster pool.
 
 ## Run the audit (Stages 1+2, no LLM)
 
@@ -70,7 +73,7 @@ mise run audit -- <pdf-file-or-dir> [options]  # everything after the target is 
 
 Writes `out/<paper_id>.json` (every reference plus per-database verification) and
 `out/summary.json` (status counts plus the DBLP build date). Options: `--dblp PATH`, `--out DIR`,
-`--mailto EMAIL`, `--s2-api-key KEY`, `--offline` (no network; the offline DBLP mirror stays
+`--mailto EMAIL`, `--s2-api-key KEY`, `--openalex-api-key KEY`, `--offline` (no network; the offline DBLP mirror stays
 live), `--disable-dbs LIST` (comma-separated), `--no-verify`, `--no-candidates` (skip the CrossRef
 lookup that attaches candidate records; implied by `--offline`), `--rate-limit-retries N`,
 `--retry-degraded N` (re-check what a backend failure left degraded; default 1, 0 disables) and

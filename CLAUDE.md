@@ -232,6 +232,15 @@ change to `SKILL.md` and to those tests together. Do not restate it here.
   ladder and about a second without it, and capping the asking instead cost five confirmations no
   other backend reaches.
 
+- A backend metered by the day is a wall, not a throttle, and gets the opposite treatment.
+  OpenAlex charges a search against a daily budget (a hundred anonymous, a thousand under a free
+  key, reset at midnight UTC), so a refusal is the budget gone: `_openalex` does not retry it and
+  stops asking after three in a row, where Semantic Scholar's breaker has to survive a burst and
+  waits on 25. Size a run to the budget before starting it -- the 567-reference residue was 813
+  requests -- and read what a record says it is: OpenAlex holds a journal's review of a book under
+  the book's title with the book's author in the byline, so a citation of the book confirms
+  through the review, and only the reviews it types `book-review` can be dropped.
+
 - Keep a measurement off the network. It is the same rule for a run and for a results file.
   Re-running the whole corpus online to see the effect of one rule exhausted the Semantic Scholar
   quota in an afternoon and made the run that mattered unusable -- 334 refusals against 6 answers,

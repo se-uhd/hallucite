@@ -111,7 +111,8 @@ How strictly to apply it depends on the source:
   it shares.
 
 The record in hand can say so for itself, and where it does that outranks anything known about
-the source. DBLP writes a literal `et al.` row where it truncated a long author list, and it
+the source. DBLP writes a literal `et al.` row where it truncated a long author list, OpenAlex
+cuts a byline at a hundred names and flags the work (`is_authors_truncated`), and DBLP
 credits a collaboration to the group rather than the people -- `OpenAI`, `Qwen Team`, `Llama Team`
 -- which is how the LLM technical reports an SE bibliography now cites constantly are stored. A
 correct citation of one names the individual authors, and none of them is in the record.
@@ -174,6 +175,10 @@ authenticated Semantic Scholar:
 | Open Library | 0.5% |
 | Europe PMC | 0.4% |
 | arXiv | 0.1% |
+
+OpenAlex, added after this table was recorded, is asked about what all of these leave: of the
+567 references the online recording could not verify, it confirms 25 -- books, technical reports,
+dissertations and repository-held papers -- and every one carries the cited names.
 
 The offline mirror decides nine confirmations in ten, so an implementation's accuracy is mostly
 its DBLP path. No other source is worth more than three percent, so the question for each is

@@ -5,13 +5,13 @@ description: >-
   to check, audit, or verify the references/bibliography of one or more papers for hallucinated or
   fabricated citations, or names a paper PDF file (or directory of PDF files) to check. Extracts each
   reference, verifies it against academic databases (the offline DBLP mirror, then CrossRef, DOI
-  resolution, arXiv and Semantic Scholar) without using an LLM, then triages only the
+  resolution, arXiv, OpenAlex and Semantic Scholar) without using an LLM, then triages only the
   database-unverified residue via web search and writes a report of likely-hallucinated
   references plus per-paper manual-verification sheets.
 license: MIT
 compatibility: Requires Python 3.10 or newer (standard library only), pdftotext (poppler), and an offline DBLP database at ~/hallucite/dblp.db, built by `mise run build-dblp` (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
-  version: "2.1.0"
+  version: "2.2.0"
 ---
 
 # hallucite

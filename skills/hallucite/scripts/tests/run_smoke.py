@@ -2361,7 +2361,7 @@ def tier5b_verifier() -> None:
         con.close()
 
         offline = {"dblp_path": str(db),
-                   "disabled_dbs": (V.CROSSREF, V.DOI, V.ARXIV, V.SEMANTIC_SCHOLAR)}
+                   "disabled_dbs": (V.CROSSREF, V.DOI, V.ARXIV, V.OPENALEX, V.SEMANTIC_SCHOLAR)}
         refs = [
             V.Reference(title="A placeholder title about fictional pipelines",
                         authors=["Alpha Aaron", "Beta Brown"]),
@@ -2408,7 +2408,7 @@ def tier5b_verifier() -> None:
         V._fetch_json = no_network
         try:
             got = V.check(refs, dblp_path=str(db),
-                          disabled_dbs=(V.DOI, V.ARXIV, V.SEMANTIC_SCHOLAR),
+                          disabled_dbs=(V.DOI, V.ARXIV, V.OPENALEX, V.SEMANTIC_SCHOLAR),
                           max_workers=1)
         finally:
             V._fetch_json = real
@@ -2455,7 +2455,7 @@ def tier5b_verifier() -> None:
                                    arxiv_id="2310.99999")],
                       dblp_path=None,
                       disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI,
-                                    V.SEMANTIC_SCHOLAR))[0]
+                                    V.OPENALEX, V.SEMANTIC_SCHOLAR))[0]
     finally:
         V._fetch, V._ARXIV_PAUSE = real, V._ARXIV_PAUSE_REAL
     C.eq(asked_ids, ["2310.99999", "2310.99999"],
@@ -2471,7 +2471,7 @@ def tier5b_verifier() -> None:
                                    arxiv_id="2407.08138")],
                       dblp_path=None,
                       disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI,
-                                    V.SEMANTIC_SCHOLAR))[0]
+                                    V.OPENALEX, V.SEMANTIC_SCHOLAR))[0]
     finally:
         V._fetch = real
     C.eq([d.status for d in got.db_results if d.db_name == "arXiv"], ["rate_limited"],
@@ -2501,7 +2501,7 @@ def tier5b_verifier() -> None:
     try:
         V.check([V.Reference(title="A paper", authors=["Ada Byte"], doi="10.5281/zenodo.1")],
                 dblp_path=None, timeout=15.0,
-                disabled_dbs=(V.DBLP, V.CROSSREF, V.ARXIV, V.SEMANTIC_SCHOLAR))
+                disabled_dbs=(V.DBLP, V.CROSSREF, V.ARXIV, V.OPENALEX, V.SEMANTIC_SCHOLAR))
     finally:
         V._fetch, V._fetch_json = real, real_json
     C.eq([t for host, t in timeouts if host == "doi.org"], [V._DOI_ORG_TIMEOUT],
@@ -2516,11 +2516,11 @@ def tier5b_verifier() -> None:
     V._fetch = lambda *a, **k: (reached.append(a[0]), (None, V.RATE_LIMITED))[1]
     try:
         got = V.check(batch, dblp_path=None, s2_api_key="",
-                      disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI, V.ARXIV))
+                      disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI, V.ARXIV, V.OPENALEX))
         C.eq((reached, [d.status for d in got[0].db_results]), ([], ["skipped"]),
              "with no key, Semantic Scholar is not asked and claims nothing")
         got = V.check(batch, dblp_path=None, s2_api_key="fake-key", rate_limit_retries=0,
-                      disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI, V.ARXIV))
+                      disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI, V.ARXIV, V.OPENALEX))
     finally:
         V._fetch = real
     C.eq(len(reached), V._S2_GIVE_UP_AFTER,
@@ -2539,6 +2539,148 @@ def tier5b_verifier() -> None:
     C.eq(result.failed_dbs, ["CrossRef", "DOI", "arXiv"],
          "REGRESSION GUARD: every backend that did not answer is named, none folded into no_match")
     C.eq(result.source, None, "an unconfirmed reference names no deciding backend")
+
+
+def tier5d_openalex() -> None:
+    """The OpenAlex backend, without asking it anything: the record it reads, the query it sends,
+    what it does with a refusal, and where it stands in the order. It is the one online backend
+    asked without a key, and the one metered by the day rather than the second, so a refusal is a
+    wall until midnight UTC and is neither retried nor asked past."""
+    print("Tier 5d: the OpenAlex backend (no network)")
+    import verifier as V
+    import audit_references as audit
+
+    C.eq(V.BACKENDS, ("DBLP", "CrossRef", "DOI", "arXiv", "OpenAlex", "Semantic Scholar"),
+         "REGRESSION GUARD: OpenAlex is asked after the registries and before the paced, keyed "
+         "backend -- it answers in under a second and wants no key")
+    C.eq(sorted(audit.DEFAULT_ONLINE_DBS), sorted(set(V.BACKENDS) - {V.DBLP}),
+         "REGRESSION GUARD: every network backend is on the --offline disable list under the name "
+         "the verifier emits -- a name missing here is a backend --offline leaves live")
+    C.eq(audit.KNOWN_LOCAL_DBS, [V.DBLP], "the mirror is the only backend that makes no request")
+
+    record = V._openalex_record({
+        "id": "https://openalex.org/W1", "doi": "https://doi.org/10.1234/x",
+        "title": "A <i>Title</i> &amp; more", "is_retracted": True,
+        "authorships": [{"raw_author_name": "Byte, Ada", "author": {"display_name": "Ada M. Byte"}},
+                        {"author": {"display_name": "Bo Bit"}}]})
+    C.eq((record.title, record.authors, record.url),
+         ("A Title & more", ["Byte, Ada", "Bo Bit"], "https://doi.org/10.1234/x"),
+         "REGRESSION GUARD: the byline is read as the paper printed it, the resolved name only "
+         "where there is no raw one, and the DOI is the record's address where it has one")
+    C.true(record.retraction is not None and record.retraction.retraction_source == "OpenAlex",
+           "REGRESSION GUARD: a work OpenAlex marks retracted carries the retraction")
+    marked = V._openalex_record({"title": "RETRACTED: A paper", "authorships": []})
+    C.eq((marked.title, marked.retraction is not None), ("A paper", True),
+         "REGRESSION GUARD: the marker a publisher writes into a retracted title comes off "
+         "before the titles are compared, and is itself the retraction")
+    C.eq(V._openalex_record({"id": "https://openalex.org/W2", "display_name": "T",
+                             "authorships": []}).url, "https://openalex.org/W2",
+         "a work without a DOI is addressed by its OpenAlex id")
+    truncated = V._openalex_record({"title": "Big", "is_authors_truncated": True,
+                                    "authorships": [{"raw_author_name": "Ada Byte"}]})
+    C.eq(truncated.authors, ["Ada Byte", "et al."],
+         "REGRESSION GUARD: a byline OpenAlex cut at a hundred says so, and that becomes the "
+         "`et al.` row the completeness tier reads")
+    C.true(not V.record_authors_complete(truncated.authors),
+           "so an unmatched cited name on that record is the record's gap, not the citation's")
+    C.eq(V._openalex_query_forms("Model-Driven Things: A Field Study of Something"),
+         ["Model-Driven Things: A Field Study of Something",
+          "ModelDriven Things: A Field Study of Something", "Model-Driven Things"],
+         "REGRESSION GUARD: the filter wants every word on the record, so a citation carrying a "
+         "subtitle the record does not is asked a third time by its head")
+    C.eq(V._openalex_query_forms("AI: A Survey"), ["AI: A Survey"],
+         "a head too short to name a work is not asked for")
+
+    # Through `check`, standing in for the HTTP call.
+    only = tuple(b for b in V.BACKENDS if b != V.OPENALEX)
+    ref = V.Reference(title="A Study, With a Comma: And a Subtitle", authors=["Ada Byte"])
+    hit = json.dumps({"results": [{
+        "id": "https://openalex.org/W1", "doi": "https://doi.org/10.1/x",
+        "title": "A Study, With a Comma: And a Subtitle",
+        "authorships": [{"raw_author_name": "A. Byte"}]}]}).encode()
+    asked: list[str] = []
+    real = V._fetch
+    try:
+        V._fetch = lambda url, *a, **k: (asked.append(url), (hit, "ok"))[1]
+        got = V.check([ref], dblp_path=None, openalex_api_key="", disabled_dbs=only)[0]
+        C.eq((got.status, got.source, got.paper_url),
+             ("verified", "OpenAlex", "https://doi.org/10.1/x"),
+             "a record with the cited title and authors verifies, and its DOI is the address")
+        q = urllib.parse.parse_qs(urllib.parse.urlparse(asked[0]).query)
+        C.eq(q.get("filter"), ['title.search:"A Study, With a Comma: And a Subtitle"'],
+             "REGRESSION GUARD: the title travels quoted -- a bare comma ends a filter value and "
+             "the request is refused outright")
+        C.true("api_key" not in q, "REGRESSION GUARD: asked without a key, unlike Semantic Scholar")
+        C.eq(len(asked), 1, "one search where the first form matches")
+        review = json.dumps({"results": [{
+            "id": "https://openalex.org/W9", "doi": "https://doi.org/10.2307/1", "type": "book-review",
+            "title": "A Study, With a Comma: And a Subtitle",
+            "authorships": [{"raw_author_name": "R. Viewer"}, {"raw_author_name": "A. Byte"}]}]}).encode()
+        V._fetch = lambda url, *a, **k: (review, "ok")
+        got = V.check([ref], dblp_path=None, disabled_dbs=only)[0]
+        C.eq(got.db_results[0].status, "no_match",
+             "REGRESSION GUARD: a journal's review of the book is not the book, however many of "
+             "the book's authors its byline carries -- three residue matches were reviews")
+        V._fetch = lambda url, *a, **k: (asked.append(url), (hit, "ok"))[1]
+        asked.clear()
+        V.check([V.Reference(title="Artifact for \u201cA Quoted Title: With a Subtitle\u201d",
+                             authors=["Ada Byte"])], dblp_path=None, disabled_dbs=only)
+        C.eq([urllib.parse.parse_qs(urllib.parse.urlparse(u).query)["filter"][0] for u in asked],
+             ['title.search:"Artifact for  A Quoted Title: With a Subtitle "',
+              'title.search:"Artifact for  A Quoted Title"'],
+             "REGRESSION GUARD: a quotation mark of any shape comes out of the quoted value -- "
+             "the subtitle split leaves a curly pair unpaired, and OpenAlex refuses the request")
+        asked.clear()
+        V.check([ref], dblp_path=None, openalex_api_key="k-1", disabled_dbs=only)
+        C.eq(urllib.parse.parse_qs(urllib.parse.urlparse(asked[0]).query).get("api_key"), ["k-1"],
+             "a configured key travels as the api_key parameter")
+
+        asked.clear()
+        V._fetch = lambda url, *a, **k: (asked.append(url), (b'{"results": []}', "ok"))[1]
+        got = V.check([V.Reference(title="Model-Driven Things: A Field Study", authors=["Ada Byte"])],
+                      dblp_path=None, disabled_dbs=only)[0]
+        C.eq([urllib.parse.parse_qs(urllib.parse.urlparse(u).query)["filter"][0] for u in asked],
+             ['title.search:"Model-Driven Things: A Field Study"',
+              'title.search:"ModelDriven Things: A Field Study"',
+              'title.search:"Model-Driven Things"'],
+             "REGRESSION GUARD: every form is asked before a negative is reported, the head last")
+        C.eq(got.db_results[0].status, "no_match",
+             "an empty result set for every form is a real negative")
+
+        for payload, outcome, want, label in (
+                (b'{"error": "x"}', "ok", "error",
+                 "REGRESSION GUARD: a 200 without `results` is an error envelope, not a negative"),
+                (None, "rate_limited", "rate_limited", "a refusal is reported as one"),
+                (None, "not_found", "error",
+                 "a 404 from the search endpoint says the endpoint moved, not that the work "
+                 "does not exist"),
+                (b"not json", "ok", "error", "a body that is not JSON is not an answer")):
+            V._fetch = lambda *a, _p=payload, _o=outcome, **k: (_p, _o)
+            got = V.check([ref], dblp_path=None, disabled_dbs=only)[0]
+            C.eq(got.db_results[0].status, want, label)
+
+        # A refusal is the day's budget gone: not retried, and not asked past.
+        retries_seen: list[int] = []
+        V._fetch = lambda url, accept, timeout, ua, retries, **k: (
+            retries_seen.append(retries), (None, V.RATE_LIMITED))[1]
+        batch = [V.Reference(title=f"A paper about things number {i}", authors=["Ada Byte"])
+                 for i in range(V._OPENALEX_GIVE_UP_AFTER + 4)]
+        got = V.check(batch, dblp_path=None, rate_limit_retries=2, disabled_dbs=only)
+        C.eq(retries_seen, [0] * V._OPENALEX_GIVE_UP_AFTER,
+             "REGRESSION GUARD: a refusal is not retried -- the ladder would wait on a wall that "
+             "stands until midnight UTC -- and after three in a row the asking stops")
+        C.eq([r.db_results[0].status for r in got],
+             ["rate_limited"] * V._OPENALEX_GIVE_UP_AFTER + ["skipped"] * 4,
+             "the references it asked about are degraded; the rest were never asked, and say so")
+        # A refusal between answers is not a wall, and does not stop the asking.
+        calls: list[int] = []
+        V._fetch = lambda *a, **k: (calls.append(1), ((None, V.RATE_LIMITED) if len(calls) % 2
+                                                      else (b'{"results": []}', "ok")))[1]
+        got = V.check(batch, dblp_path=None, disabled_dbs=only)
+        C.eq([r.db_results[0].status for r in got].count("skipped"), 0,
+             "an answer resets the count, so an intermittent refusal never sits out the batch")
+    finally:
+        V._fetch = real
 
 
 def tier5c_shared_title_record() -> None:
@@ -2738,6 +2880,9 @@ def tier6_measured_values() -> None:
          "8 to 32 s for real Zenodo DOIs, and those references have no other identifier")
     C.eq(V._S2_TIMEOUT, 45.0,
          "REGRESSION GUARD: Semantic Scholar keeps its longer ceiling; a timeout claims nothing")
+    C.eq(V._OPENALEX_GIVE_UP_AFTER, 3,
+         "REGRESSION GUARD: OpenAlex meters the day, not the second, so a refusal is a wall until "
+         "midnight UTC -- the give-up is short, where Semantic Scholar's has to survive a burst")
     C.eq(D._MAX_CANDIDATES, 20000,
          "REGRESSION GUARD: the FTS ceiling stays above the row depth where confirmations "
          "are lost -- at 50 it dropped 3 corpus confirmations, one of them a record at "
@@ -2870,12 +3015,12 @@ def tier6c_answers_and_parsing() -> None:
             V._fetch = lambda *a, **k: (payload, "ok")
             got = V.check([rp.Reference(title="Some paper about things", authors=["Ada Byte"])],
                           dblp_path=None, s2_api_key="k", rate_limit_retries=0,
-                          disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI, V.ARXIV))[0]
+                          disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI, V.ARXIV, V.OPENALEX))[0]
             C.eq(got.db_results[0].status, want, label)
         V._fetch = lambda *a, **k: (None, "not_found")
         got = V.check([rp.Reference(title="Some paper about things", authors=["Ada Byte"])],
                       dblp_path=None, s2_api_key="", rate_limit_retries=0,
-                      disabled_dbs=(V.DBLP, V.DOI, V.ARXIV, V.SEMANTIC_SCHOLAR))[0]
+                      disabled_dbs=(V.DBLP, V.DOI, V.ARXIV, V.OPENALEX, V.SEMANTIC_SCHOLAR))[0]
         C.eq((got.db_results[0].status, got.failed_dbs), (V.ERROR, ["CrossRef"]),
              "REGRESSION GUARD: a 404 from a *search* endpoint says the endpoint moved, not that "
              "the work does not exist")
@@ -2914,7 +3059,7 @@ def tier6c_answers_and_parsing() -> None:
     try:
         V._fetch = flaky
         got = V.check(batch, dblp_path=None, s2_api_key="k",
-                      disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI, V.ARXIV))
+                      disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI, V.ARXIV, V.OPENALEX))
     finally:
         V._fetch = real
     C.eq([d.status for d in (r.db_results[0] for r in got)].count(V.SKIPPED), 0,
@@ -3138,6 +3283,7 @@ def main() -> int:
     tier4i_hanging_indent_author_first()
     tier5_reference_parser()
     tier5b_verifier()
+    tier5d_openalex()
     tier5c_shared_title_record()
     tier6_measured_values()
     tier6b_completeness_tier()

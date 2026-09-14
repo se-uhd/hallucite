@@ -4,6 +4,45 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.2.0] - 2026-09-14
+
+### Added
+
+- **OpenAlex is the sixth backend, asked after arXiv and before Semantic Scholar.** Its works
+  search by title, one reference at a time, through the same title and author rules every backend
+  shares; the record is read as the paper printed its byline (`raw_author_name`), a byline OpenAlex
+  cut at a hundred names becomes the `et al.` row the completeness tier already reads, a work it
+  marks retracted carries the retraction, and a record it types as a review of a book is not the
+  book. It is asked with or without a key and meters the day rather than the second, a hundred
+  searches for an anonymous caller and a thousand under a free key (`--openalex-api-key`,
+  `$OPENALEX_API_KEY`), reset at midnight UTC, so a refusal is the budget gone: it is not retried,
+  and after three in a row the rest of the batch is reported `skipped`, never asked, which the
+  triage worklist shows as such. The filter reads a bare comma as the end of its value and refuses
+  a stray quotation mark, so the title travels quoted with every quote mark removed; a citation
+  carrying a subtitle the record lacks is asked a third time by its head, because the filter wants
+  every word it is given on the record.
+
+  Measured on the 567 references the online recording left unverified, 813 requests in seven
+  minutes under a free key: OpenAlex confirms 25, finds the cited title under other authors for 35,
+  and nothing for 507. Every one of the 25 is a real work carrying the cited names -- 8 books, 4
+  technical reports, 2 dissertations, 2 chapters, 2 software or artifact records and 7 papers, among
+  them a 1970 IBM technical report, a 1987 Bell Labs memo and a thesis on HAL -- and the recorded
+  Semantic Scholar had refused 23 of them, so what that backend would add with a working quota is
+  not known. Three land on a journal's review of the book rather than the book, because OpenAlex
+  lists the book's author in the review's byline; the verdict is right and the record shown is
+  not, and only the one review OpenAlex types `book-review` can be told apart. Of the 35 near
+  misses, 24 were already `mismatch` and 11 move from `not_found`: one real slipped byline (a
+  co-author that a Google Scholar export invents), one parse defect, one record OpenAlex holds
+  with a single author of three, and eight websites, standards and blog posts cited under a title
+  some book chapter also carries. No fabricated citation confirmed: the offline replay and the
+  fabricated-citation sets are unchanged, and scoring the 250-record set against OpenAlex alone is
+  the next day's budget. Tier 5d holds the guards, 24 checks, and ten mutation entries, each
+  of which fails the suite.
+
+- `measure/fabricated_citations.py score --backend NAME` scores one backend alone, every other
+  disabled, with `--sets` and `--columns` to bound what an online backend is asked; a full pass is
+  about 6,500 requests.
+
 ## [2.1.0] - 2026-09-13
 
 ### Removed
@@ -1534,6 +1573,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[2.2.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.2.0
 [2.1.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.1.0
 [2.0.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.0.1
 [2.0.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.0.0

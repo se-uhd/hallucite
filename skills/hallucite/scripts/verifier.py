@@ -1,7 +1,7 @@
 """Verify a batch of parsed references against bibliographic databases.
 
 The second of the two operations `VERIFICATION-SPEC.md` describes: references in, one result each,
-aligned to the input. Five backends answer, cheapest first, and each is asked only about the
+aligned to the input. Six backends answer, cheapest first, and each is asked only about the
 references the ones before it did not already match -- so the network cost falls on the hard
 residue, which is exactly the set a human will be asked to judge.
 
@@ -12,6 +12,9 @@ residue, which is exactly the set a human will be asked to judge.
   registry: does the cited DOI resolve, and does it resolve to this work.
 * `arXiv` -- `export.arxiv.org` by identifier, a hundred at a time: does the cited id exist, and
   does it name this work.
+* `OpenAlex` -- its works search by title, one reference at a time, with or without a key. It
+  holds the repository-deposited theses, books and reports the registries above do not, and it
+  meters a caller by the day: a hundred searches without a key, a thousand with a free one.
 * `Semantic Scholar` -- its paper search, one reference at a time and only where a key is
   configured. It indexes technical reports and theses the others do not.
 
@@ -49,9 +52,9 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from dblp_check import (authors_match, cited_years, matched_authors, mirror_authors_complete,
-                        normalized_title, queryable, record_authors_complete, title_candidates,
-                        titles_match)
+from dblp_check import (_SUBTITLE, _subtitle_head, authors_match, cited_years, matched_authors,
+                        mirror_authors_complete, normalized_title, queryable,
+                        record_authors_complete, title_candidates, titles_match)
 from reference_parser import Reference, parse_reference  # noqa: F401  (re-exported: one module,
                                                          # both operations of the contract)
 
@@ -61,8 +64,9 @@ DBLP = "DBLP"
 CROSSREF = "CrossRef"
 DOI = "DOI"
 ARXIV = "arXiv"
+OPENALEX = "OpenAlex"
 SEMANTIC_SCHOLAR = "Semantic Scholar"
-BACKENDS = (DBLP, CROSSREF, DOI, ARXIV, SEMANTIC_SCHOLAR)
+BACKENDS = (DBLP, CROSSREF, DOI, ARXIV, OPENALEX, SEMANTIC_SCHOLAR)
 
 # Per-backend outcomes. `skipped` says the backend was not applicable or was not needed, never that
 # it disagreed; the three failure values say it did not answer at all.
@@ -76,6 +80,7 @@ VERIFIED, NOT_FOUND, MISMATCH = "verified", "not_found", "mismatch"
 CROSSREF_WORKS = "https://api.crossref.org/works"
 DOI_ORG = "https://doi.org/"
 ARXIV_API = "http://export.arxiv.org/api/query"
+OPENALEX_WORKS = "https://api.openalex.org/works"
 S2_SEARCH = "https://api.semanticscholar.org/graph/v1/paper/search"
 _ATOM = "{http://www.w3.org/2005/Atom}"
 # arXiv takes up to 100 ids per request; the pause between requests is what its
@@ -115,6 +120,25 @@ _S2_GIVE_UP_AFTER = 25
 _S2_PATIENCE = 25
 # Extra attempts for this backend alone, on top of the caller's. Each one doubles its wait.
 _S2_RETRIES = 4
+# OpenAlex meters a caller by the day rather than by the second: a search costs a thousandth of a
+# dollar against a daily budget of ten cents for an anonymous caller and a dollar for one holding
+# a free key, and the budget resets at midnight UTC. A refusal is that budget gone until then, so
+# the backend stops asking after this many in a row and reports the rest of the batch `skipped`;
+# retrying a refusal would only wait on the same wall.
+_OPENALEX_GIVE_UP_AFTER = 3
+_OPENALEX_FIELDS = "id,doi,title,display_name,type,authorships,is_authors_truncated,is_retracted"
+# A record that says it is a review *of* the work is not the work. OpenAlex holds a journal's
+# review of a book under the book's own title, usually with the book's author in the byline
+# beside the reviewer's, so a citation of the book confirms through the review: the right verdict
+# from the wrong record, and a review whose byline is garbage is a near miss under the book's
+# title. Most such reviews it types `article`, which nothing here can tell from the book, and
+# this list drops only what it labels. Over the residue that was one record in sixty.
+_OPENALEX_NOT_THE_WORK = ("book-review",)
+# The filter value travels in double quotes, so a quotation mark of any shape inside it -- the
+# curly pair a citation prints around a quoted title, half of which the subtitle split then leaves
+# unpaired -- has to come out, or the request is refused. The title is compared on its letters
+# anyway, so nothing is lost.
+_QUOTE_MARKS = re.compile("[\"\u201c\u201d\u201e\u201f\u00ab\u00bb]")
 
 
 @dataclass
@@ -339,6 +363,46 @@ def _s2_record(item: dict) -> _Record:
                    url=item.get("url") or (f"{DOI_ORG}{doi}" if doi else None))
 
 
+def _openalex_record(item: dict) -> _Record:
+    """One OpenAlex work, reduced to what a verdict needs.
+
+    The byline is read as the paper printed it (`raw_author_name`), not as OpenAlex resolved it to
+    a person, because a merged author profile is an error the citation cannot be held to. A work
+    of more than a hundred authors is stored cut at a hundred and says so in `is_authors_truncated`;
+    that becomes the `et al.` row the completeness tier already reads, so an unmatched cited name
+    on such a record is the record's gap rather than the citation's."""
+    names = []
+    for a in item.get("authorships") or []:
+        name = a.get("raw_author_name") or (a.get("author") or {}).get("display_name") or ""
+        if name.strip():
+            names.append(" ".join(name.split()))
+    if names and item.get("is_authors_truncated"):
+        names.append("et al.")
+    raw_title = item.get("title") or item.get("display_name") or ""
+    # The marker a publisher writes into a retracted article's title comes off before the titles
+    # are compared, as it does for CrossRef, and is itself evidence of the retraction.
+    title = _plain(_RETRACTED_TITLE.sub("", raw_title))
+    retracted = bool(item.get("is_retracted")) or bool(_RETRACTED_TITLE.match(raw_title))
+    retraction = RetractionInfo(is_retracted=True, retraction_source=OPENALEX) if retracted else None
+    return _Record(title=title, authors=names, url=item.get("doi") or item.get("id"),
+                   retraction=retraction)
+
+
+def _openalex_query_forms(title: str) -> list[str]:
+    """What OpenAlex's title filter is asked for.
+
+    The filter wants every word it is given on the record, so a citation carrying a subtitle the
+    record does not is asked a third time by its head alone. The reverse case, a record carrying a
+    subtitle the citation omits, the first form already finds. `titles_match` allows a subtitle on
+    one side only, so the head retrieves nothing the matcher would not accept."""
+    forms = _query_forms(title)
+    if _subtitle_head(title):
+        head = _SUBTITLE.split(title, maxsplit=1)[0].strip()
+        if head and head not in forms:
+            forms.append(head)
+    return forms
+
+
 def _verdict(ref, record: _Record, complete_source: bool = True) -> str:
     """`match`, `author_mismatch` or `no_match` for one candidate record.
 
@@ -417,7 +481,8 @@ def _dblp_readable(path: str) -> bool:
 def _backend_of(run) -> str:
     """The backend a bound method belongs to, for naming a failure it did not survive to report."""
     return {"_dblp": DBLP, "_crossref": CROSSREF, "_doi": DOI, "_arxiv": ARXIV,
-            "_semantic_scholar": SEMANTIC_SCHOLAR}.get(getattr(run, "__name__", ""), "backend")
+            "_openalex": OPENALEX, "_semantic_scholar": SEMANTIC_SCHOLAR
+            }.get(getattr(run, "__name__", ""), "backend")
 
 
 def _answer(db_name: str, ref, records: list[_Record], elapsed_ms: float,
@@ -438,6 +503,7 @@ class Verifier:
     def __init__(self, dblp_path: str | None = DEFAULT_DBLP, mailto: str = "",
                  timeout: float = 15.0, max_workers: int | None = None,
                  rate_limit_retries: int = 2, s2_api_key: str | None = None,
+                 openalex_api_key: str | None = None,
                  disabled_dbs: tuple[str, ...] | list[str] = ()) -> None:
         self.dblp_path = dblp_path if dblp_path and Path(dblp_path).exists() else None
         # A file that is not a readable mirror -- the bot-check page a failed download leaves
@@ -459,6 +525,8 @@ class Verifier:
         self.rate_limit_retries = max(0, rate_limit_retries)
         self.s2_api_key = (s2_api_key if s2_api_key is not None
                            else os.environ.get("S2_API_KEY", ""))
+        self.openalex_api_key = (openalex_api_key if openalex_api_key is not None
+                                 else os.environ.get("OPENALEX_API_KEY", ""))
         self.disabled = set(disabled_dbs)
         contact = f"; mailto:{mailto}" if mailto else ""
         self.user_agent = f"hallucite (reference verification{contact})"
@@ -653,11 +721,61 @@ class Verifier:
         # request for it: nothing in this batch was answered either.
         return (outcome if outcome in DID_NOT_ANSWER else ERROR), elapsed
 
+    def _openalex(self, refs: list) -> list[_Answer]:
+        """OpenAlex's works search by title, over whatever the four before it could not confirm.
+
+        It holds what the registries do not -- the theses, books and technical reports deposited
+        in institutional repositories, the grey literature an empirical paper cites -- and it asks
+        for no key. What it meters is the day: a search costs a thousandth of a dollar against a
+        budget of ten cents for an anonymous caller and a dollar for a free key, reset at midnight
+        UTC. So it is asked one reference at a time, and a refusal is not retried, because it is
+        the day's budget gone and every retry would wait on the same wall. Three in a row and the
+        rest of the batch is reported `skipped` -- never asked, which is what the triage worklist
+        then shows -- rather than `rate_limited` for every remaining reference, which would tell
+        triage that no negative in the run is clean.
+
+        The title filter wants every word it is given on the record, and reads a bare comma as
+        the end of the value, so the value travels in quotes and is asked in the forms
+        `_openalex_query_forms` lists."""
+        answers: list[_Answer] = []
+        refused_in_a_row = 0
+        for ref in refs:
+            title = (getattr(ref, "title", "") or "").strip()
+            if not title or refused_in_a_row >= _OPENALEX_GIVE_UP_AFTER:
+                answers.append(_Answer(DbResult(OPENALEX, SKIPPED)))
+                continue
+            started = time.monotonic()
+            answer = _Answer(DbResult(OPENALEX, NO_MATCH))
+            for form in _openalex_query_forms(title):
+                params = {"filter": 'title.search:"' + _QUOTE_MARKS.sub(" ", form) + '"',
+                          "per-page": "5", "select": _OPENALEX_FIELDS}
+                if self.openalex_api_key:
+                    params["api_key"] = self.openalex_api_key
+                payload, outcome = _fetch_json(
+                    f"{OPENALEX_WORKS}?{urllib.parse.urlencode(params)}", self.timeout,
+                    self.user_agent, 0)
+                elapsed = (time.monotonic() - started) * 1000
+                # An answer carries `results`, empty or not. A 404 says the endpoint moved, and a
+                # 200 without the key is an error envelope; neither is a negative about the work.
+                if outcome != "ok" or not isinstance(payload, dict) or "results" not in payload:
+                    refused_in_a_row += 1
+                    answer = _Answer(DbResult(
+                        OPENALEX, outcome if outcome in DID_NOT_ANSWER else ERROR, elapsed))
+                    break
+                refused_in_a_row = 0
+                records = [_openalex_record(w) for w in payload.get("results") or []
+                           if w.get("type") not in _OPENALEX_NOT_THE_WORK]
+                answer = _answer(OPENALEX, ref, records, elapsed)
+                if answer.db_result.status != NO_MATCH:
+                    break
+            answers.append(answer)
+        return answers
+
     def _semantic_scholar(self, refs: list) -> list[_Answer]:
-        """Semantic Scholar's paper search, over whatever the other four could not confirm.
+        """Semantic Scholar's paper search, over whatever the other five could not confirm.
 
         Asked one reference at a time and paced, because the pool is shared and small. It answers
-        about work the other four do not index -- technical reports, theses, workshop papers --
+        about work the others do not index -- technical reports, theses, workshop papers --
         which is the whole reason it is here; it is also the slowest question hallucite asks, so it
         is asked last and only about the residue.
 
@@ -744,7 +862,8 @@ class Verifier:
             return results
 
         for name, run in ((DBLP, self._dblp), (CROSSREF, self._crossref), (DOI, self._doi),
-                          (ARXIV, self._arxiv), (SEMANTIC_SCHOLAR, self._semantic_scholar)):
+                          (ARXIV, self._arxiv), (OPENALEX, self._openalex),
+                          (SEMANTIC_SCHOLAR, self._semantic_scholar)):
             if name in self.disabled:
                 continue
             # Each backend is asked only about the references the ones before it did not match, so
@@ -752,7 +871,7 @@ class Verifier:
             pending = [i for i, r in enumerate(results)
                        if not any(d.status == MATCH for d in r.db_results)]
             batch = [refs[i] for i in pending]
-            if name in (ARXIV, SEMANTIC_SCHOLAR):
+            if name in (ARXIV, OPENALEX, SEMANTIC_SCHOLAR):
                 try:                                 # asked about the batch as a whole, so it is
                     answers = run(batch)             # guarded here rather than per reference
                 except Exception:                    # noqa: BLE001

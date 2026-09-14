@@ -15,12 +15,15 @@ names per setting reports holes that are not there.
   250, one, two or three invented names appended 0, one swapped 0 -- and it has to stay there.
 * `two_tokens`: 250 records with a two-token title, the population `_MIN_TOKENS` decides about,
   which the first set cannot see.
-* `truncated_records` (a separate file): records whose byline DBLP cut short with an `et al.` row,
-  the population the lenient author tier decides about.
+* `truncated_records`: records whose byline DBLP cut short with an `et al.` row, the population
+  the lenient author tier decides about. `build-truncated` adds it to the file `build` wrote.
 
-    fabricated citations.py build            [--out ~/hallucite/fabricated citations.json]
-    fabricated citations.py build-truncated  [--out ~/hallucite/fabricated citations-truncated.json]
-    fabricated citations.py score FILE [--scripts DIR] [--label NAME]
+    fabricated_citations.py build            [--out ~/hallucite/fabricated-citations.json]
+    fabricated_citations.py build-truncated  [--out ~/hallucite/fabricated-citations.json]
+    fabricated_citations.py score FILE [--scripts DIR] [--label NAME] [--backend NAME]
+
+`--backend` scores one backend alone, every other one disabled, which is how an online backend is
+held to the same set the mirror is: it costs a request per cell, so read the set's size first.
 
 The record keys are those of the mirror the set was built from; a rebuild on a newer dump samples
 different records, so keep the built file with the results files in `~/hallucite/` and score
@@ -43,7 +46,8 @@ HERE = Path(__file__).resolve().parent
 DEFAULT_SCRIPTS = HERE.parent
 DEFAULT_DBLP = os.environ.get("HALLUCITE_DBLP", os.path.expanduser("~/hallucite/dblp.db"))
 DEFAULT_OUT = os.path.expanduser("~/hallucite/fabricated-citations.json")
-ONLINE = ("CrossRef", "DOI", "arXiv", "Semantic Scholar")
+BACKENDS = ("DBLP", "CrossRef", "DOI", "arXiv", "OpenAlex", "Semantic Scholar")
+ONLINE = BACKENDS[1:]
 SEED = 20260911
 TRUNCATED_SEED = 20260912
 # Syllables for invented names; every name drawn is checked against the authors table.
@@ -191,11 +195,16 @@ def score(a) -> int:
     from audit_references import verification_dict
     from verifier import Verifier
     data = json.load(open(a.file, encoding="utf-8"))
-    verifier = Verifier(dblp_path=a.dblp, disabled_dbs=ONLINE)
+    disabled = ONLINE if a.backend is None else tuple(b for b in BACKENDS if b != a.backend)
+    verifier = Verifier(dblp_path=a.dblp, disabled_dbs=disabled)
     started = time.time()
     for name, recs in data["sets"].items():
+        if a.sets and name not in a.sets:
+            continue
         cells = []
         for column in recs[0]["variants"]:
+            if a.columns and column not in a.columns:
+                continue
             items = [(r["record"], r["variants"][column]) for r in recs
                      if r["variants"].get(column)]
             hits = other = 0
@@ -229,6 +238,13 @@ def main() -> int:
     s.add_argument("--scripts", default=str(DEFAULT_SCRIPTS),
                    help="import hallucite's modules from this directory (a snapshot)")
     s.add_argument("--label", default="working tree")
+    s.add_argument("--backend", choices=BACKENDS, default=None,
+                   help="score this backend alone (default: the offline mirror, every online "
+                        "backend disabled)")
+    s.add_argument("--sets", default="", type=lambda v: [x for x in v.split(",") if x],
+                   help="comma-separated set names to score (default: every set)")
+    s.add_argument("--columns", default="", type=lambda v: [x for x in v.split(",") if x],
+                   help="comma-separated variant columns to score (default: every column)")
     s.set_defaults(func=score)
     a = p.parse_args()
     return a.func(a)
