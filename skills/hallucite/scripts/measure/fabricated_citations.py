@@ -23,7 +23,10 @@ names per setting reports holes that are not there.
     fabricated_citations.py score FILE [--scripts DIR] [--label NAME] [--backend NAME]
 
 `--backend` scores one backend alone, every other one disabled, which is how an online backend is
-held to the same set the mirror is: it costs a request per cell, so read the set's size first.
+held to the same set the mirror is. It costs a request per cell, so size the run to the backend's
+budget with `--sets`, `--columns` and `--limit`, and read the "title found" count with the hits:
+for a backend that searches, a refused byline under the right title is a different negative from
+a title it does not hold.
 
 The record keys are those of the mirror the set was built from; a rebuild on a newer dump samples
 different records, so keep the built file with the results files in `~/hallucite/` and score
@@ -49,6 +52,9 @@ DEFAULT_OUT = os.path.expanduser("~/hallucite/fabricated-citations.json")
 BACKENDS = ("DBLP", "CrossRef", "DOI", "arXiv", "OpenAlex", "Semantic Scholar")
 ONLINE = BACKENDS[1:]
 SEED = 20260911
+# The columns that cite a record correctly; a confirmation in any other column is a fabricated
+# citation let through, and is printed with its record.
+CORRECT = ("clean", "et_al", "first_only", "subtitle_dropped", "respaced", "clean_first3_etal")
 TRUNCATED_SEED = 20260912
 # Syllables for invented names; every name drawn is checked against the authors table.
 SYLLABLES = ["bar", "den", "fol", "gar", "hal", "jen", "kol", "lim", "mor", "nes", "pol", "quen",
@@ -201,22 +207,37 @@ def score(a) -> int:
     for name, recs in data["sets"].items():
         if a.sets and name not in a.sets:
             continue
-        cells = []
+        recs = recs[:a.limit] if a.limit else recs
+        cells, flagged = [], []
         for column in recs[0]["variants"]:
             if a.columns and column not in a.columns:
                 continue
             items = [(r["record"], r["variants"][column]) for r in recs
                      if r["variants"].get(column)]
-            hits = other = 0
+            hits = other = refused = 0
             for (rec, variant), result in zip(items, verifier.check([_Ref(v) for _, v in items])):
                 d = verification_dict(result)
                 if d.get("status") == "verified":
                     hits += 1
-                    if not (d.get("paper_url") or "").endswith("/" + rec["key"]):
+                    # The set's keys name the mirror's records, so only the mirror can be asked
+                    # whether it confirmed the record sampled or a twin of it.
+                    if (a.backend in (None, "DBLP")
+                            and not (d.get("paper_url") or "").endswith("/" + rec["key"])):
                         other += 1
-            cells.append(f"{column} {hits}/{len(items)}" + (f" (other record {other})"
-                                                             if other else ""))
+                    if column not in CORRECT:
+                        # A fabricated citation that confirmed is a finding with a name, and a
+                        # count hides which record let it through.
+                        flagged.append(f"    ! {rec['key']} {column}: {variant['title']!r} "
+                                       f"{variant['authors']} -> {d.get('paper_url')} "
+                                       f"{d.get('found_authors')}")
+                elif d.get("status") == "mismatch":
+                    refused += 1
+            cells.append(f"{column} {hits}/{len(items)}"
+                         + (f" (other record {other})" if other else "")
+                         + (f" (title found, byline refused {refused})" if refused else ""))
         print(f"[{a.label}] {name}: " + "   ".join(cells), flush=True)
+        for line in flagged:
+            print(line, flush=True)
     print(f"  {time.time() - started:.0f}s", file=sys.stderr)
     return 0
 
@@ -245,6 +266,8 @@ def main() -> int:
                    help="comma-separated set names to score (default: every set)")
     s.add_argument("--columns", default="", type=lambda v: [x for x in v.split(",") if x],
                    help="comma-separated variant columns to score (default: every column)")
+    s.add_argument("--limit", type=int, default=None, metavar="N",
+                   help="score only the first N records of each set")
     s.set_defaults(func=score)
     a = p.parse_args()
     return a.func(a)

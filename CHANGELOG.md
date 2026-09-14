@@ -4,6 +4,20 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- `measure/fabricated_citations.py score` names every fabricated citation a backend confirms --
+  the record's key, the byline as cited, the record and byline it confirmed on -- instead of
+  counting it; takes `--limit N` to fit a run to a metered backend's day; reports how many
+  fabricated citations a searching backend refused under the right title; and counts "other
+  record" only for the mirror, whose records the set's keys name. Scored against OpenAlex alone,
+  the first 100 padded citations of the 250-record set: 1 confirmed, 90 refused under the right
+  title, 9 titles it does not hold. The confirmation is not yet identified, because the run that
+  names it did not fit the day's budget; until it is, OpenAlex's precision on a padded byline
+  stands at 99 in 100 against the mirror's 250 in 250.
+
 ## [2.2.0] - 2026-09-14
 
 ### Added
@@ -1573,6 +1587,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[Unreleased]: https://github.com/se-uhd/hallucite/compare/v2.2.0...HEAD
 [2.2.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.2.0
 [2.1.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.1.0
 [2.0.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.0.1
