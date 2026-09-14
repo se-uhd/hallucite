@@ -23,6 +23,10 @@ All notable changes to hallucite are documented here. The format follows
 
 ### Changed
 
+- `PLAN.md` now states what the design document had left to the contract and to CLAUDE.md: that the
+  author rule is asymmetric and why, how the completeness tier is decided, and what the three
+  measurement artifacts and the mutation run each check.
+
 - **Each fact is stated in one document.** The `run.sh` bootstrap contract, the plugin packaging
   layout, the triage protocol and the fan-out example were each written out in three or four of
   README, PLAN, CLAUDE.md and SKILL.md, which is how the resolver came to be documented with four

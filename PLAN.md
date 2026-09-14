@@ -48,13 +48,19 @@ consecutively, so extraction reports any printed entry number no reference carri
 warns about it. Nothing later in the pipeline can. A reference that never arrives cannot be
 reported as unverified.
 
-`dblp_check.py` answers over *all* records sharing the cited title rather than the one an FTS
+`dblp_check.py` compares against *all* records sharing the cited title rather than the one an FTS
 query ranks first: "Experimentation in Software Engineering" is three book editions, a 1986 TSE
 article, a 1997 survey and a 2008 conference paper, and comparing a citation against whichever
 comes back first is how a real work gets reported missing. Retrieval is generous -- both readings
 of a hyphen, both foldings of a stroked letter, a word-wise AND, and a fragment-gluing fallback for
 a word the layout split with no hyphen -- and the decision is strict: exact normalized-title
-equality plus a match of every cited name that reads as a person. Where several records match,
+equality plus a match of every cited name that reads as a person. That rule is asymmetric on
+purpose. A citation may name fewer authors than the record, which is what `et al.` means; it may
+not name more, because an invented co-author on a real paper is the fabrication pattern the tool
+targets. Whether an unmatched name counts against the citation depends on whether the record's
+author list is complete, decided per mirror from whether its ingest kept accented names and per
+record from whether the byline is a list of people rather than a group or a truncated row.
+`VERIFICATION-SPEC.md` states the rule in full. Where several records match,
 the one reported is a published record before its preprint and, among those, the record the
 citation locates: the one whose DOI, page range or volume it prints, and failing those the one
 whose year it prints. The audit also retries a failed
@@ -117,6 +123,23 @@ it), DBLP's record where one carries the cited title or its nearest title where 
 two word edits, and only with every cited author on it), what each cited DOI or arXiv id resolves
 to and whether that is the cited title, and what each backend matched. The worklist entry carries
 the same fields (`skipped_dbs`, `dblp_record`, `dblp_nearest`, `identifiers`, `matched`).
+
+## Measurement
+
+Three artifacts, all offline, check the tool itself. `~/hallucite/fabricated-citations.json` holds
+real DBLP records cited correctly and then with known fabrications -- an invented co-author
+appended, an author swapped, a title word changed -- and `measure/fabricated_citations.py score`
+counts how many correct citations confirm, which must be all, and how many fabricated ones
+confirm, which must be none; the truth is known by construction. `~/hallucite/
+verification-results-offline.json` holds the verifier's result for every reference of the
+55-paper corpus, and `verification_results.py compare` replays the corpus after a change and
+reports any parse difference and any reference whose status moved. The 55 synthetic fixtures
+under `tests/fixtures/corpus/` are the corpus papers with every content word ciphered at the same
+length, so CI holds extraction to the real layouts without the real papers; the generator refuses
+to write a fixture whose extraction differs from the paper's. Over all of it,
+`measure/mutations.py` reverts one fix at a time and requires the suite to fail, which is what
+keeps a guard from being one that passes either way. The corpus, the mirror and the dump are
+listed with these artifacts in `CLAUDE.md`.
 
 ## Tests
 
