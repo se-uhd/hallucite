@@ -336,10 +336,18 @@ def authors_match(cited: list[str], candidate: list[str],
 
 
 def _lists_people(candidate: list[str]) -> bool:
-    """Does this byline name any person, as opposed to a group or a truncation mark alone?"""
-    return any(len(_HOMONYM_SUFFIX.sub("", (a or "").strip()).split()) >= 2
-               and not _CORPORATE.search(a or "") and not _ET_AL_ROW.match((a or "").strip())
-               for a in candidate)
+    """Does this byline name people, as opposed to a group or a truncation mark alone?
+
+    A name of two words or more is a person's. So are one-word entries when there are two or more
+    of them: a collaboration is credited once, as one entry, and several mononyms or bare surnames
+    are how some records write their people -- 77 in the mirror (`Zaheeruddin`, `Garima`), and
+    whole OpenAlex bylines (`Hildmann`, `Nicolas`, `Saffre`). Read as a group, such a byline had
+    nobody to pair against and cleared any author list on its title: 2 of 250 padded citations
+    confirmed through OpenAlex that way. A lone one-word entry still reads as a group, because
+    nothing in `OpenAI` says otherwise."""
+    entries = [_HOMONYM_SUFFIX.sub("", (a or "").strip()) for a in candidate]
+    entries = [a for a in entries if a and not _CORPORATE.search(a) and not _ET_AL_ROW.match(a)]
+    return len(entries) >= 2 or any(len(a.split()) >= 2 for a in entries)
 
 
 def _split_person(cited: list[str], candidate: list[str]) -> int:
@@ -394,7 +402,7 @@ def _contradicted(cited: list[str], candidate: list[str]) -> bool:
 
 # A byline word that names a group rather than a person. Deliberately short: every word on it is
 # one an invented author could hide behind, and "AI" is left off because it is also a given name
-# ("Ai Chen") -- the one-word test below is what catches "OpenAI" and "DeepSeek-AI".
+# ("Ai Chen") -- a byline of one lone word is what reads as "OpenAI" or "DeepSeek-AI".
 _CORPORATE = re.compile(r"\b(?:teams?|labs?|group|consortium|collaboration|inc|ltd|foundation"
                         r"|project)\b", re.I)
 # What DBLP writes where it cut a long author list short. 191 publications in the mirror carry it.
@@ -409,13 +417,13 @@ def record_authors_complete(candidate: list[str]) -> bool:
     and the paper has 66. And a collaboration byline names the group, not the people: `OpenAI`,
     `Qwen Team`, `Llama Team`, `DeepSeek-AI` are how the mirror records the LLM technical reports
     an SE bibliography now cites constantly, and holding a correct citation of one against a
-    single corporate name refuses 18 corpus references on the offline path."""
+    single corporate name refuses 18 corpus references on the offline path. Which bylines name
+    people at all is `_lists_people`'s question, and a byline of bare surnames does."""
     if not candidate:
         return False
     if any(_ET_AL_ROW.match((a or "").strip()) for a in candidate):
         return False
-    return any(len(_HOMONYM_SUFFIX.sub("", (a or "").strip()).split()) >= 2
-               and not _CORPORATE.search(a or "") for a in candidate)
+    return _lists_people(candidate)
 
 
 def mirror_authors_complete(db_path: str) -> bool:

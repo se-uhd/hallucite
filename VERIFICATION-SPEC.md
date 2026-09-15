@@ -131,7 +131,10 @@ correct citation of a truncated record pairs at least one. Without this bar the 
 wildcard -- "StarCoder 2" cited under two invented names verified against its 57-person record, and
 a title 922 records share verified any author list at all through the one record carrying an
 `et al.` row. A record that lists no person, only a group, has nothing to pair against and clears on
-the title alone; that is the limit of what a bibliographic database can say about such a work.
+the title alone; that is the limit of what a bibliographic database can say about such a work. A
+group is credited once, so only a byline of one entry reads that way. Two or more one-word entries
+are people written as mononyms or bare surnames, as 77 mirror records and whole OpenAlex bylines
+write them, and read as a group they cleared any author list on the title.
 
 ## Title matching
 
