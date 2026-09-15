@@ -2620,7 +2620,17 @@ def tier5d_openalex() -> None:
         got = V.check([ref], dblp_path=None, disabled_dbs=only)[0]
         C.eq(got.db_results[0].status, "no_match",
              "REGRESSION GUARD: a journal's review of the book is not the book, however many of "
-             "the book's authors its byline carries -- three residue matches were reviews")
+             "the book's authors its byline carries")
+        bare = json.dumps({"results": [{
+            "id": "https://openalex.org/W3", "title": "A Study, With a Comma: And a Subtitle",
+            "authorships": [{"raw_author_name": "Byte"}, {"raw_author_name": "Bit"}]}]}).encode()
+        V._fetch = lambda url, *a, **k: (bare, "ok")
+        got = V.check([V.Reference(title="A Study, With a Comma: And a Subtitle",
+                                   authors=["Ada Byte", "Bo Bit", "Mallory Fakename"])],
+                      dblp_path=None, disabled_dbs=only)[0]
+        C.eq(got.status, "mismatch",
+             "REGRESSION GUARD: a byline OpenAlex stores as bare surnames names people, and an "
+             "invented author appended to it is not cleared on the title")
         V._fetch = lambda url, *a, **k: (asked.append(url), (hit, "ok"))[1]
         asked.clear()
         V.check([V.Reference(title="Artifact for \u201cA Quoted Title: With a Subtitle\u201d",
@@ -2939,9 +2949,29 @@ def tier6b_completeness_tier() -> None:
            "an ordinary byline of people is a complete author list")
     C.true(not D.record_authors_complete(["Jane Doe", "et al."]),
            "REGRESSION GUARD: a record storing a literal `et al.` says its own list is cut short")
-    for byline in (["OpenAI"], ["Qwen Team"], ["Llama Team"], ["DeepSeek-AI"]):
+    for byline in (["OpenAI"], ["Qwen Team"], ["Llama Team"], ["DeepSeek-AI"], ["OpenAI", "et al."]):
         C.true(not D.record_authors_complete(byline),
                f"REGRESSION GUARD: {byline[0]!r} is a collaboration byline, not an author list")
+    C.true(D.record_authors_complete(["Aldoro", "Benvica"]),
+           "REGRESSION GUARD: two one-word entries are people written as mononyms or bare surnames "
+           "-- a group is credited once, and 77 mirror records write their people this way")
+    surnames = V._Record(title="A Study of Things in Software",
+                         authors=["Aldoro", "Benvica", "Carrasol"])
+    def cited(*names):
+        return type("R", (), {"title": "A Study of Things in Software", "authors": list(names),
+                              "doi": None, "arxiv_id": None})()
+    C.eq(V._verdict(cited("Ada Aldoro", "Bo Benvica", "Cy Carrasol", "Mallory Fakename"), surnames),
+         V.AUTHOR_MISMATCH,
+         "REGRESSION GUARD: an invented name appended to a byline of bare surnames is refused -- "
+         "read as a group byline it cleared on the title, and 2 of 250 padded citations confirmed "
+         "through OpenAlex that way")
+    C.eq(V._verdict(cited("Ada Aldoro", "Bo Benvica", "Cy Carrasol"), surnames), V.MATCH,
+         "and the correct citation still confirms, each full name pairing with its surname")
+    C.eq(V._verdict(cited("Ada Byte", "Bo Bitnam", "Mallory Fakename"),
+                    V._Record(title="A Study of Things in Software", authors=["Adabyte", "Bo-BitNam"])),
+         V.AUTHOR_MISMATCH,
+         "REGRESSION GUARD: a byline of glued names pairs with nothing, and a citation it cannot "
+         "account for is refused rather than cleared")
     C.true(D.authors_match(["Josh Achiam", "Steven Adler", "Sandhini Agarwal"], ["OpenAI"],
                            record_complete=False),
            "a correct citation of a collaboration-credited work is not an author accusation")

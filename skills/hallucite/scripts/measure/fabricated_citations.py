@@ -52,9 +52,13 @@ DEFAULT_OUT = os.path.expanduser("~/hallucite/fabricated-citations.json")
 BACKENDS = ("DBLP", "CrossRef", "DOI", "arXiv", "OpenAlex", "Semantic Scholar")
 ONLINE = BACKENDS[1:]
 SEED = 20260911
-# The columns that cite a record correctly; a confirmation in any other column is a fabricated
-# citation let through, and is printed with its record.
-CORRECT = ("clean", "et_al", "first_only", "subtitle_dropped", "respaced", "clean_first3_etal")
+# The columns of each set where a confirmation is a fabricated citation let through, printed with
+# its record. In the truncated set `plus1` and `first_swapped` confirm by design -- against a byline
+# DBLP cut short, an unmatched name is the record's gap -- and only a citation that pairs none of
+# the record's people must not.
+_CORRUPTED = ("plus1", "plus2", "plus3", "swapped", "word_changed", "reversed", "invented_title")
+MUST_NOT_CONFIRM = {"three_plus_tokens": _CORRUPTED, "two_tokens": _CORRUPTED,
+                    "truncated_records": ("wholly_invented",)}
 TRUNCATED_SEED = 20260912
 # Syllables for invented names; every name drawn is checked against the authors table.
 SYLLABLES = ["bar", "den", "fol", "gar", "hal", "jen", "kol", "lim", "mor", "nes", "pol", "quen",
@@ -224,7 +228,7 @@ def score(a) -> int:
                     if (a.backend in (None, "DBLP")
                             and not (d.get("paper_url") or "").endswith("/" + rec["key"])):
                         other += 1
-                    if column not in CORRECT:
+                    if column in MUST_NOT_CONFIRM.get(name, ()):
                         # A fabricated citation that confirmed is a finding with a name, and a
                         # count hides which record let it through.
                         flagged.append(f"    ! {rec['key']} {column}: {variant['title']!r} "

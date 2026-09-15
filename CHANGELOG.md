@@ -4,19 +4,34 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
-## [Unreleased]
+## [2.2.1] - 2026-09-15
+
+### Fixed
+
+- **A byline of one-word names no longer clears any author list on its title.** The completeness
+  tier read a byline with no two-word name as a collaboration credited to a group, like `OpenAI`,
+  which lists no person and so clears on the title alone. OpenAlex stores some works with every
+  author as one word, in the name as printed and the resolved name alike (`Hildmann`, `Nicolas`,
+  `Saffre`; `Weiwei`, `Qing-JiZeng`), and through two such works it confirmed 2 of the 250 padded
+  citations in the fabricated set, one of them pairing none of its three names. A group is credited
+  once, so a byline now names people when it has two or more entries that are not a group name or a
+  truncation mark, however short; a lone one-word entry still reads as a group. The rule is shared,
+  so the mirror moves too: 77 of its 8.7 million records carry such a byline, every one of them
+  people under mononyms, glued names, handles or a surname and given name stored as two entries,
+  and each had cleared any author list. Against OpenAlex alone after the fix, the 250 padded and
+  the 250 swapped citations confirm 0 each, 234 of each refused under the right title. The offline
+  replay moves nothing and every fabricated set confirms exactly as recorded. The cost is recall
+  on those records: a citation that writes a glued name apart (`Wei Wei` for `Weiwei`) no longer
+  pairs, and goes to triage. How many correct citations OpenAlex confirms on its own is not yet
+  scored.
 
 ### Changed
 
-- `measure/fabricated_citations.py score` names every fabricated citation a backend confirms --
-  the record's key, the byline as cited, the record and byline it confirmed on -- instead of
-  counting it; takes `--limit N` to fit a run to a metered backend's day; reports how many
-  fabricated citations a searching backend refused under the right title; and counts "other
-  record" only for the mirror, whose records the set's keys name. Scored against OpenAlex alone,
-  the first 100 padded citations of the 250-record set: 1 confirmed, 90 refused under the right
-  title, 9 titles it does not hold. The confirmation is not yet identified, because the run that
-  names it did not fit the day's budget; until it is, OpenAlex's precision on a padded byline
-  stands at 99 in 100 against the mirror's 250 in 250.
+- `measure/fabricated_citations.py score` prints each fabricated citation a backend confirms, with
+  the record, the byline as cited and the byline it confirmed on, in the columns each set requires
+  to stay at zero; takes `--limit N` to fit a metered backend's day; reports how many citations a
+  backend refused under the right title; and counts "other record" only for the mirror, whose
+  records the set's keys name. The two records it named are what located the fix above.
 
 ## [2.2.0] - 2026-09-14
 
@@ -1587,7 +1602,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
-[Unreleased]: https://github.com/se-uhd/hallucite/compare/v2.2.0...HEAD
+[2.2.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.2.1
 [2.2.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.2.0
 [2.1.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.1.0
 [2.0.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.0.1
