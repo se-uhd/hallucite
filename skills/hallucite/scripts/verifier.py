@@ -134,11 +134,14 @@ _OPENALEX_FIELDS = "id,doi,title,display_name,type,authorships,is_authors_trunca
 # title. Most such reviews it types `article`, which nothing here can tell from the book, and
 # this list drops only what it labels. Over the residue that was one record in sixty.
 _OPENALEX_NOT_THE_WORK = ("book-review",)
-# The filter value travels in double quotes, so a quotation mark of any shape inside it -- the
-# curly pair a citation prints around a quoted title, half of which the subtitle split then leaves
-# unpaired -- has to come out, or the request is refused. The title is compared on its letters
-# anyway, so nothing is lost.
-_QUOTE_MARKS = re.compile("[\"\u201c\u201d\u201e\u201f\u00ab\u00bb]")
+# Two marks inside the filter value break it, both measured against the API rather than read
+# anywhere. A quotation mark of any shape ends the quoted value and the request is refused -- a
+# citation prints a curly pair around a quoted title, and the subtitle split leaves half of it
+# behind. And a question mark makes the search return nothing at all: "When Will Robots Be
+# Sentient?" answers 0 works, the same title without it 1, which cost 4 of 250 correct citations.
+# A trailing period, a colon, a comma and an exclamation mark all cost nothing and stay. The title
+# is compared on its letters, so removing these loses nothing.
+_FILTER_BREAKS = re.compile("[\"\u201c\u201d\u201e\u201f\u00ab\u00bb?]")
 
 
 @dataclass
@@ -735,8 +738,8 @@ class Verifier:
         triage that no negative in the run is clean.
 
         The title filter wants every word it is given on the record, and reads a bare comma as
-        the end of the value, so the value travels in quotes and is asked in the forms
-        `_openalex_query_forms` lists."""
+        the end of the value, so the value travels in quotes, stripped of the marks that break it
+        (`_FILTER_BREAKS`), and is asked in the forms `_openalex_query_forms` lists."""
         answers: list[_Answer] = []
         refused_in_a_row = 0
         for ref in refs:
@@ -747,7 +750,7 @@ class Verifier:
             started = time.monotonic()
             answer = _Answer(DbResult(OPENALEX, NO_MATCH))
             for form in _openalex_query_forms(title):
-                params = {"filter": 'title.search:"' + _QUOTE_MARKS.sub(" ", form) + '"',
+                params = {"filter": 'title.search:"' + _FILTER_BREAKS.sub(" ", form) + '"',
                           "per-page": "5", "select": _OPENALEX_FIELDS}
                 if self.openalex_api_key:
                     params["api_key"] = self.openalex_api_key

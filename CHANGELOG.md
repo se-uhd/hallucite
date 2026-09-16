@@ -4,6 +4,26 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.2.2] - 2026-09-16
+
+### Fixed
+
+- **A question mark in a cited title no longer loses the work.** OpenAlex's title filter answers 0
+  works for a value carrying one and 1 for the same value without it, so any title that asks a
+  question was reported as not held -- 4 of the 250 correct citations in the fabricated set. It now
+  comes out of the value along with the quotation marks. A trailing period, a colon, a comma and an
+  exclamation mark were each measured against the API and cost nothing, so they stay. Correct
+  citations against OpenAlex alone confirm 236 of 250, up from 232, and the padded and swapped
+  columns stay at 0.
+
+  Of the 14 correct citations it still does not confirm, 12 name works OpenAlex does not index: a
+  proceedings volume, a conference demo, recent preprints. The other 2 are records whose byline is
+  worse than the paper's -- one lists 1 of the 2 authors without flagging the list as cut, and one
+  stores a name as `nBoris Lippe`, in the printed form and the resolved form alike. A record that
+  does not say its list is cut refuses a citation naming someone it does not carry, which is the
+  direction to be wrong in: the reference goes to triage rather than being confirmed against a
+  byline that disagrees with it.
+
 ## [2.2.1] - 2026-09-15
 
 ### Fixed
@@ -1602,6 +1622,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[2.2.2]: https://github.com/se-uhd/hallucite/releases/tag/v2.2.2
 [2.2.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.2.1
 [2.2.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.2.0
 [2.1.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.1.0

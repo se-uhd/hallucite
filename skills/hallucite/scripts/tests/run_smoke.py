@@ -2641,6 +2641,14 @@ def tier5d_openalex() -> None:
              "REGRESSION GUARD: a quotation mark of any shape comes out of the quoted value -- "
              "the subtitle split leaves a curly pair unpaired, and OpenAlex refuses the request")
         asked.clear()
+        V.check([V.Reference(title="When Will Robots Be Sentient?", authors=["Ada Byte"])],
+                dblp_path=None, disabled_dbs=only)
+        C.eq([urllib.parse.parse_qs(urllib.parse.urlparse(u).query)["filter"][0] for u in asked],
+             ['title.search:"When Will Robots Be Sentient "'],
+             "REGRESSION GUARD: a question mark comes out of the filter value -- with one OpenAlex "
+             "answers 0 works and without it 1, which cost 4 of 250 correct citations. The space it "
+             "leaves behind costs nothing: 236 of 250 confirm with it")
+        asked.clear()
         V.check([ref], dblp_path=None, openalex_api_key="k-1", disabled_dbs=only)
         C.eq(urllib.parse.parse_qs(urllib.parse.urlparse(asked[0]).query).get("api_key"), ["k-1"],
              "a configured key travels as the api_key parameter")
