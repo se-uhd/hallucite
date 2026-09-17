@@ -11,7 +11,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.10 or newer (standard library only), pdftotext (poppler), and an offline DBLP database at ~/hallucite/dblp.db, built by `mise run build-dblp` (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
-  version: "2.2.2"
+  version: "2.3.0"
 ---
 
 # hallucite
@@ -138,7 +138,7 @@ against the directory the user means (ask if ambiguous).
 ## Stage 1+2: extract and verify (no LLM)
 
 ```sh
-"$RUN" audit <pdf-file-or-dir> --out <outdir> --mailto <your-email>
+"$RUN" audit <pdf-file-or-dir> --out <outdir>
 ```
 
 Writes `<outdir>/<paper_id>.json` (every reference, parsed fields plus per-database verification)

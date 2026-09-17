@@ -38,7 +38,7 @@ import sys
 from pathlib import Path
 
 import reference_parser
-from audit_references import DEFAULT_DBLP, verification_dict
+from audit_references import DEFAULT_DBLP, default_mailto, verification_dict
 from pdf_references import extract_references
 from verifier import Verifier
 
@@ -264,7 +264,8 @@ def main() -> int:
     r.add_argument("target", type=Path, help="a PDF file or a directory of them")
     r.add_argument("--out", type=Path, default=Path("verification-results.json"))
     r.add_argument("--dblp", default=DEFAULT_DBLP)
-    r.add_argument("--mailto", default="")
+    r.add_argument("--mailto", default=default_mailto(),
+                   help="CrossRef polite-pool contact; defaults to $CROSSREF_MAILTO")
     r.add_argument("--s2-api-key", default="",
                    help="Semantic Scholar API key ($S2_API_KEY). Without one the recording is "
                         "rate-limited into taking hours")

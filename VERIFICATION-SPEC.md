@@ -165,17 +165,17 @@ are what the audit depends on:
 ## Coverage, for sizing an implementation
 
 Which backend actually decides a verdict, over the 2357 confirmations `verification_results.py`
-records across the 55-paper corpus, against a mirror whose accented authors survived its ingest,
-with an authenticated Semantic Scholar, and on a day arXiv refused every identifier lookup:
+records across the 55-paper corpus, against a mirror whose accented authors survived its ingest
+and with an authenticated Semantic Scholar:
 
 | source | share |
 |---|---|
-| DBLP (offline) | 89.5% |
+| DBLP (offline) | 89.4% |
 | CrossRef | 7.7% |
-| OpenAlex | 2.0% |
+| OpenAlex | 1.4% |
+| arXiv | 0.7% |
 | DOI resolver | 0.5% |
 | Semantic Scholar | 0.4% |
-| arXiv | refused all day |
 
 The offline mirror decides nine confirmations in ten, so an implementation's accuracy is mostly
 its DBLP path. No other source is worth more than eight percent, so the question for each is
@@ -183,9 +183,10 @@ whether its share is worth a request per unverified reference. OpenAlex holds wh
 do not -- books, technical reports, dissertations, repository deposits -- and is the only one that
 answers without a key, on a budget metered by the day. Semantic Scholar is reachable only with an
 API key, anonymous callers share a quota that refuses almost everything, and even keyed it failed
-to answer for 232 references that day. A backend's share moves with what the ones before it
-already matched: arXiv decided 17 confirmations in the 2026-09-11 recording, before OpenAlex was
-asked ahead of it. Open Library, PubMed and Europe PMC are not asked at all; in the recording of
+to answer for 232 references that day. A backend's share is what the ones before it leave: arXiv
+answers about identifiers, so it is asked fourth and confirms what the mirror and the registries
+miss, and half of what it confirms OpenAlex would otherwise catch a step later. Open Library,
+PubMed and Europe PMC are not asked at all; in the recording of
 the package this one replaced they decided 1.4% between them, mostly the statistics classics and
 the books an SE bibliography cites without a DOI.
 

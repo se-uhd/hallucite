@@ -141,6 +141,14 @@ MUTATIONS = [
      "                            not doi_match(c, dois),",
      "    out.sort(key=lambda c: (not doi_match(c, dois),\n"
      '                            (c.venue or "").strip().lower() == "corr",'),
+    ("verifier: the search API's refusal is never put to OAI-PMH", V,
+     '        for arxiv_id in [i for i in ids if outcome_of.get(i) != "ok"][:_ARXIV_OAI_CAP]:',
+     "        for arxiv_id in []:"),
+    ("verifier: the OAI-PMH fallback is unbounded", V,
+     "[:_ARXIV_OAI_CAP]:", "[:]:"),
+    ("verifier: an OAI-PMH idDoesNotExist reads as a failure", V,
+     '        return None, "not_found" if (error.get("code") or "") == "idDoesNotExist" else ERROR',
+     "        return None, ERROR"),
     ("verifier: the citation's years never reach the mirror", V,
      '        candidates = title_candidates(self.dblp_path, title, cited_years(raw), raw,\n'
      '                                      getattr(ref, "doi", None))',
@@ -185,6 +193,8 @@ MUTATIONS = [
     ("triage: authors_absent is not read off the matched record", T,
      '    return absent_authors((ref.get("parsed") or {}).get("authors") or [], dv["found_authors"])',
      '    return []'),
+    ("audit: a configured CrossRef contact is ignored", A,
+     '    return os.environ.get("CROSSREF_MAILTO", "").strip()', '    return ""'),
     ("audit: the nearest title is asked for whatever the mirror said", A,
      '        if any(r.get("db") == DBLP and r.get("status") == NO_MATCH\n'
      '               for r in v.get("db_results") or []):',

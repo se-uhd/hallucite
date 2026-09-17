@@ -80,9 +80,14 @@ VERIFIED, NOT_FOUND, MISMATCH = "verified", "not_found", "mismatch"
 CROSSREF_WORKS = "https://api.crossref.org/works"
 DOI_ORG = "https://doi.org/"
 ARXIV_API = "http://export.arxiv.org/api/query"
+# arXiv's harvesting interface, beside the search API on the same host. It answers about one
+# identifier per request, which is why it is a fallback rather than the way the backend asks.
+ARXIV_OAI = "http://export.arxiv.org/oai2"
 OPENALEX_WORKS = "https://api.openalex.org/works"
 S2_SEARCH = "https://api.semanticscholar.org/graph/v1/paper/search"
 _ATOM = "{http://www.w3.org/2005/Atom}"
+_OAI = "{http://www.openarchives.org/OAI/2.0/}"
+_OAI_ARXIV = "{http://arxiv.org/OAI/arXiv/}"
 # arXiv takes up to 100 ids per request; the pause between requests is what its
 # export API asks for, and going without it is what earns a long block.
 _ARXIV_BATCH = 100
@@ -91,6 +96,13 @@ _ARXIV_PAUSE = 3.0
 # because each costs a paced request, and an unbounded re-check of a long residue is
 # what earns the block this pacing exists to avoid.
 _ARXIV_RECHECK = 20
+# How many identifiers the OAI-PMH fallback asks about when the search API will not answer. It
+# costs a paced request each, so it is bounded: on 2026-09-17 the API answered 406 to every
+# `id_list` request for a day -- whatever the headers, the scheme, the user agent or the query
+# form, and with retries at 2, 4, 8 and 16 s all refused -- while OAI-PMH, the abstract pages and
+# the arXiv DOI all answered normally. Without the fallback that outage cost the corpus recording
+# arXiv's evidence for 38 references and two confirmations outright.
+_ARXIV_OAI_CAP = 60
 # Semantic Scholar answers one reference per request and rate-limits hard, so it is paced and it is
 # asked last. Without a key it is not asked at all -- see `_semantic_scholar`.
 _S2_PAUSE_KEYED = 1.1
@@ -664,6 +676,7 @@ class Verifier:
         found: dict[str, _Record] = {}
         outcome_of: dict[str, str] = {}
         elapsed_of: dict[str, float] = {}
+        rechecked: set[str] = set()
         for start in range(0, len(ids), _ARXIV_BATCH):
             chunk = ids[start:start + _ARXIV_BATCH]
             outcome, elapsed = self._ask_arxiv(chunk, found, pause=bool(start))
@@ -671,9 +684,24 @@ class Verifier:
                 outcome_of[arxiv_id] = outcome
                 elapsed_of[arxiv_id] = elapsed
 
+        # The search API can refuse while the rest of arXiv answers, so an identifier it would not
+        # answer about is put to the harvesting interface before it is given up on. One request
+        # each and bounded, because that is a slower question than the batch.
+        for arxiv_id in [i for i in ids if outcome_of.get(i) != "ok"][:_ARXIV_OAI_CAP]:
+            record, outcome, elapsed = self._ask_arxiv_oai(arxiv_id)
+            elapsed_of[arxiv_id] = elapsed
+            if outcome == "ok" and record is not None:
+                found[arxiv_id] = record
+                outcome_of[arxiv_id] = "ok"
+            elif outcome == "not_found":
+                # The repository says it holds no such identifier, which is an answer.
+                outcome_of[arxiv_id] = "ok"
+                rechecked.add(arxiv_id)
+
         # Asked for alone, an identifier a batch omitted either comes back or is really not there.
-        absent = [i for i in ids if i not in found and outcome_of.get(i) == "ok"]
-        rechecked = set(absent[:_ARXIV_RECHECK])
+        absent = [i for i in ids if i not in found and outcome_of.get(i) == "ok"
+                  and i not in rechecked]
+        rechecked |= set(absent[:_ARXIV_RECHECK])
         for arxiv_id in absent[:_ARXIV_RECHECK]:
             outcome, elapsed = self._ask_arxiv([arxiv_id], found, pause=True)
             outcome_of[arxiv_id] = outcome
@@ -773,6 +801,24 @@ class Verifier:
                     break
             answers.append(answer)
         return answers
+
+    def _ask_arxiv_oai(self, arxiv_id: str) -> tuple[_Record | None, str, float]:
+        """One identifier through arXiv's OAI-PMH interface: (record, outcome, elapsed_ms).
+
+        The identifier travels as `oai:arXiv.org:<id>` in both the modern and the old form, and a
+        repository that holds no such record says so with an `idDoesNotExist` error, which is an
+        answer about the preprint where any other error code is not."""
+        time.sleep(_ARXIV_PAUSE)
+        params = {"verb": "GetRecord", "identifier": f"oai:arXiv.org:{arxiv_id}",
+                  "metadataPrefix": "arXiv"}
+        began = time.monotonic()
+        body, outcome = _fetch(f"{ARXIV_OAI}?{urllib.parse.urlencode(params)}", "application/xml",
+                               self.timeout, self.user_agent, self.rate_limit_retries)
+        elapsed = (time.monotonic() - began) * 1000
+        if outcome != "ok":
+            return None, outcome if outcome in DID_NOT_ANSWER else ERROR, elapsed
+        record, parsed = _arxiv_oai_record(body)
+        return record, parsed, elapsed
 
     def _semantic_scholar(self, refs: list) -> list[_Answer]:
         """Semantic Scholar's paper search, over whatever the other five could not confirm.
@@ -966,6 +1012,41 @@ def _arxiv_entries(body: bytes) -> dict[str, _Record] | None:
                    for a in entry.findall(f"{_ATOM}author")]
         out[key] = _Record(title=title, authors=[a for a in authors if a], url=url)
     return out
+
+
+def _arxiv_oai_record(body: bytes) -> tuple[_Record | None, str]:
+    """(record, outcome) for one OAI-PMH answer, in arXiv's own metadata format.
+
+    The byline is stored in parts -- `keyname` is the surname, `forenames` the rest -- and a
+    collaboration is stored under `name`. `idDoesNotExist` is the repository answering that it has
+    no such identifier; every other error code, and anything that is not an OAI-PMH document at
+    all, is not an answer and must not read as one."""
+    try:
+        root = ET.fromstring(body)
+    except ET.ParseError:
+        return None, ERROR
+    if root.tag != f"{_OAI}OAI-PMH":
+        return None, ERROR
+    error = root.find(f"{_OAI}error")
+    if error is not None:
+        return None, "not_found" if (error.get("code") or "") == "idDoesNotExist" else ERROR
+    meta = root.find(f"{_OAI}GetRecord/{_OAI}record/{_OAI}metadata/{_OAI_ARXIV}arXiv")
+    if meta is None:
+        return None, ERROR
+    title = " ".join((meta.findtext(f"{_OAI_ARXIV}title") or "").split())
+    if not title:
+        return None, ERROR
+    names = []
+    for author in meta.findall(f"{_OAI_ARXIV}authors/{_OAI_ARXIV}author"):
+        parts = [" ".join((author.findtext(f"{_OAI_ARXIV}{tag}") or "").split())
+                 for tag in ("forenames", "keyname")]
+        name = " ".join(p for p in parts if p) or " ".join(
+            (author.findtext(f"{_OAI_ARXIV}name") or "").split())
+        if name:
+            names.append(name)
+    ident = " ".join((meta.findtext(f"{_OAI_ARXIV}id") or "").split())
+    return _Record(title=title, authors=names,
+                   url=f"https://arxiv.org/abs/{ident}" if ident else None), "ok"
 
 
 def check(references: list, **kwargs) -> list[ValidationResult]:

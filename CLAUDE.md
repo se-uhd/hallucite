@@ -34,7 +34,6 @@ its contents constantly:
 | `verification-results-hallucinator.json` | frozen; nothing reads it: what `hallucinator` returned for the 41-paper corpus |
 | `verification-results-offline.json` | hallucite's result for every corpus reference, mirror only; `verification_results.py compare` diffs against it |
 | `verification-results-online.json` | the same with all six backends, recorded 2026-09-17 |
-| `verification-results-online-2026-09-11.json` | the recording before it, kept only until arXiv answers again |
 
 ## Running things
 
@@ -78,17 +77,17 @@ its contents constantly:
   runs. A change to the record shown is therefore confirmed by an `--offline` audit of the corpus
   before and after, diffed per reference, and the file is re-recorded offline after a change meant
   to move a verdict. `verification-results-online.json` was re-recorded on 2026-09-17 in 49 minutes,
-  over the same corpus with all six backends: 2357 confirmations, of which the mirror decided 2109,
-  CrossRef 181, OpenAlex 46, the DOI resolver 11 and Semantic Scholar 10. What a recording cannot
-  cover is a backend that refused that day, and two did. Semantic Scholar failed to answer for 232
-  references even with a key. arXiv refused every identifier lookup with a 406 for six hours --
-  not the headers, the scheme, the user agent or the query form, since only an already-cached query
-  got through -- so the 17 confirmations it made on 2026-09-11 are missing here and 38 references
-  carry its failure; that older recording is kept as `verification-results-online-2026-09-11.json`
-  until those 38 can be re-asked -- a re-check of those references alone, through the same `check`,
-  merged back into the file.
-  Re-recording is a corpus replay of about 50 minutes and most of a day's OpenAlex allowance, done
-  with `--mailto`, on a day the quota is fresh, and never twice in an afternoon.
+  over the same corpus with all six backends: 2359 confirmations, of which the mirror decided 2109,
+  CrossRef 181, OpenAlex 32, arXiv 16, the DOI resolver 11 and Semantic Scholar 10. What a recording
+  cannot cover is a backend that refused that day. Semantic Scholar failed to answer for 232
+  references even with a key, and those are the only degraded references in the file. arXiv's search
+  API refused every identifier lookup that day, which is what the OAI-PMH fallback now covers; the
+  references it left degraded were re-asked through the same `check` and merged back in, which is
+  the repair to make when one backend has a bad day rather than re-recording the corpus.
+  Re-recording is a corpus replay of about 50 minutes and most of a day's OpenAlex allowance, on a
+  day the quota is fresh, and never twice in an afternoon. Never type a contact address on a
+  command line or into a tracked file: `--mailto` defaults to `$CROSSREF_MAILTO`, which belongs in
+  `.env.local` beside the API keys, and a run without one asks CrossRef one request at a time.
 
   `mutations.py` reverts one fix at a time and requires the suite to fail, and does so in the
   working tree, which it owns until it finishes: no other measurement, and no edit to any tracked

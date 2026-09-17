@@ -2463,6 +2463,70 @@ def tier5b_verifier() -> None:
     C.true(got.arxiv_info is not None and got.arxiv_info.valid is False,
            "an identifier absent from both answers is reported as not existing")
 
+
+    # The search API can refuse every request while the rest of arXiv answers: on 2026-09-17 it
+    # returned 406 to each `id_list` call for a day, which cost a corpus recording arXiv's evidence
+    # for 38 references and two confirmations. An identifier it will not answer about goes to the
+    # harvesting interface instead.
+    OAI = (b'<?xml version="1.0"?><OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">'
+           b'<GetRecord><record><header><identifier>oai:arXiv.org:2502.02866</identifier></header>'
+           b'<metadata><arXiv xmlns="http://arxiv.org/OAI/arXiv/"><id>2502.02866</id><authors>'
+           b'<author><keyname>Chang</keyname><forenames>Hung-Fu</forenames></author>'
+           b'<author><keyname>Shirazi</keyname><forenames>Mohammad Shokrolah</forenames></author>'
+           b'</authors><title>A Systematic Approach for\n  Assessing Test Case Generation</title>'
+           b'</arXiv></metadata></record></GetRecord></OAI-PMH>')
+    record, outcome = V._arxiv_oai_record(OAI)
+    C.eq((outcome, record.title, record.url),
+         ("ok", "A Systematic Approach for Assessing Test Case Generation",
+          "https://arxiv.org/abs/2502.02866"),
+         "an OAI-PMH record gives up its title on one line, and the abstract page as its address")
+    C.eq(record.authors, ["Hung-Fu Chang", "Mohammad Shokrolah Shirazi"],
+         "REGRESSION GUARD: the byline is stored in parts -- forenames and keyname -- and a name "
+         "built the other way round pairs with nothing")
+    C.eq(V._arxiv_oai_record(b'<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">'
+                             b'<error code="idDoesNotExist">no such id</error></OAI-PMH>'),
+         (None, "not_found"),
+         "REGRESSION GUARD: idDoesNotExist is the repository answering that it holds no such "
+         "preprint, which is fabrication signal (D), where any other error is not an answer")
+    C.eq(V._arxiv_oai_record(b'<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/">'
+                             b'<error code="badArgument">bad</error></OAI-PMH>')[1], "error",
+         "another error code says nothing about the preprint")
+    C.eq(V._arxiv_oai_record(b"<html><body>502</body></html>")[1], "error",
+         "a page that is not an OAI-PMH document is not an answer")
+
+    # Through `check`: the batch endpoint refuses, the harvesting interface answers, and the
+    # reference is confirmed rather than left degraded.
+    asked_hosts: list[str] = []
+
+    def api_refuses(url, accept, timeout, ua, retries, headers=None):
+        asked_hosts.append("oai2" if "/oai2" in url else "api")
+        return (OAI, "ok") if "/oai2" in url else (None, V.ERROR)
+
+    real, V._ARXIV_PAUSE_KEEP = V._fetch, V._ARXIV_PAUSE
+    V._fetch, V._ARXIV_PAUSE = api_refuses, 0.0
+    try:
+        got = V.check([V.Reference(title="A Systematic Approach for Assessing Test Case Generation",
+                                   authors=["Hung-Fu Chang", "Mohammad Shokrolah Shirazi"],
+                                   arxiv_id="2502.02866")],
+                      dblp_path=None,
+                      disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI, V.OPENALEX, V.SEMANTIC_SCHOLAR))[0]
+        C.eq((got.status, got.source), ("verified", "arXiv"),
+             "REGRESSION GUARD: an identifier the search API will not answer about is put to "
+             "OAI-PMH, and the preprint is confirmed from there")
+        C.eq(got.failed_dbs, [], "so the reference is not left carrying a backend failure")
+        C.true("oai2" in asked_hosts, "the harvesting interface was the one that answered")
+
+        # Bounded: it costs a paced request each, so an outage cannot turn one batch into hundreds.
+        asked_hosts.clear()
+        refs = [V.Reference(title=f"A preprint number {i}", authors=["Ada Byte"],
+                            arxiv_id=f"2502.{i:05d}") for i in range(V._ARXIV_OAI_CAP + 5)]
+        V.check(refs, dblp_path=None,
+                disabled_dbs=(V.DBLP, V.CROSSREF, V.DOI, V.OPENALEX, V.SEMANTIC_SCHOLAR))
+        C.eq(asked_hosts.count("oai2"), V._ARXIV_OAI_CAP,
+             f"REGRESSION GUARD: the fallback stops after {V._ARXIV_OAI_CAP} identifiers")
+    finally:
+        V._fetch, V._ARXIV_PAUSE = real, V._ARXIV_PAUSE_KEEP
+
     # A rate limit is not an answer about the reference.
     real = V._fetch
     V._fetch = lambda *a, **k: (None, V.RATE_LIMITED)
@@ -3227,6 +3291,23 @@ def tier6d_extraction_and_env() -> None:
             C.true("HALLUCITE_BOOTSTRAP_FAILED:" in proc.stderr,
                    f"REGRESSION GUARD: {label} in .env.local does not take run.sh down without "
                    f"its sentinel")
+
+    # The CrossRef contact address is configuration, not an argument: it identifies a person, so it
+    # is read from the gitignored `.env.local` that run.sh and mise already export, and never typed
+    # on a command line or written into a tracked file.
+    import audit_references as audit
+    keep = os.environ.pop("CROSSREF_MAILTO", None)
+    try:
+        C.eq(audit.default_mailto(), "",
+             "with nothing configured, no contact address is sent")
+        os.environ["CROSSREF_MAILTO"] = "  reader@example.org  "
+        C.eq(audit.default_mailto(), "reader@example.org",
+             "REGRESSION GUARD: a configured address is used, and it comes from the environment "
+             "rather than from a command line the shell history keeps")
+    finally:
+        os.environ.pop("CROSSREF_MAILTO", None)
+        if keep is not None:
+            os.environ["CROSSREF_MAILTO"] = keep
 
 
 def tier6e_dblp_ingest() -> None:

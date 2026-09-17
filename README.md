@@ -49,12 +49,13 @@ below and a plugin installed from a local checkout see the same values. A variab
 the environment wins.
 
 A plugin installed from the marketplace is a different tree and never sees your clone's
-`.env.local`. Export the keys in the shell that starts Claude Code or Codex CLI, or pass
+`.env.local`. Export the values in the shell that starts Claude Code or Codex CLI, or pass
 `--s2-api-key` and `--openalex-api-key`.
 
 ```sh
-S2_API_KEY=s2k-...     # Semantic Scholar: https://www.semanticscholar.org/product/api
-OPENALEX_API_KEY=...   # OpenAlex, optional: https://openalex.org/
+S2_API_KEY=s2k-...        # Semantic Scholar: https://www.semanticscholar.org/product/api
+OPENALEX_API_KEY=...      # OpenAlex, optional: https://openalex.org/
+CROSSREF_MAILTO=you@...   # CrossRef, optional: a contact address, not a key
 ```
 
 Semantic Scholar is not asked without a key. Anonymous callers share a small quota, and a
@@ -62,7 +63,10 @@ rate-limited lookup leaves a reference degraded rather than cleanly negative, wh
 boundary between `verified` and "needs triage" between otherwise identical runs. OpenAlex is asked
 either way and meters the day rather than the second: a hundred searches without a key, a thousand
 under a free one, reset at midnight UTC. A paper's residue fits the first; a corpus needs the
-second. CrossRef wants no key, only the `--mailto` contact that puts a caller in its faster pool.
+second. CrossRef wants no key. A caller that gives a contact address
+is routed into a pool allowing three requests at a time where an anonymous one gets a single
+request, so `CROSSREF_MAILTO` buys throughput and nothing else. Keeping it in `.env.local` is what
+keeps an address off every command line and out of the repository.
 
 ## Run the audit (Stages 1+2, no LLM)
 
@@ -73,7 +77,8 @@ mise run audit -- <pdf-file-or-dir> [options]  # everything after the target is 
 
 Writes `out/<paper_id>.json` (every reference plus per-database verification) and
 `out/summary.json` (status counts plus the DBLP build date). Options: `--dblp PATH`, `--out DIR`,
-`--mailto EMAIL`, `--s2-api-key KEY`, `--openalex-api-key KEY`, `--offline` (no network; the offline DBLP mirror stays
+`--mailto EMAIL` (defaults to `$CROSSREF_MAILTO`), `--s2-api-key KEY`, `--openalex-api-key KEY`,
+`--offline` (no network; the offline DBLP mirror stays
 live), `--disable-dbs LIST` (comma-separated), `--no-verify`, `--no-candidates` (skip the CrossRef
 lookup that attaches candidate records; implied by `--offline`), `--rate-limit-retries N`,
 `--retry-degraded N` (re-check what a backend failure left degraded; default 1, 0 disables) and

@@ -20,7 +20,7 @@ Options:
     --dblp PATH         Offline DBLP SQLite database
                         (default: $HALLUCITE_DBLP, else ~/hallucite/dblp.db)
     --out DIR           Output directory (default: out)
-    --mailto EMAIL      CrossRef polite-pool contact (optional; recommended for CrossRef)
+    --mailto EMAIL      CrossRef polite-pool contact ($CROSSREF_MAILTO in .env.local)
     --s2-api-key KEY    Semantic Scholar key ($S2_API_KEY). Without one S2 rate-limits,
                         leaving references degraded and the worklist varying between runs
     --openalex-api-key KEY
@@ -80,6 +80,17 @@ DEFAULT_ONLINE_DBS = ["CrossRef", "DOI", "arXiv", "OpenAlex", "Semantic Scholar"
 # run's db_results. Any other name there means an online backend survived the disable list -- the
 # inverse drift direction of the DEFAULT_ONLINE_DBS tripwire in main().
 KNOWN_LOCAL_DBS = ["DBLP"]
+
+
+def default_mailto() -> str:
+    """The CrossRef contact address, from the environment rather than a command line.
+
+    CrossRef routes a caller who identifies itself into a pool that allows three requests at a
+    time where an anonymous caller gets one. The address is a person's, so it belongs with the API
+    keys in the gitignored `.env.local` that `run.sh` and mise both read: configured there it is
+    used, and it never reaches a command line, a script, or the git history. Nothing asks for it
+    and nothing invents one."""
+    return os.environ.get("CROSSREF_MAILTO", "").strip()
 
 
 def now_iso() -> str:
@@ -618,7 +629,8 @@ def main() -> int:
     p.add_argument("--dblp", default=DEFAULT_DBLP,
                    help="Offline DBLP SQLite DB ($HALLUCITE_DBLP, else ~/hallucite/dblp.db)")
     p.add_argument("--out", default="out", help="Output directory")
-    p.add_argument("--mailto", default="", help="CrossRef polite-pool contact (recommended)")
+    p.add_argument("--mailto", default=default_mailto(),
+                   help="CrossRef polite-pool contact; defaults to $CROSSREF_MAILTO")
     p.add_argument("--openalex-api-key", default="",
                    help="OpenAlex API key ($OPENALEX_API_KEY). Optional: an anonymous caller gets "
                         "a hundred searches a day, a free key a thousand")
