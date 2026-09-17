@@ -149,6 +149,12 @@ MUTATIONS = [
     ("verifier: an OAI-PMH idDoesNotExist reads as a failure", V,
      '        return None, "not_found" if (error.get("code") or "") == "idDoesNotExist" else ERROR',
      "        return None, ERROR"),
+    ("verifier: a malformed contact still raises CrossRef concurrency", V,
+     '        self.mailto = mailto if _is_contact(mailto) else ""',
+     "        self.mailto = mailto"),
+    ("verifier: the contact check is stricter than CrossRef's", V,
+     '    return "@" in value and bool(value.split("@", 1)[0].strip())',
+     '    return "@" in value and "." in value.split("@", 1)[1]'),
     ("verifier: the citation's years never reach the mirror", V,
      '        candidates = title_candidates(self.dblp_path, title, cited_years(raw), raw,\n'
      '                                      getattr(ref, "doi", None))',

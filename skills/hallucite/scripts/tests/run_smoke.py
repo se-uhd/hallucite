@@ -2594,6 +2594,23 @@ def tier5b_verifier() -> None:
          [V.RATE_LIMITED] * V._S2_GIVE_UP_AFTER + [V.SKIPPED] * 3,
          "the references it did ask about are degraded; the rest claim nothing")
 
+    # The contact address CrossRef is given, and what it is worth. Its polite pool allows three
+    # requests at a time, and CrossRef grants it only for a value it reads as an address -- so a
+    # value it would not read as one must not raise the concurrency, and the check here must not be
+    # stricter than CrossRef's or a working address loses the pool.
+    for value, workers, sent in (("admin@example.de", 3, "admin@example.de"),
+                                 ("a@b", 3, "a@b"),
+                                 ("a@", 3, "a@"),
+                                 ("@b.de", 1, ""),
+                                 ("not-an-email", 1, ""),
+                                 ("", 1, "")):
+        v = V.Verifier(dblp_path=None, mailto=value)
+        C.eq((v.max_workers, v.mailto), (workers, sent),
+             f"REGRESSION GUARD: {value!r} is worth {workers} concurrent CrossRef request(s), "
+             f"which is what CrossRef's own x-api-pool header says it grants")
+        C.eq(f"mailto:{sent}" in v.user_agent, bool(sent),
+             "and the address travels in the User-Agent only when CrossRef would read it")
+
     # The failure vocabulary, without asking a backend anything.
     result = V.ValidationResult(status="", db_results=[
         V.DbResult("DBLP", "no_match"), V.DbResult("CrossRef", "rate_limited"),

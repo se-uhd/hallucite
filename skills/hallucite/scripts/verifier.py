@@ -156,6 +156,18 @@ _OPENALEX_NOT_THE_WORK = ("book-review",)
 _FILTER_BREAKS = re.compile("[\"\u201c\u201d\u201e\u201f\u00ab\u00bb?]")
 
 
+def _is_contact(value: str) -> bool:
+    """Would CrossRef read this as a contact address?
+
+    Its polite pool is the whole point of sending one, and it reports the pool it used in
+    `x-api-pool`. Asked what it accepts: `admin@example.de`, `a@b`, `a@b.c`, `a@` and even
+    `a b@c.de` all came back `polite-array`, while `@b.de`, `not-an-email` and an empty value came
+    back `public-array`. So the rule is a non-empty local part before an `@`, and this is exactly
+    that -- no stricter, because a check tighter than CrossRef's would throw away the pool for an
+    address CrossRef would have honoured."""
+    return "@" in value and bool(value.split("@", 1)[0].strip())
+
+
 @dataclass
 class DbResult:
     db_name: str
@@ -532,18 +544,23 @@ class Verifier:
         # citation's -- 154 of the 2065-reference corpus, all cited correctly.
         self.dblp_authors_complete = (self.dblp_readable
                                       and mirror_authors_complete(self.dblp_path))
-        self.mailto = mailto
+        # A value CrossRef will not read as an address buys nothing, so it is dropped here rather
+        # than sent: the concurrency below, the `mailto` parameter and the User-Agent all read this
+        # one field, and a typo that raised concurrency while CrossRef kept the caller in the
+        # public pool was the combination most likely to earn a 429.
+        self.mailto = mailto if _is_contact(mailto) else ""
         self.timeout = timeout
         # CrossRef puts a caller who gives a contact address in its polite pool, which allows three
         # requests at a time; without one the limit is one, and exceeding it is what earns a 429.
-        self.max_workers = max(1, max_workers if max_workers is not None else (3 if mailto else 1))
+        self.max_workers = max(1, max_workers if max_workers is not None
+                               else (3 if self.mailto else 1))
         self.rate_limit_retries = max(0, rate_limit_retries)
         self.s2_api_key = (s2_api_key if s2_api_key is not None
                            else os.environ.get("S2_API_KEY", ""))
         self.openalex_api_key = (openalex_api_key if openalex_api_key is not None
                                  else os.environ.get("OPENALEX_API_KEY", ""))
         self.disabled = set(disabled_dbs)
-        contact = f"; mailto:{mailto}" if mailto else ""
+        contact = f"; mailto:{self.mailto}" if self.mailto else ""
         self.user_agent = f"hallucite (reference verification{contact})"
 
     # -- backends -------------------------------------------------------------

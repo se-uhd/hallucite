@@ -4,6 +4,22 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.3.1] - 2026-09-17
+
+### Fixed
+
+- **A malformed contact address no longer buys CrossRef concurrency CrossRef does not grant.** The
+  verifier raised CrossRef from one request at a time to three whenever `--mailto` or
+  `$CROSSREF_MAILTO` held anything at all, but CrossRef admits a caller to its polite pool only for
+  a value it reads as an address -- so a typo left three concurrent requests hitting the public
+  pool, which is the combination most likely to earn a 429. CrossRef reports the pool it used in
+  `x-api-pool`, and asked what it accepts: `admin@example.de`, `a@b`, `a@b.c`, `a@` and even
+  `a b@c.de` come back `polite-array`, while `@b.de`, `not-an-email` and an empty value come back
+  `public-array`. The rule is a non-empty local part before an `@`; hallucite now applies exactly
+  that, no stricter, since a tighter check would forfeit the pool for an address CrossRef would
+  have honoured, and it drops a value that fails the check rather than sending something CrossRef
+  ignores.
+
 ## [2.3.0] - 2026-09-17
 
 ### Added
@@ -1655,6 +1671,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[2.3.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.3.1
 [2.3.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.3.0
 [2.2.2]: https://github.com/se-uhd/hallucite/releases/tag/v2.2.2
 [2.2.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.2.1
