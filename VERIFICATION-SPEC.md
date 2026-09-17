@@ -164,30 +164,29 @@ are what the audit depends on:
 
 ## Coverage, for sizing an implementation
 
-Which backend actually decides a verdict, over the 1669 confirmations `verification_results.py` records
-across the 41-paper corpus, against a mirror whose accented authors survived its ingest and with an
-authenticated Semantic Scholar:
+Which backend actually decides a verdict, over the 2357 confirmations `verification_results.py`
+records across the 55-paper corpus, against a mirror whose accented authors survived its ingest,
+with an authenticated Semantic Scholar, and on a day arXiv refused every identifier lookup:
 
 | source | share |
 |---|---|
-| DBLP (offline) | 91.5% |
-| DOI resolver | 2.8% |
-| CrossRef | 2.8% |
-| Semantic Scholar | 1.4% |
-| PubMed | 0.5% |
-| Open Library | 0.5% |
-| Europe PMC | 0.4% |
-| arXiv | 0.1% |
-
-OpenAlex, added after this table was recorded, is asked about what all of these leave: of the
-567 references the online recording could not verify, it confirms 25 -- books, technical reports,
-dissertations and repository-held papers -- and every one carries the cited names.
+| DBLP (offline) | 89.5% |
+| CrossRef | 7.7% |
+| OpenAlex | 2.0% |
+| DOI resolver | 0.5% |
+| Semantic Scholar | 0.4% |
+| arXiv | refused all day |
 
 The offline mirror decides nine confirmations in ten, so an implementation's accuracy is mostly
-its DBLP path. No other source is worth more than three percent, so the question for each is
-whether its share is worth a request per unverified reference. Semantic Scholar's 1.4% is only
-reachable with an API key -- anonymous callers share a quota that refuses almost everything -- and
-PubMed, Open Library and Europe PMC decide 1.4% between them, mostly the statistics classics and
+its DBLP path. No other source is worth more than eight percent, so the question for each is
+whether its share is worth a request per unverified reference. OpenAlex holds what the registries
+do not -- books, technical reports, dissertations, repository deposits -- and is the only one that
+answers without a key, on a budget metered by the day. Semantic Scholar is reachable only with an
+API key, anonymous callers share a quota that refuses almost everything, and even keyed it failed
+to answer for 232 references that day. A backend's share moves with what the ones before it
+already matched: arXiv decided 17 confirmations in the 2026-09-11 recording, before OpenAlex was
+asked ahead of it. Open Library, PubMed and Europe PMC are not asked at all; in the recording of
+the package this one replaced they decided 1.4% between them, mostly the statistics classics and
 the books an SE bibliography cites without a DOI.
 
 A backend a replacement leaves out has to be reported as unchecked rather than as `no_match`,

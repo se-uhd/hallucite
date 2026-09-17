@@ -4,6 +4,27 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- **The online results file is re-recorded (2026-09-17), and now covers every backend that runs.**
+  The corpus replay took 49 minutes against the previous recording's 102 and confirms 2357 of 2857
+  references, up from 2290: the mirror decides 2109, CrossRef 181, OpenAlex 46, the DOI resolver 11
+  and Semantic Scholar 10. Its parse half is the current parser's, where the 2026-09-11 recording
+  predated the parser fixes and differed on 100 references. Unverified references carrying a backend
+  failure fall from 458 to 252, because Semantic Scholar answered for most of the residue this time
+  and refused 232.
+
+  arXiv refused this client all day. Every identifier lookup came back 406 within 0.3 s, and none
+  of it was ours: the headers, the scheme, the user agent and the query form each made no
+  difference, five retries at 2, 4, 8 and 16 seconds all failed, ten probes over five hours all
+  failed, and the only requests that succeeded were ones already in an edge cache. So no retry
+  ladder would have helped and nothing in the backend changed. The 17 confirmations arXiv made on
+  2026-09-11 are absent here, 38 references carry its failure, and the previous recording is kept
+  as `verification-results-online-2026-09-11.json` until those 38 can be re-asked. Recorded without
+  `--mailto`, so no contact address left this machine.
+
 ## [2.2.2] - 2026-09-16
 
 ### Fixed
@@ -1622,6 +1643,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[Unreleased]: https://github.com/se-uhd/hallucite/compare/v2.2.2...HEAD
 [2.2.2]: https://github.com/se-uhd/hallucite/releases/tag/v2.2.2
 [2.2.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.2.1
 [2.2.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.2.0
