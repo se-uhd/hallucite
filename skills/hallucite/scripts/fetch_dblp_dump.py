@@ -93,6 +93,19 @@ def accept(scratch: Path, digest: str, expected: str) -> str:
     return ""
 
 
+def install(scratch: Path, dest: Path, digest: str, checksum: str) -> str:
+    """Put a finished download in place, or say why it must not go there.
+
+    The check and the move live in one function so neither download path can take the move without
+    the check: `accept` decides, and this is what both the snapshot and the daily download call."""
+    refusal = accept(scratch, digest, checksum)
+    if refusal:
+        scratch.unlink(missing_ok=True)
+        return refusal
+    scratch.replace(dest)
+    return ""
+
+
 def _open(url: str, method: str = "GET"):
     return urllib.request.urlopen(
         urllib.request.Request(url, headers={"User-Agent": USER_AGENT}, method=method), timeout=120)
@@ -141,13 +154,11 @@ def fetch_snapshot(dest: Path) -> int:
     except (urllib.error.HTTPError, OSError):
         print("note: the release publishes no checksum beside it; falling back to the gzip check",
               file=sys.stderr)
-    refusal = accept(scratch, digest, checksum)
+    refusal = install(scratch, dest, digest, checksum)
     if refusal:
         print(f"{scratch}: {refusal}. {dest} is untouched and nothing was ingested.",
               file=sys.stderr)
-        scratch.unlink(missing_ok=True)
         return 1
-    scratch.replace(dest)
     print(f"saved {dest} ({dest.stat().st_size / 1e9:.2f} GB), md5 {digest}"
           + (" as published" if checksum else ""))
     return 0
@@ -218,13 +229,11 @@ def fetch_daily(dest: Path) -> int:
         dl.value.save_as(scratch)
         browser.close()
 
-    refusal = accept(scratch, "", "")
+    refusal = install(scratch, dest, "", "")
     if refusal:
         print(f"{scratch}: {refusal}. {dest} is untouched and nothing was ingested.",
               file=sys.stderr)
-        scratch.unlink(missing_ok=True)
         return 1
-    scratch.replace(dest)
     print(f"saved {dest} ({dest.stat().st_size / 1e9:.2f} GB)")
     return 0
 

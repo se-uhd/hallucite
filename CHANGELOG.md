@@ -4,9 +4,31 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
-## [Unreleased]
+## [2.4.1] - 2026-09-18
+
+### Fixed
+
+- **The CrossRef contact gate covered one sender and not the other.** The verifier dropped a value
+  CrossRef will not read as an address, but the audit's candidate lookup passed `--mailto` straight
+  into its own request, so a typo still went to a third party from the one call site the verifier
+  does not own. Both senders now apply the same check, and a guard asserts the junk value produces
+  a request without `mailto` while a real address produces one with it.
+
+- **The dump fetcher's checksum check could be removed without a test noticing.** Reverting the
+  `accept()` call left the suite green, which is the failure mode `measure/mutations.py` exists to
+  catch; the check ran only inside a function that talks to the network, so nothing could call it.
+  The check and the move now live in one `install()`, tested against a temp directory: a saved web
+  page is refused, a mismatched checksum is refused, the dump already on disk survives both, and a
+  verified download replaces it. Both defects came out of an adversarial pass that added the
+  mutation entry first and read what it reported.
 
 ### Changed
+
+- **Spelling is American throughout, and `CLAUDE.md` says so.** The two forms had drifted to
+  roughly even -- behaviour 7 against behavior 2, normalis- 9 against normaliz- 8, recognis- 8
+  against recogniz- 3 -- and 27 occurrences across 11 files are now American. The guidance file's
+  claim about em dashes was itself wrong (`refresh_vendor.py` carries five), and its list of synced
+  files that must not be hand-edited had omitted that file, so both are corrected.
 
 - **Figures in the documentation now match what the artifacts hold.** The mirror's share of
   confirmations is 89.4%, measured as 2109 of the 2026-09-17 recording's 2359, where the docs and
@@ -978,7 +1000,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
 - `characterize.py`, which records what the current implementation returns for `parse_reference`
   and `Validator.check` on real references and holds a replacement to that recording. hallucite
   reaches into `hallucinator` at those two points only; replacing the dependency needs an oracle,
-  and observing the current behaviour from the outside is both the specification and the
+  and observing the current behavior from the outside is both the specification and the
   differential test.
 
 ## [1.20.0] - 2026-09-09
@@ -1662,7 +1684,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   `author_mismatch` that the validator never emits at that level. Matching references -- including
   likely-hallucinated ones -- were therefore counted as neither verified nor unverified and never
   reached triage. `needs_triage` and the `unverified` total are now derived by negation (any
-  checked reference whose status is not `verified`), so an unrecognised status can no longer fall
+  checked reference whose status is not `verified`), so an unrecognized status can no longer fall
   through.
 
 ### Added
@@ -1703,7 +1725,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
-[Unreleased]: https://github.com/se-uhd/hallucite/compare/v2.4.0...HEAD
+[2.4.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.1
 [2.4.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.0
 [2.3.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.3.1
 [2.3.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.3.0

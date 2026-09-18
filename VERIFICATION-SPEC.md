@@ -22,7 +22,7 @@ segmentation (`pdf_references.py`) and never asks the verifier to find or split 
 `prev_authors` supports the `----.` repeated-author convention. `None` means the text could not be
 read as a reference, which the audit records as `unparsed` and sends to triage rather than dropping.
 
-Required behaviour:
+Required behavior:
 
 - **Title.** Quoted titles win where the style uses them (`A. Author, "Title," in Proc.`); otherwise
   the title is the field between the author list and the venue (`Author. 2023. Title. In Venue`).
@@ -138,7 +138,7 @@ write them, and read as a group they cleared any author list on the title.
 
 ## Title matching
 
-- Compare on a normalised form: case, punctuation, diacritics and internal whitespace removed.
+- Compare on a normalized form: case, punctuation, diacritics and internal whitespace removed.
 - An edition suffix on the record ("(2. ed.)", ", 3rd Edition") is not part of its title.
 - Subtitles may be present on one side only.
 - Try both readings of a hyphen -- a compound (`Model-Driven`, two tokens) and a line break

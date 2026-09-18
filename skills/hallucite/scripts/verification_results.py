@@ -7,7 +7,7 @@ for 2065 references, captured through its public API rather than by reading its 
 the specification `reference_parser` and `verifier` were written against, and the boundary that
 keeps an AGPL package and an MIT repo apart. It is frozen, and `compare` still replays it.
 
-The second is made by the modules that now ship, of their own behaviour. Once the thing being
+The second is made by the modules that now ship, of their own behavior. Once the thing being
 characterised is the thing that runs, the recording stops being a specification and becomes a
 regression test: a difference is a change *this repo* made, and the question is whether it was
 meant.
@@ -46,12 +46,12 @@ from verifier import Verifier
 # forever: it is the specification they were held to, and replaying it is how a change is shown
 # not to have moved away from it.
 SCHEMA_V1 = "characterization/1"
-# A recording made by hallucite's own modules, of hallucite's own behaviour. What a regression is
+# A recording made by hallucite's own modules, of hallucite's own behavior. What a regression is
 # measured against once the thing being characterised is the thing that ships.
 SCHEMA = "characterization/2"
 READABLE = (SCHEMA_V1, SCHEMA)
 
-# Only the fields hallucite actually consumes. Recording more would pin behaviour nobody depends
+# Only the fields hallucite actually consumes. Recording more would pin behavior nobody depends
 # on and make a replacement look wrong for differences that do not matter.
 PARSE_FIELDS = ("title", "authors", "doi", "arxiv_id")
 CHECK_FIELDS = ("status", "source", "found_authors", "paper_url", "failed_dbs")
@@ -260,7 +260,7 @@ def main() -> int:
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    r = sub.add_parser("record", help="capture the current implementation's behaviour")
+    r = sub.add_parser("record", help="capture the current implementation's behavior")
     r.add_argument("target", type=Path, help="a PDF file or a directory of them")
     r.add_argument("--out", type=Path, default=Path("verification-results.json"))
     r.add_argument("--dblp", default=DEFAULT_DBLP)

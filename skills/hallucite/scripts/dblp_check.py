@@ -762,11 +762,11 @@ def volume_match(candidate: SecondOpinion, raw: str) -> bool:
 
 def title_candidates(db_path: str, title: str, years=(), raw: str = "",
                      doi: str | None = None) -> list[SecondOpinion]:
-    """Every DBLP record whose title equals `title` after normalisation, the one to show first.
+    """Every DBLP record whose title equals `title` after normalization, the one to show first.
 
     Retrieval is generous -- three FTS queries, two hyphen readings plus a word-wise AND -- and the
-    decision is the strict normalised equality applied to each row, so a wider net costs precision
-    nothing. It earns its place on titles that need both hyphen readings at once: "Bi- Fuzz: A
+    decision is the strict normalized equality applied to each row, so a wider net costs precision
+    nothing. The third query is what matches a title needing both readings at once: "Bi- Fuzz: A
     Two-Stage Fuzzing Tool for Open-World Video Games" matches neither the joined spelling
     ("twostage" is no token) nor the split one ("bi fuzz" is not the word).
 

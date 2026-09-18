@@ -219,7 +219,7 @@ def _page_furniture(pages: list[str]) -> set[str]:
     and loses the column split for the whole page.
 
     Only the first and last non-blank line of a page can be furniture, and only if it says enough
-    to be recognised. What varies between one page's head and the next is the page number, which
+    to be recognized. What varies between one page's head and the next is the page number, which
     sits at one end of the line, so only a leading and a trailing number are removed before they
     are compared. `_head_norm`, which strips every digit, is too blunt here: two different
     references whose text is otherwise alike collapse onto each other and the pair reads as a
@@ -595,7 +595,7 @@ def _segment(section: list[str], style: str,
         last = _bracket_numeric_anchor(section) - 1  # bracket-label sequentiality anchor
     else:
         last = 0
-    # Only author-year needs the hanging indent; the labelled styles anchor on their own labels.
+    # Only author-year needs the hanging indent; the labeled styles anchor on their own labels.
     entry_col = _entry_indent(section) if style == "author-year" else None
     if entry_col is not None:
         section = _hanging_block(section, entry_col)

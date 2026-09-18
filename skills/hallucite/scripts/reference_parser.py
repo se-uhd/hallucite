@@ -4,7 +4,7 @@ hallucite reads and segments the bibliography itself (`pdf_references.py`); this
 finished entry and reads its fields. `VERIFICATION-SPEC.md` states what it has to get right, and
 `verification_results.py` holds it to real references.
 
-The corpus styles it has to cover, and how each is recognised:
+The corpus styles it has to cover, and how each is recognized:
 
 * ACM / Chicago -- `Authors. 2023. Title. In Venue. pages. doi:...`, split on the standalone year.
 * APA -- `Authors (2023). Title. Journal, 12(3), 1-10.`, split on the parenthesised year.
@@ -40,7 +40,7 @@ class Reference:
     original_number: int | None = None
 
 
-# ── text normalisation ───────────────────────────────────────────────────────
+# ── text normalization ───────────────────────────────────────────────────────
 
 # Quotation marks, paired: a curly opener closes only on its own partner, or a title carrying a
 # quoted phrase ends at the phrase's opening mark.
@@ -588,7 +588,7 @@ _TRAILING_IDENT = re.compile(
     r"(?:\s*[,.;:]\s*)?(?:doi\s*:|(?:\burl\s+)?https?://|arxiv\s*:).*$", re.I)
 # An access note. It only counts as one where a field starts, because every one of these words is
 # also an ordinary word: "the readily available tests" is a title, and so is "Online impact
-# analysis". "Online" is only recognised in the brackets the styles print it in.
+# analysis". "Online" is only recognized in the brackets the styles print it in.
 _TRAILING_NOTE = re.compile(
     r"(?:\s*[,.;:]\s*(?:available|retrieved|accessed)\b"
     r"|\s*[\[(]\s*online\b"
@@ -675,7 +675,7 @@ _SURNAME_INITIALS = re.compile(
     rf"{_NAME}(?:\s+{_NAME})*\s+[A-Z]{{1,4}})\.\s+(.+)$")
 # What makes a leading phrase a list of people rather than a title: a separator, or an initial.
 _AUTHOR_LIST = re.compile(r",|\s(?:and|&)\s|\b[A-Z]\.")
-# A field only a venue carries, recognised at its head. Narrower than `_looks_like_venue` on
+# A field only a venue carries, recognized at its head. Narrower than `_looks_like_venue` on
 # purpose: that one weighs a word list, and a title is allowed to say "review" or "letters"
 # ("Statistics review 6: Nonparametric methods"), to open with "In" ("In Search of Socio-Technical
 # Congruence"), and to number an issue it is about ("triage of issue 500 reports").
@@ -772,7 +772,7 @@ def _leading_names(text: str) -> tuple[str, str] | None:
 def _candidates(text: str, prev_authors: list[str] | None):
     """Every (authors, remainder) reading of the entry, best first.
 
-    Each style is recognised by the mark that separates its author list from its title -- a
+    Each style is recognized by the mark that separates its author list from its title -- a
     standalone year, an "et al.", an opening quote, a colon after inverted names, a comma after
     initials-led ones -- and the readings are tried in that order. `parse_reference` takes the
     first that yields a title, so a mark that happens to appear inside a venue cannot leave the
@@ -843,7 +843,7 @@ _BIBLIOGRAPHIC = re.compile(r"^(?:pp|vol|no|nos|eds?|edn|art|iss)$", re.I)
 def _is_title(title: str) -> bool:
     """Is there a title here at all?
 
-    A page range, a bracketed label or a licence footer that a segmentation slip left behind is not
+    A page range, a bracketed label or a license footer that a segmentation slip left behind is not
     a reference, and saying so lets the audit record it as `unparsed` -- which tells a triager to
     look at the PDF -- instead of reporting a work that does not exist. A tool's name is a title
     even at two letters ("Ck"), so the bar is a word, not a length."""

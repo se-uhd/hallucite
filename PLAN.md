@@ -38,7 +38,7 @@ before it did not match: the offline DBLP mirror through `dblp_check.py`, CrossR
 search, DOI resolution, arXiv by identifier, OpenAlex's works search by title, and Semantic
 Scholar where a key is configured.
 Nothing is decided on a similarity score: a backend confirms only when a record's title matches
-after normalisation and its authors match on an initial-and-surname fingerprint. `build_dblp.py`
+after normalization and its authors match on an initial-and-surname fingerprint. `build_dblp.py`
 builds the mirror from the DBLP dump. `VERIFICATION-SPEC.md` is the contract the parse and check
 halves meet.
 

@@ -138,8 +138,8 @@ change to `SKILL.md` and to those tests together. Do not restate it here.
 
 - Keep Markdown lint-clean: `mise run lint-md` (`MD_FIX=1` to auto-fix). The vendored PyMarkdown
   in `skills/hallucite/scripts/` is synced from se-uhd/pymarkdown-skill; do not hand-edit
-  `_vendor/`, `lint_markdown.py`, or `check_baseline.py` (re-sync instead). The hallucite-owned
-  files are `schema_checks.py` and `lint_markdown.yaml`.
+  `_vendor/`, `lint_markdown.py`, `check_baseline.py`, or `refresh_vendor.py` (re-sync instead).
+  The hallucite-owned files are `schema_checks.py` and `lint_markdown.yaml`.
 
 ### Rules and contracts
 
@@ -152,7 +152,7 @@ change to `SKILL.md` and to those tests together. Do not restate it here.
   names that never appear (`DEFAULT_ONLINE_DBS`); `--offline` runs warn about live backends that are
   not known-local (`KNOWN_LOCAL_DBS`). A silent name mismatch is what caused both the `mismatch` and
   the `DOI Resolver` bugs. `VERIFICATION-SPEC.md` states the vocabulary a verifier has to emit;
-  `verification_results.py` records the current behaviour on real references and holds a replacement
+  `verification_results.py` records the current behavior on real references and holds a replacement
   to it.
 
 - Prefer a check the input already supports over one you have to tune. A numbered bibliography
@@ -283,7 +283,9 @@ change to `SKILL.md` and to those tests together. Do not restate it here.
   "importantly"), grandiose stakes, vague attributions ("experts say") instead of a named source,
   invented concept labels, and inflated verbs (`use`, not `utilize`/`leverage`). The house dash is
   `--`, two ASCII hyphens, and a literal em dash is not house style: since the 2.0.0 prose pass no
-  hallucite-owned file carries one, and the only exceptions are the synced `lint_markdown.py` and a
-  citation quoted inside a fixture. Those and bold-lead bullets already appear throughout, so do
-  not pile on more than the surrounding text uses. Plain, specific, and
+  hallucite-owned file carries one, and the only em dashes left are in the synced vendor tooling
+  and in citations quoted as data. Spelling is American throughout (`behavior`, `normalized`,
+  `recognized`), which a repo-wide pass fixed on 2026-09-18 after the two forms had drifted to
+  roughly even. Those and bold-lead bullets already appear throughout, so do not pile on more than
+  the surrounding text uses. Plain, specific, and
   varied beats ornate.

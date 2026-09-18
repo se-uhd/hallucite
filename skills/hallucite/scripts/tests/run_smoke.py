@@ -1445,7 +1445,7 @@ def tier4j_corpus_shapes() -> None:
     author name and title word replaced by an invented word of the same length, so column
     positions, hanging indents, running heads, margin numbers and trailing biographies all survive
     and nobody's authorship does. The generator refuses to write a fixture whose extraction does
-    not match the real paper's, so each one reproduces the behaviour it was derived from.
+    not match the real paper's, so each one reproduces the behavior it was derived from.
 
     `corpus/EXPECTED.tsv` is written from the REAL papers rather than from the fixtures, so this
     asserts against what the corpus actually extracts and not against the thing under test. 55
@@ -3278,7 +3278,7 @@ def tier6d_extraction_and_env() -> None:
            "short two-column page still splits -- left as it is, the right column is appended to "
            "the left column's lines and half the bibliography disappears")
     C.true(P._furniture_norm(head % 1234) in P._page_furniture(pages),
-           "a head differing only in its page number is recognised as furniture")
+           "a head differing only in its page number is recognized as furniture")
     C.true(P._furniture_norm("Smith et al. Some Title 2020") not in P._page_furniture(pages),
            "a line that appears once is not furniture")
 
@@ -3309,6 +3309,7 @@ def tier6d_extraction_and_env() -> None:
                    f"REGRESSION GUARD: {label} in .env.local does not take run.sh down without "
                    f"its sentinel")
 
+
     # The CrossRef contact address is configuration, not an argument: it identifies a person, so it
     # is read from the gitignored `.env.local` that run.sh and mise already export, and never typed
     # on a command line or written into a tracked file.
@@ -3325,6 +3326,35 @@ def tier6d_extraction_and_env() -> None:
         os.environ.pop("CROSSREF_MAILTO", None)
         if keep is not None:
             os.environ["CROSSREF_MAILTO"] = keep
+
+    # Every sender of the address carries the same gate, because CrossRef reads a contact or
+    # ignores what it is given: the verifier drops a value it would ignore, and so does the audit's
+    # candidate lookup, which the verifier does not own. One gated and the other not is how a typo
+    # reaches a third party.
+    sent: list[str] = []
+
+    class _Answer:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self):
+            return b'{"message": {"items": []}}'
+
+    real_open = audit.urllib.request.urlopen
+    audit.urllib.request.urlopen = lambda url, timeout=0, *a, **k: (sent.append(url), _Answer())[1]
+    try:
+        audit.crossref_candidates("A title of a paper", ["Ada Byte"], mailto="not-an-email")
+        audit.crossref_candidates("A title of a paper", ["Ada Byte"], mailto="admin@example.de")
+    finally:
+        audit.urllib.request.urlopen = real_open
+    C.true(len(sent) == 2 and "mailto" not in sent[0],
+           "REGRESSION GUARD: the audit's candidate lookup drops a contact CrossRef would ignore, "
+           "exactly as the verifier does")
+    C.true(len(sent) == 2 and "mailto=admin%40example.de" in sent[1],
+           "and sends one CrossRef will read")
 
 
 def tier6f_dump_source() -> None:
@@ -3362,6 +3392,30 @@ def tier6f_dump_source() -> None:
          "41abb87b4e8b8a2e3c470efd6528ad88",
          "the checksum file is one `<md5>  <filename>` line")
     C.eq(F.expected_md5(""), "", "a release publishing none claims none")
+
+
+    # A finished download is checked and moved by one function, so no path can take the move
+    # without the check.
+    with tempfile.TemporaryDirectory() as td:
+        dest = Path(td) / "dblp.xml.gz"
+        dest.write_bytes(b"the mirror already on disk")
+        scratch = Path(td) / "dblp.xml.gz.part"
+
+        scratch.write_bytes(b"<html>make sure you are not a bot</html>")
+        C.true("not gzip" in F.install(scratch, dest, "abc", ""),
+               "REGRESSION GUARD: a web page saved under a .gz name is never installed")
+        C.eq(dest.read_bytes(), b"the mirror already on disk",
+             "and the dump already on disk is left where it is")
+        C.true(not scratch.exists(), "the refused download is cleaned up")
+
+        scratch.write_bytes(b"\x1f\x8bthe new dump")
+        C.true("checksum mismatch" in F.install(scratch, dest, "abc", "def"),
+               "REGRESSION GUARD: bytes the release's checksum disagrees with are never installed")
+        C.eq(dest.read_bytes(), b"the mirror already on disk", "again the old dump stays")
+
+        scratch.write_bytes(b"\x1f\x8bthe new dump")
+        C.eq(F.install(scratch, dest, "abc", "abc"), "", "a checked download replaces the old one")
+        C.eq(dest.read_bytes(), b"\x1f\x8bthe new dump", "and it is the bytes just downloaded")
 
     with tempfile.TemporaryDirectory() as td:
         gz = Path(td) / "dump.gz"

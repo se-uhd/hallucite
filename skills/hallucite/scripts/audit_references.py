@@ -51,7 +51,7 @@ from pathlib import Path
 
 import reference_parser
 from dblp_check import nearest_title, record_context
-from verifier import DBLP, NO_MATCH, Verifier
+from verifier import DBLP, NO_MATCH, Verifier, is_contact
 from pdf_references import _parse, extract_references
 
 SCHEMA_VERSION = "1.0"
@@ -377,7 +377,10 @@ def crossref_candidates(title: str, authors: list, mailto: str = "",
     query = " ".join([title] + [str(a) for a in (authors or [])[:3]])
     params = {"query.bibliographic": query, "rows": str(rows),
               "select": "title,author,container-title,issued,DOI"}
-    if mailto:
+    # The same gate the verifier applies: CrossRef reads a contact address or ignores what it is
+    # given, so a value it would ignore is not sent at all. Without this the audit's candidate
+    # lookup sent a typo to a third party from the one call site the verifier does not own.
+    if is_contact(mailto):
         params["mailto"] = mailto
     url = f"{CROSSREF_WORKS}?{urllib.parse.urlencode(params)}"
     try:
@@ -605,7 +608,7 @@ def paper_status_counts(record: dict) -> dict:
         if dv.get("retraction_info"):
             counts["retracted"] += 1
     # Everything the validator checked but did not confirm ("verified") needs triage. Derive this
-    # by negation rather than summing a hard-coded list of failure statuses, so an unrecognised
+    # by negation rather than summing a hard-coded list of failure statuses, so an unrecognized
     # status -- e.g. "mismatch", which an earlier list silently dropped from both
     # the count and the worklist -- is always surfaced.
     counts["unverified"] = checked - counts["verified"]

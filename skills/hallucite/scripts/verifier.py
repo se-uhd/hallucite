@@ -19,7 +19,7 @@ residue, which is exactly the set a human will be asked to judge.
   configured. It indexes technical reports and theses the others do not.
 
 Two rules run through all of it. Nothing is decided on a similarity score: a backend confirms a
-reference only when a record's title matches after normalisation *and* its authors match on an
+reference only when a record's title matches after normalization *and* its authors match on an
 initial-and-surname fingerprint, both of which `dblp_check` already implements and every backend
 shares. And a backend that could not answer -- a timeout, a transport error, a rate limit
 -- says so, and is never silently folded into "no match", because a `not_found` from an incomplete
@@ -156,7 +156,7 @@ _OPENALEX_NOT_THE_WORK = ("book-review",)
 _FILTER_BREAKS = re.compile("[\"\u201c\u201d\u201e\u201f\u00ab\u00bb?]")
 
 
-def _is_contact(value: str) -> bool:
+def is_contact(value: str) -> bool:
     """Would CrossRef read this as a contact address?
 
     Its polite pool is the whole point of sending one, and it reports the pool it used in
@@ -306,7 +306,7 @@ _RETRACTED_TITLE = re.compile(
 def _plain(text: str) -> str:
     """A title as CrossRef stores it, reduced to text.
 
-    Its records carry markup -- `<i>`, `<scp>`, MathML, HTML entities -- and normalisation strips
+    Its records carry markup -- `<i>`, `<scp>`, MathML, HTML entities -- and normalization strips
     the angle brackets but keeps the tag name, so an unstripped `<i>N</i>` turns into the letters
     "i n i" and the title stops matching itself."""
     return " ".join(html.unescape(_MARKUP.sub("", text or "")).split())
@@ -447,7 +447,7 @@ def _verdict(ref, record: _Record, complete_source: bool = True) -> str:
     own half is read off the byline here. Both have to hold before an unmatched cited name counts
     as an absence."""
     # `titles_match` refuses a pair whose letters both reduce to nothing, which is what keeps two
-    # titles in scripts this normalisation cannot read from matching each other.
+    # titles in scripts this normalization cannot read from matching each other.
     if not titles_match(getattr(ref, "title", "") or "", record.title):
         return NO_MATCH
     cited = [a for a in (getattr(ref, "authors", None) or []) if a]
@@ -548,7 +548,7 @@ class Verifier:
         # than sent: the concurrency below, the `mailto` parameter and the User-Agent all read this
         # one field, and a typo that raised concurrency while CrossRef kept the caller in the
         # public pool was the combination most likely to earn a 429.
-        self.mailto = mailto if _is_contact(mailto) else ""
+        self.mailto = mailto if is_contact(mailto) else ""
         self.timeout = timeout
         # CrossRef puts a caller who gives a contact address in its polite pool, which allows three
         # requests at a time; without one the limit is one, and exceeding it is what earns a 429.
@@ -600,7 +600,7 @@ class Verifier:
             params = {
                 # `query.bibliographic` is the field CrossRef intends for a whole citation string,
                 # and it tolerates the abbreviations and expansions an exact-title lookup misses.
-                # Its relevance score is not usable as a threshold -- it is unnormalised and grows
+                # Its relevance score is not usable as a threshold -- it is unnormalized and grows
                 # with the query, and a fabricated title scores above a real one -- so the title
                 # comparison below is what decides, over the top few hits.
                 "query.bibliographic": " ".join([form] + names),
