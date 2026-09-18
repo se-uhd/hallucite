@@ -4,6 +4,34 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.4.2] - 2026-09-18
+
+### Changed
+
+- **The mutation run takes three minutes instead of an hour and a half, and no longer owns the
+  tree.** It copied nothing and reverted each fix in the working tree itself, so it had to run
+  serially, nothing else could be edited or measured while it ran, and 71 entries at 84 s apiece
+  came to about 98 minutes -- which is how a check that CLAUDE.md requires after every fix turns
+  into one that gets put off. It now snapshots the tracked tree into a scratch directory per
+  worker, runs the entries concurrently (`--jobs`, default: cores less two), and asks each suite
+  run to stop at its first failing check (`SMOKE_FAIL_FAST`), since the only question here is
+  whether any check noticed. Measured on this repo: 71 entries in 2 min 39 s. The tree-freeze rule
+  in CLAUDE.md is gone with it.
+
+### Fixed
+
+- **Five behaviours no test covered, found by probing rather than by reading.** Adding a mutation
+  entry first and reading what it reports is what surfaced them: the downloaded file's digest was
+  never checked against the bytes written, so a digest of nothing would satisfy any published
+  checksum; the harvesting fallback's pacing could be removed, and unpaced requests are what earn
+  the block it exists for; the OpenAlex query could stop asking `is_authors_truncated`, which
+  arrives as absent and reads as a complete byline, reopening the lenient-tier hole 2.2.1 closed;
+  and arXiv's hundred-identifier batch and three-second pause were unpinned. Each now has a guard
+  and an entry, and the suite pins the re-check and fallback caps as literals too.
+
+- **Four more British spellings**, in `organisation`, `centred` and `recognising`, which the first
+  pass's word list had missed.
+
 ## [2.4.1] - 2026-09-18
 
 ### Fixed
@@ -338,7 +366,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   `_author_absence_pass` are gone: the DBLP backend *is* the all-candidates check, and the author
   tier is decided inside the rule rather than by a pass over whatever a lenient backend cleared.
 
-  `parse_reference` reads one segmented entry, recognising each style by the mark that separates
+  `parse_reference` reads one segmented entry, recognizing each style by the mark that separates
   the author list from the title -- a standalone year, a parenthesised one, an "et al.", an opening
   quote, a colon after inverted names, a comma after initials-led ones, the surname-and-initials
   run the medical styles print -- and falling back to the leading sentence. Measured over the 2065
@@ -514,17 +542,17 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   a handful of continuation lines opening with digits and segmented as one entry. The same gate was
   already costing the three author-year papers among the original 41: the ACM author-year paper lost
   every two-author entry (`Haipeng Cai and Raul Santelices. 2014.` does not match `_AUTHORYEAR`) and
-  the two Springer papers lost every organisation (`OpenAI (2024)`, `GitHub (2021)`), all glued into
+  the two Springer papers lost every organization (`OpenAI (2024)`, `GitHub (2021)`), all glued into
   the entry before them where only a second `(year)` gave them away.
 
   The hanging indent is the structural signal, and four things had to change for it to carry the
   weight. The right column of a two-column page is shifted to the left column's text edge before
   anything reads the indents, because the gutter cut leaves the right column two characters in under
   an ACM template and seven under Elsevier's, where "entry" in one column meant "continuation" in
-  the other; the centred page number the cut lands inside is dropped rather than moved. With a
+  the other; the centered page number the cut lands inside is dropped rather than moved. With a
   hanging indent only a line at the entry column can vote for a style, so a digit-led continuation
   is not a numeric label. At the entry column an entry needs no year, only to open with a name or an
-  organisation and go on to more names, an "and", an "et al.", a year in any form, or a lone
+  organization and go on to more names, an "and", an "et al.", a year in any form, or a lone
   author's period and the title's capital; `_AUTHORYEAR` stays the gate where there is no hanging
   indent. And the block ends where the layout does: Elsevier prints the authors' biographies after
   the bibliography under no heading, as justified paragraphs at the entry column, and one paper
@@ -616,7 +644,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
     capitalised word and `d'Amorim` -- which `VERIFICATION-SPEC.md` names -- has none, so the whole
     Springer-style byline failed to read as an author list. A reference with no authors cannot be
     confirmed by anything. `van den Bergh` and `De Lucia` were already right in both orders.
-  - An organisation was split on its own `and`: "Institute of Electrical and Electronics Engineers"
+  - An organization was split on its own `and`: "Institute of Electrical and Electronics Engineers"
     became two authors, "Barnes & Noble Research" two more, and under the author rule both halves
     then had to be matched by a real person. A byline with no comma, no initials, a lowercase
     function word and eight words or fewer is one body's name. The bounds matter: without them a
@@ -1725,6 +1753,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[2.4.2]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.2
 [2.4.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.1
 [2.4.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.0
 [2.3.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.3.1

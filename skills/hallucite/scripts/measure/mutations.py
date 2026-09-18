@@ -6,30 +6,34 @@ revertible with the suite green. Each entry below names a fix by the text that c
 text that reverts it; the runner swaps them in, runs the suite, and puts the file back whatever
 happens. Add an entry with every fix that gets a guard, and re-run:
 
-    mutations.py                 # every entry
-    mutations.py "lenient tier"  # entries whose label contains the text
+    mutations.py                       # every entry
+    mutations.py "lenient tier"        # entries whose label contains the text
+    mutations.py --jobs 4 "dblp:"      # four at a time
 
 Every entry must end in `suite FAILS`; an entry the runner cannot find in the file is reported as
 SKIPPED, which means the fix has been rewritten and the entry needs updating.
 
-The run mutates the working tree in place, one file at a time, for the twenty seconds each suite
-run takes. It owns the tree until it finishes: nothing else may be measured against it, and nothing
-may be edited in it either -- not the modules, not the Markdown. A scorer started beside it imports
-whichever revert happens to be in place; an edit to a file under test is lost when the backup is
-restored over it; and an edit to any other tracked file lands inside a suite run as a partial read,
-because the suite reads `CHANGELOG.md`, both plugin manifests, `SKILL.md` and `AGENTS.md` as well
-as the six modules reverted here. The failure that produces is indistinguishable from the one the
-revert was meant to cause, which turns "this fix is unguarded" into "this fix is guarded" -- the
-one conclusion this run exists to prevent. So the tracked tree is fingerprinted before the first
-entry and after each one, and the run stops if anything moved.
+The run never touches the working tree. It copies the tracked tree into a scratch directory per
+worker, reverts one fix inside a copy, and runs the suite there, so entries run in parallel and
+the tree stays free to edit and to measure against while they do. What it measures is the snapshot
+taken when it started, which is the honest answer either way: a tree edited mid-run would otherwise
+fail a suite run for a reason that has nothing to do with the revert, and that reads as "this fix
+is guarded" -- the one conclusion this run exists to prevent.
+
+Two things make it quick enough to run after every fix, which is the point: the copies run
+concurrently (`--jobs`, defaulting to the machine's cores less two), and each suite run stops at
+its first failing check (`SMOKE_FAIL_FAST`), since the only question here is whether any check
+noticed. Serially and in full it was about 84 s an entry.
 """
 
 from __future__ import annotations
 
-import hashlib
+import os
 import shutil
 import subprocess
 import sys
+import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[1]
@@ -170,6 +174,24 @@ MUTATIONS = [
     ("fetch: the download is installed without checking it at all", F,
      "    refusal = accept(scratch, digest, checksum)\n    if refusal:\n        scratch.unlink(missing_ok=True)\n        return refusal",
      '    refusal = ""'),
+    ("verifier: OpenAlex is not asked whether the byline was cut", V,
+     '_OPENALEX_FIELDS = "id,doi,title,display_name,type,authorships,is_authors_truncated,is_retracted"',
+     '_OPENALEX_FIELDS = "id,doi,title,display_name,type,authorships,is_retracted"'),
+    ("verifier: arXiv is asked unpaced between batches", V,
+     "_ARXIV_PAUSE = 3.0", "_ARXIV_PAUSE = 0.0"),
+    ("verifier: arXiv batches one identifier per request", V,
+     "_ARXIV_BATCH = 100", "_ARXIV_BATCH = 1"),
+    ("verifier: an identifier a batch omitted is never re-asked alone", V,
+     "_ARXIV_RECHECK = 20", "_ARXIV_RECHECK = 0"),
+    ("verifier: the harvesting fallback is unbounded", V,
+     "_ARXIV_OAI_CAP = 60", "_ARXIV_OAI_CAP = 100000"),
+    ("fetch: the snapshot walk looks back one month only", F,
+     "_LOOKBACK_MONTHS = 6", "_LOOKBACK_MONTHS = 1"),
+    ("fetch: the download's digest is not of the bytes it wrote", F,
+     "            digest.update(chunk)", "            pass"),
+    ("verifier: the OAI-PMH fallback asks unpaced", V,
+     '        time.sleep(_ARXIV_PAUSE)\n        params = {"verb": "GetRecord"',
+     '        params = {"verb": "GetRecord"'),
     ("fetch: only the current month's snapshot is looked for", F,
      "    for back in range(_LOOKBACK_MONTHS):", "    for back in range(1):"),
     ("fetch: a checksum the release disagrees with is swapped in", F,
@@ -226,60 +248,84 @@ MUTATIONS = [
 ]
 
 
-def _tracked_fingerprint() -> dict[str, str]:
-    """A content hash of every tracked file, to catch a tree edited while the run is in flight.
-
-    Tracked only, so the `.mutbak` backup written beside each file under test does not register as
-    a change of its own. Outside a git checkout there is nothing to list and the check is vacuous,
-    which is the right answer for a plugin install: this is a development tool."""
-    try:
-        listing = subprocess.run(["git", "-C", str(REPO), "ls-files", "-z"],
-                                 capture_output=True, text=True, check=True).stdout
-    except (OSError, subprocess.CalledProcessError):
-        return {}
-    out: dict[str, str] = {}
+def _snapshot(into: Path) -> Path:
+    """The tracked tree, copied. Working-tree content, not HEAD: what is being measured is what is
+    on disk right now, uncommitted edits included."""
+    listing = subprocess.run(["git", "-C", str(REPO), "ls-files", "-z"],
+                             capture_output=True, text=True, check=True).stdout
     for rel in listing.split("\0"):
         if not rel:
             continue
-        try:
-            out[rel] = hashlib.sha256((REPO / rel).read_bytes()).hexdigest()
-        except OSError:
-            out[rel] = "missing"
-    return out
+        src, dst = REPO / rel, into / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        # The plugin layout is held together by symlinks (`plugins/hallucite -> ..`), which git
+        # tracks as links. Copied by content they become directories and the copy loops; recreated
+        # as links they point where they did, which is what the packaging tiers read.
+        if src.is_symlink():
+            dst.symlink_to(os.readlink(src))
+        elif src.exists():
+            shutil.copy2(src, dst)
+    return into
+
+
+def _run_entry(entry, workdir: Path) -> tuple[str, bool, str]:
+    """(label, ok, detail) for one revert, run entirely inside `workdir`."""
+    label, path, fixed, reverted = entry
+    rel = path.relative_to(REPO)
+    target = workdir / rel
+    src = target.read_text(encoding="utf-8")
+    if src.count(fixed) != 1:
+        return label, False, f"SKIPPED: the fixed text occurs {src.count(fixed)} times"
+    try:
+        target.write_text(src.replace(fixed, reverted), encoding="utf-8")
+        proc = subprocess.run(
+            [sys.executable, str(workdir / rel.parts[0] / "hallucite" / "scripts" / "tests"
+                                 / "run_smoke.py")],
+            capture_output=True, text=True,
+            env={**os.environ, "SMOKE_FAIL_FAST": "1"}, cwd=str(workdir))
+    finally:
+        target.write_text(src, encoding="utf-8")
+    failed = [l.strip() for l in proc.stdout.splitlines() if l.strip().startswith("FAIL")]
+    if proc.returncode != 0:
+        return label, True, f"suite FAILS ({len(failed)} check(s)): {failed[0][:110] if failed else ''}"
+    return label, False, "suite PASSES: the fix is revertible, add a guard"
 
 
 def main() -> int:
-    only = sys.argv[1:]
-    bad = 0
-    base = _tracked_fingerprint()
-    for label, path, fixed, reverted in MUTATIONS:
-        if only and not any(o in label for o in only):
-            continue
-        src = path.read_text(encoding="utf-8")
-        if src.count(fixed) != 1:
-            print(f"{label:60s} -> SKIPPED: the fixed text occurs {src.count(fixed)} times")
-            bad += 1
-            continue
-        backup = path.with_suffix(path.suffix + ".mutbak")
-        shutil.copy(path, backup)
-        try:
-            path.write_text(src.replace(fixed, reverted), encoding="utf-8")
-            proc = subprocess.run([sys.executable, str(SMOKE)], capture_output=True, text=True)
-            failed = [l.strip() for l in proc.stdout.splitlines() if l.strip().startswith("FAIL")]
-        finally:
-            shutil.move(backup, path)
-        now = _tracked_fingerprint()
-        moved = sorted(k for k in set(base) | set(now) if base.get(k) != now.get(k))
-        if moved:
-            print(f"\nSTOPPED after {label!r}: the tree changed under the run "
-                  f"({', '.join(moved[:5])}). Every result so far was measured against a tree that "
-                  "moved, so none of them is evidence. Freeze the tree and start again.")
-            return 1
-        if proc.returncode != 0:
-            print(f"{label:60s} -> suite FAILS ({len(failed)} check(s)): {failed[0][:110] if failed else ''}")
-        else:
-            print(f"{label:60s} -> suite PASSES: the fix is revertible, add a guard")
-            bad += 1
+    argv = sys.argv[1:]
+    jobs = max(1, (os.cpu_count() or 4) - 2)
+    if "--jobs" in argv:
+        i = argv.index("--jobs")
+        jobs = max(1, int(argv[i + 1]))
+        del argv[i:i + 2]
+    entries = [e for e in MUTATIONS if not argv or any(o in e[0] for o in argv)]
+    if not entries:
+        print("no entry matches")
+        return 1
+    jobs = min(jobs, len(entries))
+
+    with tempfile.TemporaryDirectory(prefix="hallucite-mutations-") as tmp:
+        root = Path(tmp)
+        print(f"{len(entries)} entr(y|ies), {jobs} at a time, in copies of the tracked tree",
+              flush=True)
+        workdirs = [_snapshot(root / f"w{i}") for i in range(jobs)]
+        queue: list = list(entries)
+        bad = 0
+
+        def worker(workdir: Path) -> list[tuple[str, bool, str]]:
+            out = []
+            while True:
+                try:
+                    entry = queue.pop()
+                except IndexError:
+                    return out
+                out.append(_run_entry(entry, workdir))
+
+        with ThreadPoolExecutor(max_workers=jobs) as pool:
+            for got in pool.map(worker, workdirs):
+                for label, ok, detail in got:
+                    print(f"{label:60s} -> {detail}", flush=True)
+                    bad += 0 if ok else 1
     return 1 if bad else 0
 
 

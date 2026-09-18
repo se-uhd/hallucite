@@ -121,6 +121,12 @@ class Checks:
     def fail(self, msg: str) -> None:
         self.failed += 1
         print(f"  FAIL {msg}")
+        # `measure/mutations.py` runs this suite once per guarded fix and only asks whether any
+        # check noticed the revert, so it stops at the first one. A person reading a failure wants
+        # the whole list, which is what happens without the variable.
+        if os.environ.get("SMOKE_FAIL_FAST"):
+            print(f"\nSMOKE FAILED: 1 check(s) failed (stopped at the first), {self.skipped} skipped")
+            raise SystemExit(1)
 
     def skip(self, msg: str) -> None:
         self.skipped += 1
@@ -1939,7 +1945,7 @@ def tier4i_hanging_indent_author_first() -> None:
         "  docs.example.org/popular-3k-python",
     ])
     # A two-column page: the right column's text starts a few columns past the gutter cut, and
-    # the centred page number lands inside it, left of its text.
+    # the centered page number lands inside it, left of its text.
     left = ["Lime, L., Moss, M., 2020. Placeholder testing of",
             "  invented mobile systems. Imaginary Software",
             "  Engineering 21, 1107–1142.",
@@ -1982,7 +1988,7 @@ def tier4i_hanging_indent_author_first() -> None:
     C.true(any(l.startswith("  in invented digraphs") for l in lines),
            "and its continuations keep their hanging indent")
     C.true(not any(l.strip() == "36" for l in lines),
-           "the centred page number the gutter cut is dropped, not moved to the entry column")
+           "the centered page number the gutter cut is dropped, not moved to the entry column")
 
     section = P._references_section(P._strip_line_numbers(lines)[0])
     C.eq(P._dominant_style(section), "author-year",
@@ -2001,8 +2007,8 @@ def tier4i_hanging_indent_author_first() -> None:
     for who, why in (("Ivy Ash and Jo Kemp. 2011. Practical", "a two-author ACM entry"),
                      ("Karl Knot. A state-of-the-art", "a lone author with the year in the venue"),
                      ("Fred Fig", "a plainnat entry with no year on its first line"),
-                     ("OpenAI (2024)", "an organisation"),
-                     ("popular-3k python (2023)", "a lowercase organisation with a (year)"),
+                     ("OpenAI (2024)", "an organization"),
+                     ("popular-3k python (2023)", "a lowercase organization with a (year)"),
                      ("Rose, R.", "a right-column entry"), ("Vale, V.", "the last right-column entry")):
         C.true(any(r.raw_text.startswith(who) for r in info.refs),
                f"REGRESSION GUARD: {why} opens its own entry")
@@ -2494,6 +2500,22 @@ def tier5b_verifier() -> None:
     C.eq(V._arxiv_oai_record(b"<html><body>502</body></html>")[1], "error",
          "a page that is not an OAI-PMH document is not an answer")
 
+
+    # Paced: the fallback asks one identifier per request, and arXiv's API asks callers to wait
+    # between them. Unpaced over a long residue is what earns the block this fallback exists for.
+    import types as _types
+    paused: list[float] = []
+    real_time, real_fetch = V.time, V._fetch
+    V.time = _types.SimpleNamespace(sleep=paused.append, monotonic=real_time.monotonic)
+    V._fetch = lambda *a, **k: (OAI, "ok")
+    try:
+        V.Verifier(dblp_path=None)._ask_arxiv_oai("2502.02866")
+    finally:
+        V.time, V._fetch = real_time, real_fetch
+    C.eq(paused, [V._ARXIV_PAUSE],
+         "REGRESSION GUARD: every identifier the fallback asks about waits the pause arXiv asks "
+         "for, which is the difference between a slow check and a block")
+
     # Through `check`: the batch endpoint refuses, the harvesting interface answers, and the
     # reference is confirmed rather than left degraded.
     asked_hosts: list[str] = []
@@ -2688,6 +2710,10 @@ def tier5d_openalex() -> None:
              ("verified", "OpenAlex", "https://doi.org/10.1/x"),
              "a record with the cited title and authors verifies, and its DOI is the address")
         q = urllib.parse.parse_qs(urllib.parse.urlparse(asked[0]).query)
+        for field in ("is_authors_truncated", "type", "authorships"):
+            C.true(field in q.get("select", [""])[0],
+                   f"REGRESSION GUARD: the query asks for `{field}`, which a record rule reads -- "
+                   f"a field dropped from `select` arrives as absent, and absent reads as false")
         C.eq(q.get("filter"), ['title.search:"A Study, With a Comma: And a Subtitle"'],
              "REGRESSION GUARD: the title travels quoted -- a bare comma ends a filter value and "
              "the request is refused outright")
@@ -2979,6 +3005,19 @@ def tier6_measured_values() -> None:
          "8 to 32 s for real Zenodo DOIs, and those references have no other identifier")
     C.eq(V._S2_TIMEOUT, 45.0,
          "REGRESSION GUARD: Semantic Scholar keeps its longer ceiling; a timeout claims nothing")
+    C.eq(V._ARXIV_BATCH, 100,
+         "REGRESSION GUARD: arXiv answers a hundred identifiers per request, so a whole residue "
+         "costs a handful of calls rather than one each -- and this backend blocks a caller that "
+         "asks too often")
+    C.eq(V._ARXIV_PAUSE, 3.0,
+         "REGRESSION GUARD: the pause arXiv's API asks callers to keep between requests; going "
+         "without it is what earns a long block")
+    C.eq(V._ARXIV_RECHECK, 20,
+         "REGRESSION GUARD: how many identifiers a batch omitted are re-asked alone, bounded "
+         "because each costs a paced request")
+    C.eq(V._ARXIV_OAI_CAP, 60,
+         "REGRESSION GUARD: how far the harvesting fallback goes when the search API refuses, "
+         "bounded for the same reason")
     C.eq(V._OPENALEX_GIVE_UP_AFTER, 3,
          "REGRESSION GUARD: OpenAlex meters the day, not the second, so a refusal is a wall until "
          "midnight UTC -- the give-up is short, where Semantic Scholar's has to survive a burst")
@@ -3396,6 +3435,42 @@ def tier6f_dump_source() -> None:
 
     # A finished download is checked and moved by one function, so no path can take the move
     # without the check.
+
+    # The digest is what a published checksum is compared against, so it has to be taken from the
+    # bytes that were written: a download reporting the digest of nothing would satisfy any
+    # checksum it was handed.
+    import hashlib
+    payload = b"\x1f\x8b" + bytes(range(256)) * 4096
+
+    class _Stream:
+        def __init__(self):
+            self.left = payload
+            self.headers = {"Content-Length": str(len(payload))}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self, size=-1):
+            take = len(self.left) if size is None or size < 0 else size
+            chunk, self.left = self.left[:take], self.left[take:]
+            return chunk
+
+    with tempfile.TemporaryDirectory() as td:
+        scratch = Path(td) / "dblp.xml.gz.part"
+        real_open = F._open
+        F._open = lambda url, method="GET": _Stream()
+        try:
+            digest = F._download("https://example.invalid/dblp.xml.gz", scratch)
+        finally:
+            F._open = real_open
+        C.eq(digest, hashlib.md5(payload).hexdigest(),
+             "REGRESSION GUARD: the digest is of the bytes actually written, or comparing it "
+             "against the release's checksum proves nothing")
+        C.eq(scratch.read_bytes(), payload, "and every byte reached the file")
+
     with tempfile.TemporaryDirectory() as td:
         dest = Path(td) / "dblp.xml.gz"
         dest.write_bytes(b"the mirror already on disk")

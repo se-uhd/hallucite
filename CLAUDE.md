@@ -93,13 +93,12 @@ its contents constantly:
   command line or into a tracked file: `--mailto` defaults to `$CROSSREF_MAILTO`, which belongs in
   `.env.local` beside the API keys, and a run without one asks CrossRef one request at a time.
 
-  `mutations.py` reverts one fix at a time and requires the suite to fail, and does so in the
-  working tree, which it owns until it finishes: no other measurement, and no edit to any tracked
-  file, Markdown included. The suite reads the CHANGELOG, the manifests and `SKILL.md` as well as
-  the modules reverted, so an edit landing inside a run is read half-written and fails a check
-  indistinguishable from the revert's, which reports an unguarded fix as guarded. It fingerprints
-  the tracked tree between entries and stops if anything moved; work in a snapshot
-  (`git ls-files -z | xargs -0 tar cf -`) instead.
+  `mutations.py` reverts one fix at a time and requires the suite to fail. It works in copies of
+  the tracked tree, one per worker, so the working tree stays free to edit and to measure against
+  while it runs, and the entries run concurrently (`--jobs`, default: cores less two) with each
+  suite run stopping at its first failing check. The whole set takes about three minutes, against
+  the hour and a half it took in place and serially -- which is the difference between running it
+  after every fix and putting it off. What it measures is the snapshot taken when it started.
 - Stage 1/2 driver: `skills/hallucite/scripts/audit_references.py` (segments each reference via
   `pdf_references.py`, parses it with `reference_parser.py`, then runs `verifier.check`). The
   target is 0 unparsed references.

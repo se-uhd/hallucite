@@ -81,13 +81,13 @@ _AUTHORYEAR = re.compile(
 
 # What opens an entry once a hanging indent says where entries open. The column is the structural
 # signal there, and this only has to tell an entry from the furniture that can share its column: a
-# page number, a URL, a heading. Every author-first style starts with a name -- or an organisation,
+# page number, a URL, a heading. Every author-first style starts with a name -- or an organization,
 # "OpenAI (2024)", "GitHub (2021)" -- and then either goes on to more names (a comma, an "and", an
 # "et al.") or dates the work (a year, bare or parenthesised); a lone author closes with a period
 # and the title's capital follows ("Tom Mens. A state-of-the-art survey ..."); and a parenthesised
 # year marks an entry whatever precedes it ("popular-3k python (2023) Dataset ..."). Holding these
 # entries to `_AUTHORYEAR` instead lost every two-author ACM entry ("Haipeng Cai and Raul
-# Santelices. 2014.") and every organisation to the entry before it, silently: 16 of 68 in one
+# Santelices. 2014.") and every organization to the entry before it, silently: 16 of 68 in one
 # corpus paper.
 _ENTRY_HEAD = re.compile(
     rf"^(?:{_PARTICLE}{_UP}{_NAME_CHARS}.{{0,300}}?"
@@ -248,7 +248,7 @@ def _furniture_norm(s: str) -> str:
 def _text_edge(lines: list[str]) -> int | None:
     """The column a column's text starts at: the smallest indent of a line that carries text.
 
-    A page number centred under both columns is cut by the gutter and lands inside the right column,
+    A page number centered under both columns is cut by the gutter and lands inside the right column,
     left of its text, so a bare number does not count; a `lineno` margin number is furniture too,
     and its line's text starts after the gap."""
     edges = []
@@ -268,7 +268,7 @@ def _align(left: list[str], right: list[str]) -> list[str]:
     hanging indent that means "entry" in the left column then means "continuation" in the right,
     where the entries sit at the left column's continuation depth or past it. Both bibliographies
     that lost half their entries this way were two-column journal papers. A bare number the shift
-    would cut is the centred page number and is dropped rather than moved to the entry column."""
+    would cut is the centered page number and is dropped rather than moved to the entry column."""
     le, re_ = _text_edge(left), _text_edge(right)
     if le is None or re_ is None or le == re_:
         return right

@@ -318,7 +318,7 @@ def _merge_inverted(chunks: list[str]) -> list[str]:
 
 
 _SEPARATORS = re.compile(r"\s*(?:,|;|\band\b|&)\s*", re.I)
-# A lowercase function word inside a byline says the byline is one organisation's name, not a list
+# A lowercase function word inside a byline says the byline is one organization's name, not a list
 # of people: "Institute of Electrical and Electronics Engineers", "Association for Computing
 # Machinery". People\u2019s names do not carry one, so the `and` inside is part of the name.
 _ORG_WORD = re.compile(r"(?:^|\s)(?:of|for|the|und|der|voor)(?:\s|$)")
