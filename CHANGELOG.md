@@ -4,6 +4,27 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.4.3] - 2026-09-18
+
+### Fixed
+
+- **A backend that raised named the failure after its own method.** `_map` read the backend's name
+  off the bound method's `__name__`, so a rename or a wrapper would attribute the failure to a
+  backend called "backend" -- a name no disable list and no drift tripwire knows, on the one code
+  path whose job is to report a failure. The caller passes the name it already has. Found by a
+  guard written for something else, which is the second time a probe has paid for itself.
+
+### Added
+
+- **Guards for six behaviors the tests never held to**, each of them a documented intention that
+  a revert left green: a backend raising on one reference must not cost the paper its whole
+  verification; an unverified reference a backend failed to answer for must be marked degraded,
+  which is what stops triage reading it as a clean negative; a retraction the verifier found must
+  reach the record triage reads; DBLP's homonym suffix is not a second name, and left on, a byline
+  of one bare surname reads as a complete author list; and evidence an earlier backend gathered --
+  a DOI that does not resolve -- must survive a later backend confirming the title. All 77
+  mutation entries now fail the suite when reverted.
+
 ## [2.4.2] - 2026-09-18
 
 ### Changed
@@ -20,7 +41,7 @@ All notable changes to hallucite are documented here. The format follows
 
 ### Fixed
 
-- **Five behaviours no test covered, found by probing rather than by reading.** Adding a mutation
+- **Five behaviors no test covered, found by probing rather than by reading.** Adding a mutation
   entry first and reading what it reports is what surfaced them: the downloaded file's digest was
   never checked against the bytes written, so a digest of nothing would satisfy any published
   checksum; the harvesting fallback's pacing could be removed, and unpaced requests are what earn
@@ -1753,6 +1774,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[2.4.3]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.3
 [2.4.2]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.2
 [2.4.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.1
 [2.4.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.0

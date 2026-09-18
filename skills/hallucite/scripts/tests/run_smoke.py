@@ -2633,6 +2633,72 @@ def tier5b_verifier() -> None:
         C.eq(f"mailto:{sent}" in v.user_agent, bool(sent),
              "and the address travels in the User-Agent only when CrossRef would read it")
 
+
+    # Evidence one backend gathered survives a later one deciding the verdict. A cited DOI that
+    # does not resolve is fabrication signal (D) whoever confirms the title, and triage reads it
+    # off the result: overwritten by the confirming backend's empty answer, it disappears.
+    FEED = (b'<feed xmlns="http://www.w3.org/2005/Atom"><entry>'
+            b"<id>http://arxiv.org/abs/2407.08138v1</id>"
+            b"<title>A dead DOI and a live preprint</title>"
+            b"<author><name>Ada Byte</name></author></entry></feed>")
+    real_json, real_fetch, pause = V._fetch_json, V._fetch, V._ARXIV_PAUSE
+    V._fetch_json = lambda url, *a, **k: (None, "not_found")
+    V._fetch = lambda url, *a, **k: ((None, "not_found") if "doi.org" in url else (FEED, "ok"))
+    V._ARXIV_PAUSE = 0.0
+    try:
+        got = V.check([V.Reference(title="A dead DOI and a live preprint", authors=["Ada Byte"],
+                                   doi="10.1234/dead", arxiv_id="2407.08138")],
+                      dblp_path=None,
+                      disabled_dbs=(V.DBLP, V.CROSSREF, V.OPENALEX, V.SEMANTIC_SCHOLAR))[0]
+    finally:
+        V._fetch_json, V._fetch, V._ARXIV_PAUSE = real_json, real_fetch, pause
+    C.eq((got.status, got.source), ("verified", "arXiv"),
+         "the preprint confirms the reference even though its DOI is dead")
+    C.true(got.doi_info is not None and got.doi_info.valid is False,
+           "REGRESSION GUARD: the dead DOI the earlier backend found survives the later one's "
+           "confirmation -- it is fabrication signal (D), and triage reads it off this result")
+
+
+    # One reference must not cost a paper its verification, and what the audit writes has to carry
+    # what the verifier learned: an incomplete check marked degraded, and a retraction that reaches
+    # the triager. All four of these were documented intentions that no check held to.
+    import audit_references as audit_mod
+
+    def explodes(self, ref):
+        if "explodes" in (getattr(ref, "title", "") or ""):
+            raise RuntimeError("a malformed entry")
+        return V._Answer(V.DbResult(V.CROSSREF, V.NO_MATCH))
+
+    real_crossref = V.Verifier._crossref
+    V.Verifier._crossref = explodes
+    try:
+        got = V.check([V.Reference(title="A paper that explodes", authors=["Ada Byte"]),
+                       V.Reference(title="An ordinary paper", authors=["Ada Byte"])],
+                      dblp_path=None, max_workers=1,
+                      disabled_dbs=(V.DBLP, V.DOI, V.ARXIV, V.OPENALEX, V.SEMANTIC_SCHOLAR))
+    finally:
+        V.Verifier._crossref = real_crossref
+    C.eq(len(got), 2,
+         "REGRESSION GUARD: a backend raising on one reference still answers about the rest -- "
+         "one malformed entry must not cost a paper its whole verification")
+    C.eq((got[0].failed_dbs, got[1].failed_dbs), (["CrossRef"], []),
+         "and the reference it raised on is the only one carrying the failure")
+
+    degraded = V.ValidationResult(status="not_found", failed_dbs=["Semantic Scholar"],
+                                  db_results=[V.DbResult("Semantic Scholar", "rate_limited")])
+    C.true(audit_mod.verification_dict(degraded)["degraded"],
+           "REGRESSION GUARD: an unverified reference a backend failed to answer for is marked "
+           "degraded, which is what stops triage reading it as a clean negative")
+    confirmed = V.ValidationResult(status="verified", failed_dbs=["Semantic Scholar"],
+                                   db_results=[V.DbResult("DBLP", "match")])
+    C.true(not audit_mod.verification_dict(confirmed)["degraded"],
+           "a confirmed reference is not degraded by a backend that failed after it")
+    retracted = V.ValidationResult(status="verified", retraction_info=V.RetractionInfo(
+        is_retracted=True, retraction_doi="10.1/notice", retraction_source="CrossRef"))
+    C.eq((audit_mod.verification_dict(retracted)["retraction_info"] or {}).get("retraction_doi"),
+         "10.1/notice",
+         "REGRESSION GUARD: a retraction the verifier found reaches the record triage reads")
+
     # The failure vocabulary, without asking a backend anything.
     result = V.ValidationResult(status="", db_results=[
         V.DbResult("DBLP", "no_match"), V.DbResult("CrossRef", "rate_limited"),
@@ -3025,6 +3091,12 @@ def tier6_measured_values() -> None:
          "REGRESSION GUARD: the FTS ceiling stays above the row depth where confirmations "
          "are lost -- at 50 it dropped 3 corpus confirmations, one of them a record at "
          "row 2,507")
+    C.true(D.authors_match(["Xin Xia"], ["Xin Xia 0001"]),
+           "DBLP's homonym suffix is not part of the name the citation gives")
+    C.true(not D.record_authors_complete(["Xia 0001"]),
+           "REGRESSION GUARD: and the suffix is not a second name either -- left on, a byline of "
+           "one bare surname reads as a complete author list, which is the strict tier refusing a "
+           "citation that names the authors the record does not carry")
     C.true(D._author_matches("O\u2019Donoghue, P.", "Paul O'Donoghue"),
            "a curly apostrophe and a straight one are one surname")
     C.true(D._author_matches("P. ODonoghue", "Paul O'Donoghue"),

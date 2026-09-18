@@ -505,13 +505,6 @@ def _dblp_readable(path: str) -> bool:
     return True
 
 
-def _backend_of(run) -> str:
-    """The backend a bound method belongs to, for naming a failure it did not survive to report."""
-    return {"_dblp": DBLP, "_crossref": CROSSREF, "_doi": DOI, "_arxiv": ARXIV,
-            "_openalex": OPENALEX, "_semantic_scholar": SEMANTIC_SCHOLAR
-            }.get(getattr(run, "__name__", ""), "backend")
-
-
 def _answer(db_name: str, ref, records: list[_Record], elapsed_ms: float,
             complete_source: bool = True, **evidence) -> _Answer:
     """One backend's answer, from the candidates it retrieved."""
@@ -943,7 +936,7 @@ class Verifier:
                 except Exception:                    # noqa: BLE001
                     answers = [_Answer(DbResult(name, ERROR)) for _ in batch]
             else:
-                answers = self._map(run, batch)
+                answers = self._map(run, batch, name)
             for i, answer in zip(pending, answers):
                 results[i].absorb(answer)
             for i in set(range(len(refs))) - set(pending):
@@ -953,17 +946,21 @@ class Verifier:
             self._finish(result)
         return results
 
-    def _map(self, run, items: list) -> list:
+    def _map(self, run, items: list, name: str) -> list:
         """Run one backend over its share of the batch.
 
         An unexpected exception becomes that reference's `error`, not the batch's. One malformed
         entry must not cost a paper its whole verification, and `error` is already the value that
-        says "this backend did not answer about this reference"."""
+        says "this backend did not answer about this reference".
+
+        The backend is named by its caller, which knows. Read off the bound method's `__name__`
+        instead, a rename or a wrapper attributes the failure to a backend called "backend" -- a
+        name no disable list and no tripwire knows, on the one code path that reports a failure."""
         def guarded(item):
             try:
                 return run(item)
             except Exception:                        # noqa: BLE001 -- reported, never re-raised
-                return _Answer(DbResult(_backend_of(run), ERROR))
+                return _Answer(DbResult(name, ERROR))
 
         if not items:
             return []
