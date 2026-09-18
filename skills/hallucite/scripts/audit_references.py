@@ -617,6 +617,28 @@ def paper_status_counts(record: dict) -> dict:
     return counts
 
 
+def drift_warnings(seen_dbs: set, offline: bool) -> list[str]:
+    """What to say when the configured backend names and the ones that ran disagree.
+
+    Two directions, and a silent name mismatch caused a real bug in each. A configured online name
+    that never appeared as a real `db` is misspelled or renamed upstream, which is how the old
+    "DOI Resolver" entry never disabled the live "DOI" backend in `--offline`. And a backend that
+    ran under `--offline` and is not known-local is one the disable list missed, so `--offline`
+    quietly stopped meaning no network for it. Pure, because a warning nothing can call is a
+    warning nothing can check."""
+    if not seen_dbs:
+        return []
+    if offline:
+        unexpected = sorted(seen_dbs - set(KNOWN_LOCAL_DBS))
+        return [f"warning: backend(s) {unexpected} ran despite --offline and are not in "
+                f"KNOWN_LOCAL_DBS; if they query the network, add them to DEFAULT_ONLINE_DBS so "
+                f"--offline disables them."] if unexpected else []
+    stale = [db for db in DEFAULT_ONLINE_DBS if db not in seen_dbs]
+    return [f"warning: configured online-backend name(s) {stale} never appeared in any db_results; "
+            f"`verifier` may have renamed or removed them, so --offline would not actually disable "
+            f"them. Update DEFAULT_ONLINE_DBS."] if stale else []
+
+
 def backend_failures(record: dict) -> dict:
     """How often each backend failed to answer, across a paper's references."""
     failures: dict = {}
@@ -752,24 +774,8 @@ def main() -> int:
     if not args.no_verify:
         print(f"Unverified references to triage: {totals.get('unverified', 0)} "
               f"across {len(pdfs)} papers.")
-        # Drift tripwire: a configured online-backend name that never appeared as a real `db`
-        # is almost certainly misspelled or renamed upstream -- the failure mode that let the
-        # old "DOI Resolver" entry silently never disable the live "DOI" backend in --offline.
-        if not args.offline and seen_dbs:
-            stale = [db for db in DEFAULT_ONLINE_DBS if db not in seen_dbs]
-            if stale:
-                print(f"warning: configured online-backend name(s) {stale} never appeared in any "
-                      f"db_results; `verifier` may have renamed or removed them, so --offline would "
-                      f"not actually disable them. Update DEFAULT_ONLINE_DBS.", file=sys.stderr)
-        # The inverse direction: a backend that ran in --offline mode but is not known-local is an
-        # online backend the disable list missed (new or renamed upstream), i.e. --offline silently
-        # stopped meaning "no network" for it.
-        if args.offline and seen_dbs:
-            unexpected = sorted(seen_dbs - set(KNOWN_LOCAL_DBS))
-            if unexpected:
-                print(f"warning: backend(s) {unexpected} ran despite --offline and are not in "
-                      f"KNOWN_LOCAL_DBS; if they query the network, add them to "
-                      f"DEFAULT_ONLINE_DBS so --offline disables them.", file=sys.stderr)
+        for warning in drift_warnings(seen_dbs, args.offline):
+            print(warning, file=sys.stderr)
     zero = [p for p in summary_papers if "error" not in p and p.get("num_references") == 0]
     if zero:
         # Aggregate the per-paper warnings, so one unsupported layout in a long batch cannot

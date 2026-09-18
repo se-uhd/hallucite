@@ -4,6 +4,17 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.4.4] - 2026-09-18
+
+### Added
+
+- **The two backend-name drift tripwires are a function, and guarded.** They ran inline in the
+  audit's closing block, where nothing could call them, so either could be disabled with the suite
+  green -- and a silent name mismatch has defeated them once in each direction already
+  (`DOI Resolver` never disabling `DOI`; a backend running under `--offline`). `drift_warnings` is
+  pure and both directions are checked. A title too short to ask the mirror about is guarded as
+  `skipped` rather than `no_match`, since a negative claims a search that never happened.
+
 ## [2.4.3] - 2026-09-18
 
 ### Fixed
@@ -1774,6 +1785,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[2.4.4]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.4
 [2.4.3]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.3
 [2.4.2]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.2
 [2.4.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.1

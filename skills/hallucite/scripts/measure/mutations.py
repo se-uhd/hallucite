@@ -252,6 +252,12 @@ MUTATIONS = [
      '    return []'),
     ("audit: a configured CrossRef contact is ignored", A,
      '    return os.environ.get("CROSSREF_MAILTO", "").strip()', '    return ""'),
+    ("audit: the stale-backend-name tripwire never fires", A,
+     "    stale = [db for db in DEFAULT_ONLINE_DBS if db not in seen_dbs]", "    stale = []"),
+    ("audit: the offline tripwire never fires", A,
+     "        unexpected = sorted(seen_dbs - set(KNOWN_LOCAL_DBS))", "        unexpected = []"),
+    ("verifier: a title too short to query is asked about anyway", V,
+     "        if not queryable(title):", "        if False:"),
     ("audit: the nearest title is asked for whatever the mirror said", A,
      '        if any(r.get("db") == DBLP and r.get("status") == NO_MATCH\n'
      '               for r in v.get("db_results") or []):',

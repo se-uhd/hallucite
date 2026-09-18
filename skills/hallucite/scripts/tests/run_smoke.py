@@ -953,6 +953,24 @@ def tier3j_triage_evidence() -> None:
                 "db_verification": dv,
                 "parsed": parsed or {"title": f"Title {n}", "authors": ["Author A"]}}
 
+
+    # The two drift tripwires, which a silent name mismatch has defeated once in each direction.
+    C.eq(audit.drift_warnings(set(), False), [], "no run, nothing claimed")
+    C.eq(audit.drift_warnings({"DBLP", "CrossRef", "DOI", "arXiv", "OpenAlex", "Semantic Scholar"},
+                              False), [],
+         "every configured online backend appeared, so there is nothing to warn about")
+    stale = audit.drift_warnings({"DBLP", "CrossRef", "DOI", "arXiv", "OpenAlex"}, False)
+    C.true(stale and "Semantic Scholar" in stale[0],
+           "REGRESSION GUARD: a configured online-backend name that never ran is named -- a typo "
+           "there leaves that backend live under --offline, which is the `DOI Resolver` bug")
+    C.eq(audit.drift_warnings({"DBLP"}, True), [],
+         "the mirror is the only backend expected in an --offline run")
+    leaked = audit.drift_warnings({"DBLP", "OpenAlex"}, True)
+    C.true(leaked and "OpenAlex" in leaked[0],
+           "REGRESSION GUARD: a backend that ran under --offline and is not known-local is named "
+           "-- the same mismatch in the other direction, where --offline stopped meaning no "
+           "network for it")
+
     # Not asked. `skipped` is the verifier's word for it, and the one string that means it.
     short = ref(1, "not_found", [("DBLP", "skipped"), ("CrossRef", "no_match"), ("DOI", "skipped"),
                                  ("arXiv", "skipped"), ("Semantic Scholar", "skipped")],
@@ -2389,6 +2407,11 @@ def tier5b_verifier() -> None:
         C.eq([d.status for d in got[1].db_results if d.db_name == "DBLP"], ["author_mismatch"],
              "the backend reports which of the two questions it answered no to")
         C.eq(got[2].status, "not_found", "an invented title is not found")
+        short = V.check([V.Reference(title="AI", authors=["Alpha Aaron"])], **offline)[0]
+        C.eq([d.status for d in short.db_results if d.db_name == "DBLP"], ["skipped"],
+             "REGRESSION GUARD: a title too short to ask the mirror about is `skipped`, not "
+             "`no_match` -- a negative claims a search that never happened, and triage reads the "
+             "difference")
         padded = V.check([V.Reference(title="A placeholder title about fictional pipelines",
                                       authors=["Alpha Aaron", "Beta Brown", "Quentin Fabrikant"])],
                          **offline)[0]
