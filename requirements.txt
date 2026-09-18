@@ -8,7 +8,9 @@
 # Nothing imports `hallucinator`. The modules were written against a black-box recording of it,
 # kept outside the repo as ~/hallucite/verification-results-hallucinator.json.
 #
-# One task has a dependency, and only that task: `mise run fetch-dblp-dump` drives a real browser,
-# because dblp.org fronts the dump with a proof-of-work challenge no plain HTTP client answers.
+# Nothing the pipeline runs needs a package, and neither does fetching the dump: the monthly dblp
+# snapshot is an ordinary download with a published MD5. Only `mise run fetch-dblp-dump -- --daily`
+# has a dependency, because dblp.org fronts its daily dump with a proof-of-work challenge that no
+# plain HTTP client answers and only a real browser completes.
 #
-#     pip install playwright && playwright install chromium
+#     uv pip install playwright && playwright install chromium

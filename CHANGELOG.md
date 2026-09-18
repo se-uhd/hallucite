@@ -4,6 +4,26 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.4.0] - 2026-09-18
+
+### Changed
+
+- **`fetch-dblp-dump` takes dblp's monthly snapshot, and needs no browser to do it.** dblp
+  publishes a snapshot a month through Schloss Dagstuhl's DROPS, each release under its own DOI
+  (`10.4230/dblp.xml.2026-09-01`), CC0, served by an ordinary web server with an MD5 file beside
+  it. That is now the default: the fetcher streams it, computes the digest as it goes, and refuses
+  to install bytes the release disagrees with or that are not a gzip. Two things follow. The
+  default path has no Python dependency at all, where Playwright existed only to answer the
+  proof-of-work challenge fronting dblp.org's daily dump. And a mirror becomes nameable -- "built
+  from the 2026-09-01 release" is a file anyone can fetch again, where "yesterday's dblp.xml.gz" is
+  not, which matters because the fabricated-citation set is sampled from whichever mirror built it
+  and cannot be rebuilt on another without changing what it measures.
+
+  `-- --daily` keeps the browser path, for when currency is the point: a paper indexed last week is
+  in the daily dump and not in a snapshot dated the first of the month. A release appears during
+  the month it is dated, so the newest published one is found by asking for the current month and
+  stepping back, up to six, rather than assuming which exists.
+
 ## [2.3.1] - 2026-09-17
 
 ### Fixed
@@ -1671,6 +1691,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[2.4.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.0
 [2.3.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.3.1
 [2.3.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.3.0
 [2.2.2]: https://github.com/se-uhd/hallucite/releases/tag/v2.2.2

@@ -58,7 +58,11 @@ its contents constantly:
   `build-dblp` builds to a scratch file, swapping only after checking the publication count and
   that accented names survived. The audit reads the same property off whatever mirror it is handed
   and drops to the lenient author tier when the mirror cannot support an absence claim.
-  `fetch-dblp-dump` gets the dump with a real browser when the bot check is up.
+  `fetch-dblp-dump` takes the newest monthly snapshot, a citable release with a published MD5 that
+  downloads with no browser and no package; `-- --daily` takes dblp.org's daily dump instead, which
+  is up to a month fresher and needs Playwright and a display to answer the proof-of-work challenge
+  fronting it. Prefer the snapshot: a measurement sampled from a mirror says which release built
+  it, where "yesterday's dump" names nothing anyone can fetch again.
 - Measuring a change. `measure/fabricated_citations.py score` runs the verifier over the fabricated
   set and must come back unchanged from any change to the title or author rules; `--scripts DIR`
   imports a snapshot of the modules, so a before-and-after needs no stash. The built set is scored,

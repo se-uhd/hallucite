@@ -27,11 +27,11 @@ Run from this directory.
 | [mise](https://mise.jdx.dev) | provisions Python and uv | see mise docs |
 | `pdftotext` (poppler) | reference extraction shells out to it | `brew install poppler` |
 | `sqlite3` | `build-dblp` checks the database it just built | ships with macOS |
-| Playwright + Chromium | `fetch-dblp-dump` only; needs a display | `pip install playwright && playwright install chromium` |
+| Playwright + Chromium | `fetch-dblp-dump -- --daily` only; needs a display | `uv pip install playwright && playwright install chromium` |
 
 ```sh
 mise install               # provision Python + uv (auto-venv)
-mise run fetch-dblp-dump   # download dblp.xml.gz with a real browser (~1 GB)
+mise run fetch-dblp-dump   # download the newest monthly dblp snapshot (~1 GB)
 mise run build-dblp        # build ~/hallucite/dblp.db from it (~5 min)
 ```
 
@@ -152,15 +152,18 @@ is more than 30 days old. Rebuild it with `mise run build-dblp`, which builds to
 and swaps it in only after checking that the result is mirror-sized and that accented author names
 survived the ingest.
 
-dblp.org and both its mirrors front `dblp.xml.gz` with an Anubis proof-of-work bot check. A plain
-HTTP client such as `curl` receives the challenge page instead of the dump, and an ingest reads it
-as zero publications, so `build-dblp` verifies what it built before installing it.
+dblp publishes two dumps. A monthly snapshot goes out through Schloss Dagstuhl's DROPS, one
+release per month under its own DOI (`10.4230/dblp.xml.2026-09-01`), CC0, served by an ordinary
+web server with an MD5 beside it. dblp.org also publishes a daily dump, fronted by an Anubis
+proof-of-work bot check that no plain HTTP client answers: `curl` receives the challenge page
+instead of the dump, and an ingest reads that as zero publications.
 
-`mise run fetch-dblp-dump` drives a real browser, which answers the challenge with its own JS
-engine the way it does for a person clicking the link. It has to run headed: Anubis refuses a
-headless browser outright ("Access Denied"), while the headed one completes the proof-of-work
-normally. On a machine without a display, download the dump on a desktop and copy it over. Either
-way, point the build at the file:
+`mise run fetch-dblp-dump` takes the newest snapshot, checks it against the published MD5, and
+refuses to install bytes the release disagrees with or that are not a gzip. It needs no browser
+and no package. Add `-- --daily` for dblp.org's daily dump, which is fresher by up to a month and
+drives a real browser that answers the challenge with its own JS engine; that path has to run
+headed, since Anubis refuses a headless browser outright, so on a machine without a display you
+download the dump elsewhere and copy it over. Either way, point the build at the file:
 
 ```sh
 mise run fetch-dblp-dump   # -> ~/hallucite/dblp.xml.gz, where build-dblp looks for it
@@ -229,8 +232,8 @@ install: the pipeline is standard library only. Set `$HALLUCITE_PYTHON` to pin a
 is missing.
 
 You still build the offline DBLP database once, and without a clone there are no mise tasks to do
-it with. Get `dblp.xml.gz` (on a machine with a display, `fetch_dblp_dump.py`; otherwise download
-it on a desktop and copy it over), then run the ingest through the wrapper:
+it with. Get `dblp.xml.gz` with `fetch_dblp_dump.py`, which downloads the newest monthly
+snapshot and verifies its checksum, then run the ingest through the wrapper:
 
 ```sh
 RUN=<plugin>/skills/hallucite/scripts/run.sh

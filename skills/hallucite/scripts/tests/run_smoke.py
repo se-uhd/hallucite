@@ -3327,6 +3327,57 @@ def tier6d_extraction_and_env() -> None:
             os.environ["CROSSREF_MAILTO"] = keep
 
 
+def tier6f_dump_source() -> None:
+    """Which dump a rebuild takes, and whether the bytes arrived.
+
+    The monthly snapshot is one citable file with a published checksum; the daily dump is neither,
+    and is fronted by a challenge whose HTML ingests as a valid, empty, useless mirror. So both
+    paths refuse anything that is not a gzip, and the snapshot path refuses bytes the release's
+    own checksum disagrees with."""
+    print("Tier 6f: which dblp dump a rebuild takes (no network)")
+    import datetime as dt
+    import fetch_dblp_dump as F
+
+    C.eq(F.snapshot_url(dt.date(2026, 9, 18)),
+         "https://drops.dagstuhl.de/storage/artifacts/dblp/xml/2026/dblp-2026-09-01.xml.gz",
+         "a release is dated the first of its month and filed under its year")
+    asked: list[str] = []
+
+    def only_august(url):
+        asked.append(url)
+        return "2026-08-01" in url
+
+    C.eq(F.newest_snapshot(dt.date(2026, 9, 18), only_august),
+         "https://drops.dagstuhl.de/storage/artifacts/dblp/xml/2026/dblp-2026-08-01.xml.gz",
+         "REGRESSION GUARD: a release appears during the month it is dated, so for part of every "
+         "month the newest published one is the month before")
+    C.eq(asked[0], F.snapshot_url(dt.date(2026, 9, 1)),
+         "and the current month is the one asked for first")
+    C.eq(F.newest_snapshot(dt.date(2026, 1, 5), lambda u: "2025-12-01" in u),
+         "https://drops.dagstuhl.de/storage/artifacts/dblp/xml/2025/dblp-2025-12-01.xml.gz",
+         "REGRESSION GUARD: the walk back crosses a year, where the file sits under the older one")
+    C.true(F.newest_snapshot(dt.date(2026, 9, 18), lambda u: False) is None,
+           "and nothing published means nothing claimed")
+    C.eq(F.expected_md5("41abb87b4e8b8a2e3c470efd6528ad88  dblp-2026-09-01.xml.gz\n"),
+         "41abb87b4e8b8a2e3c470efd6528ad88",
+         "the checksum file is one `<md5>  <filename>` line")
+    C.eq(F.expected_md5(""), "", "a release publishing none claims none")
+
+    with tempfile.TemporaryDirectory() as td:
+        gz = Path(td) / "dump.gz"
+        gz.write_bytes(b"\x1f\x8b" + b"the rest of a gzip")
+        C.eq(F.accept(gz, "abc", "abc"), "", "a gzip the release's checksum agrees with is kept")
+        C.true("checksum mismatch" in F.accept(gz, "abc", "def"),
+               "REGRESSION GUARD: bytes the release disagrees with are never swapped in")
+        C.eq(F.accept(gz, "abc", ""), "",
+             "a release with no published checksum leaves the gzip check to decide")
+        page = Path(td) / "page.gz"
+        page.write_bytes(b"<!DOCTYPE html><html>make sure you are not a bot</html>")
+        C.true("not gzip" in F.accept(page, "abc", "abc"),
+               "REGRESSION GUARD: a web page saved under a .gz name ingests as an empty mirror, "
+               "so it is refused whatever checksum it was handed")
+
+
 def tier6e_dblp_ingest() -> None:
     """The mirror hallucite now builds for itself, on a dump small enough to check by eye.
 
@@ -3426,6 +3477,7 @@ def main() -> int:
     tier6c_answers_and_parsing()
     tier6d_extraction_and_env()
     tier6e_dblp_ingest()
+    tier6f_dump_source()
     print()
     if C.failed:
         print(f"SMOKE FAILED: {C.failed} check(s) failed, {C.skipped} skipped")

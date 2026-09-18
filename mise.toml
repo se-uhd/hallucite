@@ -36,9 +36,11 @@ description = "Install Python dependencies into the venv"
 run = "uv pip install -r requirements.txt"
 
 [tasks.fetch-dblp-dump]
-description = "Download dblp.xml.gz with a real browser (dblp.org fronts it with a bot challenge)"
-# Needs Playwright and a display: Anubis refuses the headless browser outright, while a headed one
-# completes the proof-of-work normally. Writes beside $HALLUCITE_DBLP by default.
+description = "Download the newest monthly dblp snapshot (--daily takes dblp.org's daily dump)"
+# The monthly snapshot is a plain download with a published MD5, one citable release per month.
+# `-- --daily` takes dblp.org's daily dump instead, which is fresher by up to a month and needs
+# Playwright and a display, because a proof-of-work challenge fronts it. Writes beside
+# $HALLUCITE_DBLP by default.
 run = "python skills/hallucite/scripts/fetch_dblp_dump.py"
 
 [tasks.build-dblp]
