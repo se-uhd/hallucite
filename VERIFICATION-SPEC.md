@@ -104,8 +104,8 @@ How strictly to apply it depends on the source:
   local mirror was built by an ingest that preserves accented names*) -- one unmatched cited author
   is enough to flag.
 - **A database whose records may be truncated** -- an unmatched cited name is absence of evidence
-  and does not flag, because the absence may be the record's fault. Measured over a 95-paper corpus,
-  every DBLP author complaint against an otherwise-confirmed reference traced to a mirror that had
+  and does not flag, because the absence may be the record's fault. Measured over the corpus, every
+  DBLP author complaint against an otherwise-confirmed reference traced to a mirror that had
   dropped authors, not to a bad citation. The tier still needs a floor: the people such a record
   does list have to account for at least one cited name, or it clears any author list on any title
   it shares.
@@ -164,7 +164,7 @@ are what the audit depends on:
 
 ## Coverage, for sizing an implementation
 
-Which backend actually decides a verdict, over the 2357 confirmations `verification_results.py`
+Which backend actually decides a verdict, over the 2359 confirmations `verification_results.py`
 records across the 55-paper corpus, against a mirror whose accented authors survived its ingest
 and with an authenticated Semantic Scholar:
 

@@ -27,7 +27,7 @@ its contents constantly:
 
 | path | what it is |
 |---|---|
-| `dblp.db` | the offline mirror, ~3.5 GB, rebuilt from the dump; `$HALLUCITE_DBLP` overrides |
+| `dblp.db` | the offline mirror, ~3.8 GB, rebuilt from the dump; `$HALLUCITE_DBLP` overrides |
 | `dblp.xml.gz` | the DBLP dump `build-dblp` ingests |
 | `corpus/` | the 55 measurement papers, with `MANIFEST.csv` (`file`, `venue_note`, `title`) |
 | `fabricated-citations.json` | real citations and fabricated variants of them, three sets: scored, never rebuilt |
@@ -258,7 +258,7 @@ change to `SKILL.md` and to those tests together. Do not restate it here.
   which says nothing about the code -- where asking the 49 references that actually moved took four
   minutes and settled it. A results file recorded across the network likewise bakes in whoever's
   rate limit was in force that afternoon, where `--offline` is reproducible, takes half a minute,
-  and covers the 91.5% of confirmations the mirror decides.
+  and covers the 89.4% of confirmations the mirror decides.
 
 - A guard has to be able to fail. Two ways one cannot: asserting a helper the pipeline is free to
   ignore, and pinning a constant by reading it back from the module. `_longest_blank_run` and
@@ -282,7 +282,8 @@ change to `SKILL.md` and to those tests together. Do not restate it here.
   "it's not X, it's Y" negative parallelism, filler transitions ("it's worth noting",
   "importantly"), grandiose stakes, vague attributions ("experts say") instead of a named source,
   invented concept labels, and inflated verbs (`use`, not `utilize`/`leverage`). The house dash is
-  `--`, two ASCII hyphens, and a literal em dash is not house style: the repo holds 186 of the
-  former and, after the 2.0.0 prose pass, none of the latter. Those and bold-lead bullets already
-  appear throughout, so do not pile on more than the surrounding text uses. Plain, specific, and
+  `--`, two ASCII hyphens, and a literal em dash is not house style: since the 2.0.0 prose pass no
+  hallucite-owned file carries one, and the only exceptions are the synced `lint_markdown.py` and a
+  citation quoted inside a fixture. Those and bold-lead bullets already appear throughout, so do
+  not pile on more than the surrounding text uses. Plain, specific, and
   varied beats ornate.

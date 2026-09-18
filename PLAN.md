@@ -71,7 +71,7 @@ matching.
 
 ## DBLP dump
 
-`build_dblp.py` builds the offline DB from DBLP's XML dump (~1 GB compressed) into a ~3.5 GB
+`build_dblp.py` builds the offline DB from DBLP's XML dump (~1 GB compressed) into a ~3.8 GB
 SQLite + FTS5 file (8.7 M publications, 4.3 M authors) at `~/hallucite/dblp.db` (or
 `$HALLUCITE_DBLP` if set), outside the repo (not committed). It takes about five minutes and
 resolves the dump's character entities as numeric references, so the authors whose names carry a

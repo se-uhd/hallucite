@@ -39,7 +39,7 @@ The pipeline itself has no Python dependencies: extraction, parsing, verificatio
 ingest are all standard library, and `pdftotext` is the only outside program it calls.
 
 The offline DBLP database lives at `~/hallucite/dblp.db`, outside this repo, which keeps the
-3.5 GB file out of git. Set `$HALLUCITE_DBLP` to store it somewhere else.
+3.8 GB file out of git. Set `$HALLUCITE_DBLP` to store it somewhere else.
 
 ### API keys
 

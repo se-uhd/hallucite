@@ -171,7 +171,7 @@ MUTATIONS = [
     ("fetch: a saved web page is ingested as a dump", F,
      r'    if magic != b"\x1f\x8b":', "    if False:"),
     ("verification_results: a bare percent sign in argparse help text", VR,
-     "reproducible, and the 91.5%% of ", "reproducible, and the 91.5% of "),
+     "reproducible, and the 89.4%% of ", "reproducible, and the 89.4% of "),
     ("verifier: OpenAlex's cut byline reads as complete", V,
      '    if names and item.get("is_authors_truncated"):\n        names.append("et al.")\n', ""),
     ("verifier: a retraction OpenAlex marks is dropped", V,

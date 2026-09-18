@@ -23,7 +23,7 @@ different set of backends makes `source`, `failed_dbs` and `db_results` differ b
 and where a reference lands is what the audit and every report are built on.
 
 Record with `--offline` unless the online verdicts are what is being characterised. An offline
-recording takes half a minute instead of an hour, covers the 91.5% of confirmations the mirror
+recording takes half a minute instead of an hour, covers the 89.4% of confirmations the mirror
 decides, and is reproducible -- where one made across the network bakes in whoever's rate limit
 was in force that afternoon, which is not a property of this code at all.
 """
@@ -270,7 +270,7 @@ def main() -> int:
                    help="Semantic Scholar API key ($S2_API_KEY). Without one the recording is "
                         "rate-limited into taking hours")
     r.add_argument("--offline", action="store_true",
-                   help="verify against the offline mirror only -- reproducible, and the 91.5%% of "
+                   help="verify against the offline mirror only -- reproducible, and the 89.4%% of "
                         "confirmations it decides do not depend on anyone's rate limit")
     r.add_argument("--no-check", action="store_true", help="record the parse only")
 

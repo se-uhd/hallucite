@@ -295,7 +295,7 @@ def tier1c_codex_cli_marketplace() -> None:
 def tier1d_help_answers() -> None:
     """Every argparse entry point, and every subcommand, answers `--help` with a usage line and
     exit 0. argparse formats help text with `%`, so a bare percent sign in a help string -- the
-    `91.5%` that `verification_results.py record` carried -- is a TypeError the moment anyone asks what
+    `89.4%` that `verification_results.py record` carried -- is a TypeError the moment anyone asks what
     the command does. A script's help is the first thing a new user runs, and it must not be the
     first thing that crashes. The list is explicit: a new entry point is added here by hand."""
     print("Tier 1d: every entry point answers --help (no network/DB)")

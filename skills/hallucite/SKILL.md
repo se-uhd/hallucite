@@ -125,7 +125,7 @@ mirror, every reference carries a DBLP failure rather than a clean negative.
 2. Build the offline DBLP database. In a repo clone, `mise run fetch-dblp-dump` downloads
    dblp's newest monthly snapshot (about 1 GB, checked against the MD5 the release publishes; add
    `-- --daily` for dblp.org's daily dump, which is fresher but needs a headed browser to answer
-   the bot check fronting it) and `mise run build-dblp` ingests it into a ~3.5 GB SQLite+FTS5 file
+   the bot check fronting it) and `mise run build-dblp` ingests it into a ~3.8 GB SQLite+FTS5 file
    in about five minutes. Elsewhere, run `build_dblp.py <dump> --out ~/hallucite/dblp.db` directly. Keep it
    outside protected dirs such as ~/Downloads; set `$HALLUCITE_DBLP` to store it elsewhere.
 3. Updates: the audit (Stage 1+2 below) checks the database's age at run time and warns when it is

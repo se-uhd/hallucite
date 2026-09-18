@@ -4,6 +4,18 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- **Figures in the documentation now match what the artifacts hold.** The mirror's share of
+  confirmations is 89.4%, measured as 2109 of the 2026-09-17 recording's 2359, where the docs and
+  the `--offline` help text still carried the 91.5% the replaced package's 1669-confirmation
+  recording gave. The mirror is ~3.8 GB rather than ~3.5 GB. The coverage table's header said 2357
+  confirmations where the repaired recording holds 2359. Two claims that cannot be checked are
+  gone rather than restated: a "95-paper corpus" that never existed here, the corpus having gone
+  from 41 papers to 55, and a count of `--` occurrences that was wrong by a factor of three.
+
 ## [2.4.0] - 2026-09-18
 
 ### Changed
@@ -1691,6 +1703,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[Unreleased]: https://github.com/se-uhd/hallucite/compare/v2.4.0...HEAD
 [2.4.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.0
 [2.3.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.3.1
 [2.3.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.3.0
