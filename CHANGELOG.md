@@ -4,6 +4,39 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.5.0] - 2026-09-28
+
+### Changed
+
+- **An unsupported bibliography layout stops the run instead of warning.** Extraction problems
+  ended in a warning line and exit 0, which an agent reads past: an installed 1.9.0 audited an
+  IEEE TSE proof whose small-caps `R EFERENCES` heading it could not match (the 1.12.1 fix), wrote
+  0 references and "0 unverified", and exited 0, so the paper looked checked when none of its
+  references had been. The audit now prints
+  `HALLUCITE_EXTRACTION_UNSUPPORTED: <paper_id>: <problems>` for each such paper, exits 4, and
+  records the problems under `extraction.problems` in the paper's JSON and
+  `extraction_unsupported` in `summary.json`. The other papers in a batch are written as before.
+  `SKILL.md` makes the line a stop condition: tell the user that hallucite does not support the
+  template and needs an update, check that the install is current, and do not triage the paper,
+  read its bibliography by hand, or patch the extraction to get past it. The triage report opens
+  the paper's own page and the rollup with a *Not fully checked* section, so that a "nothing
+  flagged" line cannot cover a paper whose references did not all arrive.
+
+  The problems are the ones the input exposes on its own: no recognized heading, no entries under
+  it, an entry number the bibliography prints that no reference carries, two author-year blocks in
+  one entry, and the new one below. Over the 55-paper corpus they name one paper,
+  `tse-2607.29422v1.pdf`, whose `[1]` beside a figure is a real miss; the other 54 still exit 0.
+
+### Added
+
+- **The body's citations count the bibliography's tail.** A tail lost from a plain-numeric
+  bibliography left no gap and no label to find, so nothing reported it. `_cited_beyond` reads the
+  bracketed citations before the References heading, and a number past the last extracted entry is
+  a reference that never arrived. A subscript glued to an identifier is not a citation: without
+  that lookbehind the only hit over the corpus was `field_3329[52]` in a code listing, and with it
+  there is none. Tier 4k drives the check through `extract_references` and the audit's exit status
+  through `run.sh`, and seven mutation entries guard it; all 87 fail the suite when reverted.
+
 ## [2.4.4] - 2026-09-18
 
 ### Added
@@ -1785,6 +1818,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[2.5.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.5.0
 [2.4.4]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.4
 [2.4.3]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.3
 [2.4.2]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.2

@@ -30,6 +30,11 @@ Options:
                         The offline DBLP mirror stays live.
     --disable-dbs LIST  Comma-separated DB names to disable
     --no-verify         Extract only; skip database verification (fast, offline)
+
+Exit status: 0 when every paper was extracted and checked; 1 when a paper failed and produced no
+output; 4 when extraction could not account for a paper's bibliography, which prints one
+`HALLUCITE_EXTRACTION_UNSUPPORTED: <paper_id>: <problems>` line per paper to stderr (see
+`extraction_problems`). The other papers' output is written either way.
 """
 
 from __future__ import annotations
@@ -55,6 +60,11 @@ from verifier import DBLP, NO_MATCH, Verifier, is_contact
 from pdf_references import _parse, extract_references
 
 SCHEMA_VERSION = "1.0"
+
+# The line an agent keys its stop condition on (SKILL.md), and the exit status that goes with it.
+# Distinct from 1 (a paper errored), 2 (usage) and run.sh's 3 (no usable Python).
+UNSUPPORTED = "HALLUCITE_EXTRACTION_UNSUPPORTED:"
+EXIT_UNSUPPORTED = 4
 
 # Offline DBLP database location. Defaults to ~/hallucite/dblp.db in the user's home (kept out of
 # the repo: it is ~2.5 GB). Override with $HALLUCITE_DBLP to relocate it without editing this
@@ -575,23 +585,56 @@ def audit_pdf(pdf: Path, extractor, validator: Verifier | None,
                 rec["candidates"] = found
         references.append(rec)
 
+    extraction = {
+        "style": info.style,
+        "lineno_on": info.lineno_on,
+        "section_found": info.section_found,
+        "parsed": len(parsed_refs),
+        "unparsed": len(info.refs) - len(parsed_refs),
+        "suspect_merged": info.suspect_merged,
+        "missing_numbers": info.missing_numbers,
+        "cited_beyond": info.cited_beyond,
+    }
+    extraction["problems"] = extraction_problems(len(info.refs), extraction)
     return {
         "schema_version": SCHEMA_VERSION,
         "paper_id": pdf.stem,
         "pdf_path": os.path.relpath(pdf, Path.cwd()),
         "audited_at": now_iso(),
         "num_references": len(info.refs),
-        "extraction": {
-            "style": info.style,
-            "lineno_on": info.lineno_on,
-            "section_found": info.section_found,
-            "parsed": len(parsed_refs),
-            "unparsed": len(info.refs) - len(parsed_refs),
-            "suspect_merged": info.suspect_merged,
-            "missing_numbers": info.missing_numbers,
-        },
+        "extraction": extraction,
         "references": references,
     }
+
+
+def extraction_problems(num_references: int, ext: dict) -> list[str]:
+    """Why extraction cannot vouch for having reached every reference in the bibliography, or []
+    when it can. Each problem is one the input itself exposes -- a heading that never matched, an
+    entry number the bibliography prints and no reference carries, a number the text cites past the
+    last entry, two author-year blocks in one entry -- so none needs a threshold. Over the 55-paper
+    corpus the one paper this names is a real miss: an `[1]` printed beside a figure.
+
+    A paper with any of these was not fully checked, and no verdict can say otherwise: the
+    reference that went missing is the one the audit cannot report. Pure, so a test can call it."""
+    problems = []
+    if not ext.get("section_found"):
+        problems.append("no References or Bibliography heading was recognized")
+    elif num_references == 0:
+        problems.append(f"a References heading was found, but no entries could be segmented "
+                        f"under it (style: {ext.get('style')})")
+    if ext.get("missing_numbers"):
+        labels = ", ".join(f"[{n}]" for n in ext["missing_numbers"])
+        problems.append(f"the bibliography prints entry {labels}, but no reference was extracted "
+                        f"for it")
+    if ext.get("cited_beyond"):
+        beyond = ext["cited_beyond"]
+        problems.append(f"the text cites up to [{max(beyond)}], but the extracted bibliography "
+                        f"ends before [{min(beyond)}]")
+    if ext.get("suspect_merged"):
+        labels = ", ".join(f"#{n}" for n in ext["suspect_merged"])
+        problems.append(f"reference(s) {labels} carry two author-year blocks, the mark of two "
+                        f"entries merged into one")
+    return problems
 
 
 def paper_status_counts(record: dict) -> dict:
@@ -708,30 +751,17 @@ def main() -> int:
         _atomic_write(out_dir / f"{pdf.stem}.json",
                       json.dumps(record, indent=2, ensure_ascii=False))
         counts = paper_status_counts(record)
+        problems = record["extraction"]["problems"]
         summary_papers.append({"paper_id": record["paper_id"],
-                               "num_references": record["num_references"], **counts})
+                               "num_references": record["num_references"], **counts,
+                               "extraction_problems": problems})
         for ref in record["references"]:
             for r in (ref.get("db_verification") or {}).get("db_results", []) or []:
                 seen_dbs.add(r["db"])
         for db, n in backend_failures(record).items():
             all_failures[db] = all_failures.get(db, 0) + n
-        ext = record["extraction"]
-        if record["num_references"] == 0 or not ext["section_found"]:
-            print(f"    warning: extracted {record['num_references']} reference(s)"
-                  f"{'; no References section was found' if not ext['section_found'] else ''}"
-                  f" -- this paper contributes nothing to triage; check the PDF/extraction.",
-                  file=sys.stderr)
-        if ext.get("missing_numbers"):
-            labels = ", ".join(f"[{n}]" for n in ext["missing_numbers"])
-            print(f"    warning: the bibliography prints entry {labels} but extraction produced "
-                  f"no reference for it. A numbered bibliography numbers itself consecutively, so "
-                  f"each of those is a reference that never reached verification and cannot be "
-                  f"reported as unverified. Check the PDF around it.", file=sys.stderr)
-        if ext.get("suspect_merged"):
-            labels = ", ".join(f"#{n}" for n in ext["suspect_merged"])
-            print(f"    warning: reference(s) {labels} carry two author-year blocks in one entry "
-                  f"-- possibly two entries merged by a wrapped year line; if so, the second was "
-                  f"never verified on its own. Check them in the PDF.", file=sys.stderr)
+        for problem in problems:
+            print(f"    extraction problem: {problem}", file=sys.stderr)
         if args.no_verify:
             print(f"    {record['num_references']} refs extracted "
                   f"({record['extraction']['unparsed']} unparsed)", flush=True)
@@ -748,6 +778,7 @@ def main() -> int:
             if isinstance(v, int):
                 totals[k] = totals.get(k, 0) + v
 
+    unsupported = [p for p in summary_papers if p.get("extraction_problems")]
     summary = {
         "schema_version": SCHEMA_VERSION,
         "generated_at": now_iso(),
@@ -756,6 +787,7 @@ def main() -> int:
         "num_papers": len(pdfs),
         "totals": totals,
         "backend_failures": all_failures,
+        "extraction_unsupported": [p["paper_id"] for p in unsupported],
         "papers": summary_papers,
     }
     _atomic_write(out_dir / "summary.json",
@@ -776,23 +808,28 @@ def main() -> int:
               f"across {len(pdfs)} papers.")
         for warning in drift_warnings(seen_dbs, args.offline):
             print(warning, file=sys.stderr)
-    zero = [p for p in summary_papers if "error" not in p and p.get("num_references") == 0]
-    if zero:
-        # Aggregate the per-paper warnings, so one unsupported layout in a long batch cannot
-        # scroll out of sight: a paper with zero extracted references was never checked at all.
-        ids = ", ".join(p["paper_id"] for p in zero)
-        print(f"\nwarning: {len(zero)} of {len(pdfs)} paper(s) yielded 0 references (unsupported "
-              f"bibliography layout, or no References section) and were NOT checked: {ids}. "
-              f"This is an extraction failure, not a finding: report it as such and fix the "
-              f"extraction. Reading the bibliography by eye is not a substitute -- it yields no "
-              f"verdict.", file=sys.stderr)
+    if unsupported:
+        # Last, and as a non-zero exit, so one unsupported layout in a long batch can neither
+        # scroll out of sight nor pass for a clean run: an agent stops on the sentinel line.
+        print("", file=sys.stderr)
+        for p in unsupported:
+            print(f"{UNSUPPORTED} {p['paper_id']}: {'; '.join(p['extraction_problems'])}",
+                  file=sys.stderr)
+        print(f"\nhallucite's reference extraction does not support the bibliography layout of "
+              f"{len(unsupported)} of {len(pdfs)} paper(s) above, so not all of their references "
+              f"were checked; the other papers' results stand. This is a limitation of hallucite, "
+              f"not a finding about the paper. Stop and tell the user which paper and why: the "
+              f"extraction (pdf_references.py) needs an update to support this template. Check "
+              f"first that the installed hallucite is the current release, since an older install "
+              f"can lack a fix. Reading the bibliography by eye, or patching the extraction ad hoc, "
+              f"yields no verdict.", file=sys.stderr)
     errored = [p for p in summary_papers if "error" in p]
     if errored:
         ids = ", ".join(p["paper_id"] for p in errored)
         print(f"\nERROR: {len(errored)} of {len(pdfs)} paper(s) failed and produced NO output, so "
               f"they are silently absent from Stage 3 triage: {ids}", file=sys.stderr)
         return 1
-    return 0
+    return EXIT_UNSUPPORTED if unsupported else 0
 
 
 if __name__ == "__main__":

@@ -267,6 +267,20 @@ MUTATIONS = [
     ("triage: every resolved title reads as the cited one", T,
      '                    "cited_title": titles_match(cited, title) if title else None})',
      '                    "cited_title": True if title else None})'),
+    ("extract: the body's citations do not count the bibliography's tail", P,
+     "    return sorted(n for n in cited if n > last)", "    return []"),
+    ("extract: a subscript glued to an identifier reads as a citation", P,
+     '_CITATION = re.compile(r"(?<![\\w\\]])\\[', '_CITATION = re.compile(r"\\['),
+    ("audit: a lost tail is not an extraction problem", A,
+     '    if ext.get("cited_beyond"):', "    if False:"),
+    ("audit: a printed entry never extracted is not an extraction problem", A,
+     '    if ext.get("missing_numbers"):\n        labels', "    if False:\n        labels"),
+    ("audit: an unsupported layout exits 0", A,
+     "    return EXIT_UNSUPPORTED if unsupported else 0", "    return 0"),
+    ("triage: the rollup does not name a paper not fully checked", T,
+     "    if incomplete:\n        # First in the rollup", "    if False:\n        # First in the rollup"),
+    ("triage: the paper's report does not say it was not fully checked", T,
+     '            lines += ["## Not fully checked", "",', '            lines += ["", "",'),
 ]
 
 

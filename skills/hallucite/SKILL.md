@@ -11,7 +11,7 @@ description: >-
 license: MIT
 compatibility: Requires Python 3.10 or newer (standard library only), pdftotext (poppler), and an offline DBLP database at ~/hallucite/dblp.db, built by `mise run build-dblp` (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
 metadata:
-  version: "2.4.4"
+  version: "2.5.0"
 ---
 
 # hallucite
@@ -36,11 +36,20 @@ tool output, not to your own reading of a `.bib`/`.bbl`/PDF.
   yourself. "The tool would not run" is the correct, honest outcome -- not a hand-written report.
 - **Run the preflight (`check-env`) first.** If it does not print `HALLUCITE_OK`, the environment is
   not ready; surface its message and stop.
-- **A paper that yields 0 references was not checked.** The audit still exits 0 and warns, so read
-  the warning: `section_found: false` or 0 references on a paper that visibly has a bibliography is
-  an extraction failure (an unrecognized heading or layout), never "this paper has no references"
-  and never a statement that its references are sound. Say so plainly, and fix the extraction rather than reading the
-  bibliography yourself -- reading it by hand yields no verdict, whatever the tool is doing.
+- **An unsupported bibliography layout stops the run for that paper.** When extraction cannot
+  account for a paper's whole bibliography, the audit prints
+  `HALLUCITE_EXTRACTION_UNSUPPORTED: <paper_id>: <problems>` and exits 4. The problems it detects
+  are a References heading it did not recognize, no entries under the heading, an entry number the
+  bibliography prints that no extracted reference carries, a number the text cites beyond the last
+  extracted entry, and two entries merged into one. Stop there and tell the user that hallucite
+  does not support this paper's template, quote the problems, and say that the skill needs to be
+  updated to handle it. Check first that the installed hallucite is the current release, because an
+  older install can lack a fix the current one has. Do not triage that paper, read its bibliography
+  by hand, or patch the extraction to get past it: none of these yields a verdict. The paper is not
+  "without references" and its references are not "sound". The other papers in the same run were
+  extracted normally, and their results stand. If the user explicitly asks to go on with the
+  references that were extracted, triage them; the report then marks the paper as not fully
+  checked.
 - If commands start erroring or returning empty output, **halt and say so.** Do not begin
   assembling findings from memory or from the source files while the pipeline is broken.
 
@@ -159,19 +168,19 @@ backends are only ever asked about the residue -- the same references that reach
 is where rate limiting lands. The audit therefore marks any reference a backend failed to answer
 for as `degraded` and prints a per-backend tally at the end. A backend that answered nothing
 weakens every `not_found` it should have had a say in; if the tally looks bad, re-run before
-triaging rather than judging references on an incomplete check. The closing warnings also list
-papers that yielded 0 references -- an unsupported bibliography layout means that paper was never
-checked at all -- and the per-paper output flags author-year references that look like two entries
-merged into one (the second was then never verified on its own); check those in the PDF.
+triaging rather than judging references on an incomplete check. Extraction problems are printed
+per paper as they occur and repeated at the end as `HALLUCITE_EXTRACTION_UNSUPPORTED:` lines, and
+each JSON record carries them under `extraction.problems`; see the stop conditions above.
 
 References are named by the handle a reader can actually find. A numbered bibliography keeps its
 printed `[12]`; an author-year one is named by its citation key (`de Dieu et al. (2025c)`), since
 nothing is numbered in the paper. A trailing `[#n]` is hallucite's own index, appears nowhere in
 the paper, and is only what `triage record` takes as its `<number>`.
 
-If this exits non-zero -- whether a `HALLUCITE_BOOTSTRAP_FAILED:` line (no usable Python) or
-a per-paper error from the audit -- stop and report it; do not infer verdicts by hand (see the stop
-conditions above).
+If this exits non-zero, stop and report it, and do not infer verdicts by hand (see the stop
+conditions above). Exit 3 with a `HALLUCITE_BOOTSTRAP_FAILED:` line means no usable Python, 1 means
+a paper failed and produced no output, and 4 with `HALLUCITE_EXTRACTION_UNSUPPORTED:` lines means
+hallucite does not support the named papers' bibliography layout.
 
 ## Stage 3: triage the residue (LLM)
 

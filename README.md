@@ -92,12 +92,16 @@ reference needs triage when its `db_verification.status` is anything other than 
 (`not_found`, `mismatch`, or `unparsed`). Re-running into the same `--out` is idempotent
 (`triage_verdicts.json` accumulates by `paper_id:number`).
 
-Read the warnings the run ends with, because the audit exits 0 either way. A paper that yielded 0
-references was not checked at all, usually a bibliography layout the extractor does not read. An
-entry number the bibliography prints that no reference carries is a reference that never reached
-verification, and nothing downstream can report one that never arrived. The per-backend failure
-tally says how many references came back degraded: their `not_found` is a weaker claim than a
-clean negative, and `--retry-degraded` re-checks them.
+The audit exits 4 when extraction cannot account for a paper's whole bibliography, and names each
+such paper on a `HALLUCITE_EXTRACTION_UNSUPPORTED:` line with the reasons. It detects a References
+heading it did not recognize, no entries under the heading, an entry number the bibliography prints
+that no reference carries, a number the text cites beyond the last extracted entry, and two
+author-year entries merged into one. Each of these means a reference that never reached
+verification, and nothing downstream can report one that never arrived. The paper's template needs
+support in `pdf_references.py`; the other papers in the run are unaffected, and the triage report
+lists the paper as not fully checked. Read the other warnings the run ends with too: the
+per-backend failure tally says how many references came back degraded, their `not_found` is a
+weaker claim than a clean negative, and `--retry-degraded` re-checks them.
 
 ## Triage the residue (Stage 3, an interactive LLM agent)
 

@@ -60,6 +60,11 @@ Tiers (any failing check exits non-zero):
   4e small-caps headings    -- an IEEE-style heading letter-spaced by pdftotext ("R EFERENCES")
                               still opens the bibliography, and the entries under it segment.
                               Pure pdf_references logic; no network, DB, or poppler.
+  4k unsupported layouts   -- a paper whose bibliography extraction cannot account for (the body
+                              cites past the last entry, a printed entry never extracted, no
+                              heading) is named on a HALLUCITE_EXTRACTION_UNSUPPORTED line, the
+                              audit exits 4, and the triage report lists it as not fully checked.
+                              Needs poppler for the exit-status half; no network or DB.
   4h page furniture         -- the three ways a bibliography loses whole references: a running
                               head hiding the gutter on a short page, a gutter cut placed inside a
                               word, and an entry wearing a running head's disguises. No network/DB.
@@ -1282,6 +1287,8 @@ def tier4_end_to_end() -> None:
             C.fail(f"audit produced no record (exit {r.returncode}): {r.stderr[-300:]}")
             return
         rec = json.loads(rec_path.read_text())
+        C.eq(r.returncode, 0, "a fully extracted paper exits 0")
+        C.eq(rec["extraction"]["problems"], [], "and reports no extraction problem")
         C.eq(rec["num_references"], 4, "extracted 4 references")
         C.eq(rec["extraction"]["unparsed"], 0, "0 unparsed references")
         # Couple the two stages' schemas: the audit's real output must pass Stage 3's paper-record
@@ -1688,6 +1695,115 @@ def tier4e_smallcaps_heading() -> None:
          "Sam Stone received the Ph.D. degree in imaginary computing."]), "bracket-numeric")
     C.eq([n for n, _, _ in tail], [1, 2, 3],
          "a letter-spaced Acknowledgment heading still ends the section")
+
+
+def tier4k_extraction_unsupported() -> None:
+    """A paper whose bibliography extraction cannot fully account for stops the run for that paper.
+
+    Extraction problems used to end in a warning and exit 0, which an agent can read past: a
+    journal proof whose small-caps heading an older release missed produced 0 references, exit 0,
+    and a "0 unverified" line that reads like a clean result. The audit now names every such paper
+    on a `HALLUCITE_EXTRACTION_UNSUPPORTED:` line and exits 4, the other papers in the batch are
+    written as before, and triage's report lists the paper as not fully checked.
+
+    The new detector is the body's own citations: a paper that cites [6] has a sixth entry, which
+    is the one count a lost tail cannot hide from a plain-numeric bibliography."""
+    print("Tier 4k: unsupported bibliography layouts stop the run (no network/DB)")
+    import audit_references as A
+    import pdf_references as P
+    import reference_parser as RP
+
+    entries = [
+        "[1]  Anna Apple. A first invented entry. Imaginary Press, 2011.",
+        "[2]  Ben Berry and Carla Cherry. A second invented entry. J. Imaginary 4, 2 (2015), 1-9.",
+        "[3]  Dan Date. A third invented entry. Proc. Imaginary Conf. (2020), 44-51.",
+    ]
+    body = ["Introduction", "",
+            "Prior work [1], [2, 5] and the survey in [4]-[6] treat this question.",
+            "The parser stores the value in buf[99] before it returns.", ""]
+
+    def extract(lines):
+        real = P._pages
+        try:
+            P._pages = lambda _path: ["\n".join(lines)]
+            return P.extract_references("ignored.pdf", RP)
+        finally:
+            P._pages = real
+
+    info = extract(body + ["REFERENCES", *entries])
+    C.eq([r.number for r in info.refs], [1, 2, 3], "the three printed entries are extracted")
+    C.eq(info.missing_numbers, [], "no gap in the run the bibliography prints")
+    C.eq(info.cited_beyond, [4, 5, 6],
+         "REGRESSION GUARD: the body cites [4]..[6] past the last extracted entry, and a subscript "
+         "glued to an identifier (buf[99]) is not a citation")
+
+    plain = [e.replace("[1]  ", "1. ").replace("[2]  ", "2. ").replace("[3]  ", "3. ")
+             for e in entries]
+    info = extract(body + ["References", *plain])
+    C.eq(info.style, "numeric", "a plain `1.` bibliography reads as numeric")
+    C.eq(info.missing_numbers, [], "which prints no label that could reveal a lost tail")
+    C.eq(info.cited_beyond, [4, 5, 6],
+         "REGRESSION GUARD: the body's citations reveal the lost tail of a plain-numeric one")
+
+    whole = entries + ["[4]  Eve Elm. A fourth entry. Imaginary Press, 2012.",
+                       "[5]  Fay Fig. A fifth entry. Imaginary Press, 2013.",
+                       "[6]  Gus Gum. A sixth entry. Imaginary Press, 2014."]
+    C.eq(extract(body + ["REFERENCES", *whole]).cited_beyond, [],
+         "a bibliography that holds every cited number reports nothing")
+
+    # The problems the audit derives from what extraction reported, one per kind.
+    ok = {"section_found": True, "style": "bracket-numeric", "missing_numbers": [],
+          "cited_beyond": [], "suspect_merged": []}
+    C.eq(A.extraction_problems(3, ok), [], "a clean extraction has no problems")
+    for field, value, n, needle in (("section_found", False, 0, "heading"),
+                                    ("section_found", True, 0, "no entries"),
+                                    ("missing_numbers", [1], 33, "[1]"),
+                                    ("cited_beyond", [40, 41], 39, "[41]"),
+                                    ("suspect_merged", [7], 12, "#7")):
+        got = A.extraction_problems(n, {**ok, field: value})
+        C.true(len(got) == 1 and needle in got[0],
+               f"REGRESSION GUARD: {field}={value!r} with {n} reference(s) is one problem naming "
+               f"{needle!r} (got {got})")
+
+    if which("pdftotext") is None or which("bash") is None:
+        C.skip("pdftotext (poppler) or bash not installed; the audit's exit status is not checked")
+        return
+    sys.path.insert(0, str(FIXTURES))
+    from make_corpus_fixtures import build_pdf
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        papers = tmp / "papers"
+        papers.mkdir()
+        (papers / "whole.pdf").write_bytes(build_pdf([body + ["REFERENCES", *whole]]))
+        (papers / "cut.pdf").write_bytes(build_pdf([body + ["REFERENCES", *entries]]))
+        out = tmp / "out"
+        r = subprocess.run(["bash", str(SCRIPTS / "run.sh"), "audit", str(papers),
+                            "--no-verify", "--offline", "--dblp", str(tmp / "absent.db"),
+                            "--out", str(out)],
+                           capture_output=True, text=True,
+                           env={**os.environ, "HALLUCITE_PYTHON": sys.executable})
+        C.eq(r.returncode, 4, "REGRESSION GUARD: an unsupported layout makes the audit exit 4")
+        sentinels = [l for l in r.stderr.splitlines() if l.startswith(A.UNSUPPORTED)]
+        C.eq([l.split()[1] for l in sentinels], ["cut:"],
+             "one sentinel line, naming only the paper whose tail was lost")
+        cut = json.loads((out / "cut.json").read_text())
+        C.eq(len(cut["extraction"]["problems"]), 1, "the record carries the problem")
+        C.eq(json.loads((out / "whole.json").read_text())["extraction"]["problems"], [],
+             "the other paper in the batch is written as before, with no problem")
+        C.eq(json.loads((out / "summary.json").read_text())["extraction_unsupported"], ["cut"],
+             "summary.json names the unsupported paper")
+
+        import triage
+        triage.cmd_report(out)
+        reports = out / "reports"
+        C.true("## Not fully checked" in (reports / "reference-check-cut.md").read_text(),
+               "the paper's own report says it was not fully checked")
+        C.true("Not fully checked" not in (reports / "reference-check-whole.md").read_text(),
+               "and the complete paper's report does not")
+        roll = (reports / "potential-hallucinations.md").read_text()
+        C.true("## Not fully checked: unsupported bibliography layout (1)" in roll
+               and "**cut**" in roll,
+               "REGRESSION GUARD: the rollup lists the paper as not fully checked")
 
 
 def tier4f_dblp_record_metadata() -> None:
@@ -3686,6 +3802,7 @@ def main() -> int:
     tier4b_extraction_lineno()
     tier4j_corpus_shapes()
     tier4e_smallcaps_heading()
+    tier4k_extraction_unsupported()
     tier4c_extraction_authoryear_lineno()
     tier4d_dblp_second_opinion()
     tier4f_dblp_record_metadata()

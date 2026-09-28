@@ -137,6 +137,9 @@ class ExtractionInfo:
     # bibliography numbers itself consecutively, so a gap is a reference that never reached
     # verification -- invisible afterwards, because the audit only ever sees what did arrive.
     missing_numbers: list[int] = field(default_factory=list)
+    # Numbers the body text cites in brackets that are higher than the last extracted entry: the
+    # bibliography's tail was lost, which `missing_numbers` cannot see in a plain-numeric one.
+    cited_beyond: list[int] = field(default_factory=list)
 
 
 # ── PDF text to linearized lines ─────────────────────────────────────────────
@@ -723,6 +726,28 @@ def _missing_numbers(refs: list[ExtractedRef], style: str) -> list[int]:
     return inside + after
 
 
+# An in-text citation group: "[12]", "[3, 7]", "[4]-[9]" (read as two groups), "[10-14]". The
+# lookbehind keeps out a subscript glued to an identifier: over the 55-paper corpus the only
+# bracketed number above a bibliography's last entry was `field_3329[52]` in a code listing.
+_CITATION = re.compile(r"(?<![\w\]])\[(\s*\d{1,3}(?:\s*[,\u2013\u2014-]\s*\d{1,3})*\s*)\]")
+
+
+def _cited_beyond(body: list[str], refs: list[ExtractedRef], style: str) -> list[int]:
+    """Numbers the body cites in brackets that are higher than the last extracted entry.
+
+    A lost tail leaves no gap in the run, and a plain-numeric bibliography prints no label that
+    `_missing_numbers` could find inside the entry that swallowed it. The body is the independent
+    count: a paper that cites [39] has a 39th entry. Over the 55-paper corpus, 47 of them numbered,
+    the highest body citation never exceeded the last extracted entry once the identifier
+    lookbehind was in place, so this needs no threshold."""
+    if style not in ("numeric", "bracket-numeric") or not refs:
+        return []
+    last = max(r.number for r in refs)
+    cited = {int(n) for line in body for m in _CITATION.finditer(line)
+             for n in re.findall(r"\d+", m.group(1))}
+    return sorted(n for n in cited if n > last)
+
+
 # ── Public API ───────────────────────────────────────────────────────────────
 
 def _parse(extractor, text: str, prev_authors):
@@ -756,7 +781,10 @@ def extract_references(pdf_path: str, extractor) -> ExtractionInfo:
             prev_authors = list(parsed.authors)
         refs.append(ExtractedRef(number=num, raw_text=text, reference=parsed, alt_text=alt))
 
+    # `_references_section` returns the lines after the heading, so everything before them is body.
+    body = lines[:len(lines) - len(section)] if section else []
     return ExtractionInfo(refs=refs, lineno_on=lineno_on,
                           section_found=bool(section), style=style,
                           suspect_merged=_suspect_merges(refs, style),
-                          missing_numbers=_missing_numbers(refs, style))
+                          missing_numbers=_missing_numbers(refs, style),
+                          cited_beyond=_cited_beyond(body, refs, style))

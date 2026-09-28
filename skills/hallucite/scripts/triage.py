@@ -241,6 +241,12 @@ def load_papers(out_dir: Path) -> list[dict]:
     return out
 
 
+def extraction_problems(paper: dict) -> list[str]:
+    """What kept extraction from reaching every reference in the paper's bibliography, as the audit
+    recorded it (see audit_references.extraction_problems). A record without the field has none."""
+    return list((paper.get("extraction") or {}).get("problems") or [])
+
+
 def is_retracted(ref: dict) -> bool:
     return bool((ref.get("db_verification") or {}).get("retraction_info"))
 
@@ -541,6 +547,12 @@ def cmd_worklist(out_dir: Path, pending: bool = False, paper_id: str | None = No
           f"-> {dest}")
     for pid, n in sorted(by_paper.items(), key=lambda kv: _natural_key(kv[0])):
         print(f"  {pid}: {n}")
+    incomplete = [paper["paper_id"] for paper in papers if extraction_problems(paper)]
+    if incomplete:
+        print(f"warning: extraction did not reach every reference of {', '.join(incomplete)} "
+              f"(an unsupported bibliography layout). Triaging the references that did arrive "
+              f"does not make the paper checked, and the report marks it as not fully checked.",
+              file=sys.stderr)
 
 
 def _verify_sheet(paper: dict, items: list) -> str:
@@ -649,11 +661,13 @@ def cmd_report(out_dir: Path) -> None:
     flagged: list[tuple[dict, dict, dict]] = []  # (paper, ref, verdict)
     all_retracted: list[tuple[dict, dict]] = []  # (paper, ref) matched to a retracted record
     all_dupes: list[tuple[dict, list[dict]]] = []  # (paper, group of same-title references)
+    incomplete: list[dict] = []  # papers whose extraction did not reach every reference
     written: list = []
     today = dt.date.today().isoformat()
 
     for paper in load_papers(out_dir):
         pid = paper["paper_id"]
+        problems = extraction_problems(paper)
         verified = [r for r in paper["references"]
                     if (r.get("db_verification") or {}).get("status") == "verified"]
         triage = [r for r in paper["references"] if needs_triage(r)]
@@ -677,6 +691,15 @@ def cmd_report(out_dir: Path) -> None:
                     ([f"{nc} conflicting group(s)"] if nc else [])
             lines.append("- Repeated bibliography entries: " + ", ".join(parts))
         lines.append("")
+        if problems:
+            # Ahead of everything else in the file: counts above a missing reference read as a
+            # complete check unless the page says otherwise first.
+            incomplete.append(paper)
+            lines += ["## Not fully checked", "",
+                      "hallucite's extraction does not support this paper's bibliography layout, "
+                      "so some references never reached verification. This report covers only the "
+                      "references that were extracted and says nothing about the rest:", ""]
+            lines += [f"- {p}" for p in problems] + [""]
         note = label_note(paper)
         if note:
             lines += [note, ""]
@@ -781,6 +804,16 @@ def cmd_report(out_dir: Path) -> None:
     # Corpus rollup for human review.
     roll = ["# Potentially hallucinated references", "",
             f"Generated: {today}", ""]
+    if incomplete:
+        # First in the rollup: every count and "nothing flagged" below is about the references
+        # that were extracted, and for these papers that is not all of them.
+        roll += [f"## Not fully checked: unsupported bibliography layout ({len(incomplete)})", "",
+                 "Extraction did not reach every reference of these papers, so nothing below "
+                 "covers them in full. A limitation of hallucite, not a finding about the paper.",
+                 ""]
+        for paper in incomplete:
+            roll.append(f"- **{paper['paper_id']}**: {'; '.join(extraction_problems(paper))}")
+        roll.append("")
     if all_retracted:
         roll += [f"## Retracted references still cited ({len(all_retracted)})", "",
                  "Matched to a record flagged as retracted; confirm each and treat it as serious.", ""]
@@ -814,7 +847,8 @@ def cmd_report(out_dir: Path) -> None:
                 roll.append(f"- **{paper['paper_id']}** {keys}: {title}")
             roll.append("")
     if not flagged:
-        roll.append("No references were flagged as likely-hallucinated, partial-match, or unclear.")
+        roll.append("No references were flagged as likely-hallucinated, partial-match, or unclear"
+                    + (" among the references that were extracted." if incomplete else "."))
     else:
         # Group by paper; rank papers by their count of high-severity (likely-hallucinated) flags.
         by_paper: dict[str, list] = {}
