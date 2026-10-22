@@ -549,8 +549,8 @@ def cmd_worklist(out_dir: Path, pending: bool = False, paper_id: str | None = No
         print(f"  {pid}: {n}")
     incomplete = [paper["paper_id"] for paper in papers if extraction_problems(paper)]
     if incomplete:
-        print(f"warning: extraction did not reach every reference of {', '.join(incomplete)} "
-              f"(an unsupported bibliography layout). Triaging the references that did arrive "
+        print(f"warning: complete extraction could not be established for {', '.join(incomplete)} "
+              f"(see the extraction diagnostics). Triaging the references that did arrive "
               f"does not make the paper checked, and the report marks it as not fully checked.",
               file=sys.stderr)
 
@@ -696,9 +696,9 @@ def cmd_report(out_dir: Path) -> None:
             # complete check unless the page says otherwise first.
             incomplete.append(paper)
             lines += ["## Not fully checked", "",
-                      "hallucite's extraction does not support this paper's bibliography layout, "
-                      "so some references never reached verification. This report covers only the "
-                      "references that were extracted and says nothing about the rest:", ""]
+                      "hallucite could not establish complete bibliography extraction for this "
+                      "paper. This report covers the extracted references. The diagnostics below "
+                      "can reflect missing entries or non-citation text mistaken for citations:", ""]
             lines += [f"- {p}" for p in problems] + [""]
         note = label_note(paper)
         if note:

@@ -1751,6 +1751,37 @@ def tier4k_extraction_unsupported() -> None:
     C.eq(extract(body + ["REFERENCES", *whole]).cited_beyond, [],
          "a bibliography that holds every cited number reports nothing")
 
+    intervals = [
+        "Estimates and 95% confidence intervals.",
+        "Category       Count [95% CI]",
+        "Referential    153 [112, 201]",
+        "Convention      78 [53, 110]",
+        "All            231 [176, 285]",
+        "",
+        "The estimate has 95% CI [112, 201].",
+        "The prediction interval: [176, 285] contains the estimate.",
+    ]
+    for bibliography in (entries, plain):
+        C.eq(extract(intervals + ["References", *bibliography]).cited_beyond, [],
+             "REGRESSION GUARD: labeled integer intervals and estimates under an interval "
+             "heading do not invent citations beyond the bibliography")
+    for line, expected in (
+        ("Prior work [4, 6] discusses confidence intervals.", [4, 6]),
+        ("Prior work [4-6] discusses confidence intervals.", [4, 6]),
+        ("The confidence interval table cites [4, 5, 6].", [4, 5, 6]),
+        ("In the confidence interval table, 25 [112, 201] cites prior work.", [112, 201]),
+        ("A malformed confidence interval is 153 [201, 112].", [112, 201]),
+        ("The confidence interval: [201, 112].", [112, 201]),
+        ("The result is 153 [112, 201].", [112, 201]),
+    ):
+        C.eq(extract([line, "References", *entries]).cited_beyond, expected,
+             f"REGRESSION GUARD: preserve citation evidence without valid interval context: {line}")
+    C.eq(extract(intervals + ["", "The result is 153 [112, 201].", "References", *entries])
+         .cited_beyond, [112, 201],
+         "REGRESSION GUARD: an interval heading does not suppress a later paragraph's citations")
+    C.eq(extract(intervals + ["", *body, "References", *entries]).cited_beyond, [4, 5, 6],
+         "REGRESSION GUARD: real missing-tail citations still stop extraction after an interval table")
+
     # The problems the audit derives from what extraction reported, one per kind.
     ok = {"section_found": True, "style": "bracket-numeric", "missing_numbers": [],
           "cited_beyond": [], "suspect_merged": []}

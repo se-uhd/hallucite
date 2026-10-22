@@ -628,8 +628,8 @@ def extraction_problems(num_references: int, ext: dict) -> list[str]:
                         f"for it")
     if ext.get("cited_beyond"):
         beyond = ext["cited_beyond"]
-        problems.append(f"the text cites up to [{max(beyond)}], but the extracted bibliography "
-                        f"ends before [{min(beyond)}]")
+        problems.append(f"the text contains citation-like numbers up to [{max(beyond)}] beyond "
+                        f"the extracted bibliography (first unmatched number [{min(beyond)}])")
     if ext.get("suspect_merged"):
         labels = ", ".join(f"#{n}" for n in ext["suspect_merged"])
         problems.append(f"reference(s) {labels} carry two author-year blocks, the mark of two "

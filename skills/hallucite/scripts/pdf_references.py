@@ -730,6 +730,33 @@ def _missing_numbers(refs: list[ExtractedRef], style: str) -> list[int]:
 # lookbehind keeps out a subscript glued to an identifier: over the 55-paper corpus the only
 # bracketed number above a bibliography's last entry was `field_3329[52]` in a code listing.
 _CITATION = re.compile(r"(?<![\w\]])\[(\s*\d{1,3}(?:\s*[,\u2013\u2014-]\s*\d{1,3})*\s*)\]")
+_INTERVAL_CONTEXT = re.compile(
+    r"\b(?i:confidence|credible|prediction)\s+intervals?\b|\b(?:CI|CrI|PI)s?\b")
+_INTERVAL_LABEL = re.compile(
+    r"(?:\b(?i:confidence|credible|prediction)\s+interval|\b(?:CI|CrI|PI))\s*[:=]?\s*$")
+_INTERVAL_PAIR = re.compile(r"\s*(\d{1,3})\s*,\s*(\d{1,3})\s*")
+_ESTIMATE = re.compile(r"(?<![\w.])(\d+(?:\.\d+)?)\s*%?\s*$")
+
+
+def _is_interval(line: str, match: re.Match, interval_context: bool) -> bool:
+    """Recognize a labeled interval or an estimate with bounds in an interval paragraph/table.
+
+    Two comma-separated numbers are also a valid citation group, so neither their size nor
+    their being a pair is enough. Require an explicit interval label, or an interval heading
+    in the same nonblank text block and a preceding estimate contained by the two bounds.
+    Other citation groups, ranges, and unlabeled pairs still participate in the tail check.
+    """
+    pair = _INTERVAL_PAIR.fullmatch(match.group(1))
+    if pair is None:
+        return False
+    lower, upper = map(int, pair.groups())
+    if lower > upper:
+        return False
+    prefix = line[:match.start()]
+    if _INTERVAL_LABEL.search(prefix):
+        return True
+    estimate = _ESTIMATE.search(prefix)
+    return bool(interval_context and estimate and lower <= float(estimate.group(1)) <= upper)
 
 
 def _cited_beyond(body: list[str], refs: list[ExtractedRef], style: str) -> list[int]:
@@ -737,14 +764,22 @@ def _cited_beyond(body: list[str], refs: list[ExtractedRef], style: str) -> list
 
     A lost tail leaves no gap in the run, and a plain-numeric bibliography prints no label that
     `_missing_numbers` could find inside the entry that swallowed it. The body is the independent
-    count: a paper that cites [39] has a 39th entry. Over the 55-paper corpus, 47 of them numbered,
-    the highest body citation never exceeded the last extracted entry once the identifier
-    lookbehind was in place, so this needs no threshold."""
+    count: a paper that cites [39] has a 39th entry. Explicitly labeled statistical intervals
+    and estimates with bounds in interval tables are numeric data rather than citations.
+    Unlabeled bracket pairs remain candidates, so the check needs no size threshold."""
     if style not in ("numeric", "bracket-numeric") or not refs:
         return []
     last = max(r.number for r in refs)
-    cited = {int(n) for line in body for m in _CITATION.finditer(line)
-             for n in re.findall(r"\d+", m.group(1))}
+    cited: set[int] = set()
+    interval_context = False
+    for line in body:
+        if not line.strip():
+            interval_context = False
+            continue
+        interval_context = interval_context or bool(_INTERVAL_CONTEXT.search(line))
+        for match in _CITATION.finditer(line):
+            if not _is_interval(line, match, interval_context):
+                cited.update(int(n) for n in re.findall(r"\d+", match.group(1)))
     return sorted(n for n in cited if n > last)
 
 

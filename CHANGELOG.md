@@ -4,6 +4,22 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.5.1] - 2026-10-22
+
+### Fixed
+
+- Integer confidence intervals in tables no longer trigger a false missing-reference error.
+  A bachelor's thesis with 81 references stopped on estimates such as `153 [112, 201]`, which
+  the bibliography-tail check read as citations. The check now recognizes explicitly labeled
+  confidence, credible, and prediction intervals, plus estimates contained by their bounds under
+  an interval heading in the same nonblank block. Unlabeled pairs, citation lists and ranges,
+  reversed bounds, and bounds that exclude the estimate remain citation candidates.
+  All 55 corpus papers retain identical extracted entries and completeness diagnostics; the
+  thesis retains all 81 entries and loses only the false warning. Regression tests and mutation
+  checks cover interval recognition, labels, reversed bounds, and context reset.
+- Extraction diagnostics and triage reports describe uncertain completeness without asserting
+  that bibliography entries were necessarily lost. Citation-like numbers can also be table data.
+
 ## [2.5.0] - 2026-09-28
 
 ### Changed
@@ -1818,6 +1834,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[2.5.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.5.1
 [2.5.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.5.0
 [2.4.4]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.4
 [2.4.3]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.3
