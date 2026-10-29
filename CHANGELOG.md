@@ -556,8 +556,10 @@ dependency.
 ### Changed
 
 - `.env.local` in the repo root, gitignored, holds the API keys that the online backends want. mise
-  reads it through `[env]` and `run.sh` reads it directly, so a dev clone and an installed plugin
-  see the same values. A variable already set in the environment wins, and a missing file is fine.
+  reads it through `[env]` and `run.sh` reads it directly, so a dev clone and a plugin installed
+  from it see the same values. A plugin installed from the marketplace runs from its own tree and
+  does not read the clone's file. A variable already set in the environment wins, and a missing
+  file is fine.
 
 - `characterize.py record` takes `--s2-api-key` or `$S2_API_KEY` and warns when it has neither. It
   never passed a key through, so recordings ran unauthenticated and Semantic Scholar rate-limited

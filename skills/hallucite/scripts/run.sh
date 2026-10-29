@@ -32,9 +32,9 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/../../.." >/dev/null 2>&1 && pwd -P)"
 
 # API keys for the online verification backends, if this tree has any. `.env.local` is gitignored
-# and optional; mise reads the same file, so a dev clone and an installed plugin see the same
-# values. A variable already set in the environment wins, so `S2_API_KEY=... run.sh audit ...`
-# still overrides the file.
+# and optional. mise reads the same file, so a dev clone and a plugin installed from it see the
+# same values, while a marketplace install is a separate tree without the file. A variable already
+# set in the environment wins, so `S2_API_KEY=... run.sh audit ...` still overrides the file.
 if [ -r "$REPO_ROOT/.env.local" ]; then
   while IFS='=' read -r key value; do
     key="${key%$'\r'}"; value="${value%$'\r'}"   # a file written on Windows
