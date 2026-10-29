@@ -15,23 +15,18 @@ All notable changes to hallucite are documented here. The format follows
 
 ### Changed
 
-- `AGENTS.md` is a symlink to `CLAUDE.md`, so a Codex session in a clone loads the same repo
-  guidance as Claude Code. Codex reads `AGENTS.md` itself, and its documentation describes no link
-  following, so the four-line pointer file this replaces gave Codex the guidance only if the agent
-  chose to open `CLAUDE.md`. Smoke tier 1 checks that the symlink resolves to `CLAUDE.md`.
-- `CLAUDE.md` states its rules without the history around them: the mutation runner's old serial
-  timing, the dates of the prose and spelling passes, and a release it never named. Its title is
-  now "Agent guidance for hallucite".
+- `AGENTS.md` is a symlink to `CLAUDE.md` instead of a pointer file, so a Codex session in a clone
+  loads the same repo guidance as Claude Code.
+- `CLAUDE.md` states its rules without their history, such as the dates of the prose and spelling
+  passes, and is titled "Agent guidance for hallucite".
 
 ### Fixed
 
-- `SKILL.md` gives the triaging agent the real reason triage is slow: each reference takes several
-  web searches. It said triage "calls an LLM", but the agent reading the skill does the triage and
-  no script calls one. `README.md` carries the same correction.
-- In `SKILL.md`, "Classify title-first", the sentence that opens the classification protocol,
-  rendered as the end of the preceding search bullet because no blank line separated them. The
-  paragraph on repeated bibliography entries now names the per-paper reports and the rollup, where
-  it said "both reports" after a list of three.
+- `SKILL.md` and `README.md` no longer say that triage "calls an LLM". The agent reading the skill
+  does the triage, and it is slow because each reference takes several web searches.
+- In `SKILL.md`, the "Classify title-first" sentence that opens the classification protocol renders
+  as its own paragraph instead of the end of the preceding search bullet. The paragraph on repeated
+  bibliography entries names the per-paper reports and the rollup instead of "both reports".
 - The Claude Code and Codex plugin descriptions list OpenAlex among the verification backends, as
   `SKILL.md` and `README.md` already did.
 
@@ -39,1637 +34,937 @@ All notable changes to hallucite are documented here. The format follows
 
 ### Fixed
 
-- Integer confidence intervals in tables no longer trigger a false missing-reference error.
-  A bachelor's thesis with 81 references stopped on estimates such as `153 [112, 201]`, which
-  the bibliography-tail check read as citations. The check now recognizes explicitly labeled
-  confidence, credible, and prediction intervals, plus estimates contained by their bounds under
-  an interval heading in the same nonblank block. Unlabeled pairs, citation lists and ranges,
+- Integer confidence intervals in tables, such as `153 [112, 201]`, no longer trigger a false
+  missing-reference error from the bibliography-tail check. The check now recognizes explicitly
+  labeled confidence, credible, and prediction intervals, plus estimates contained by their bounds
+  under an interval heading in the same nonblank block. Unlabeled pairs, citation lists and ranges,
   reversed bounds, and bounds that exclude the estimate remain citation candidates.
-  All 55 corpus papers retain identical extracted entries and completeness diagnostics; the
-  thesis retains all 81 entries and loses only the false warning. Regression tests and mutation
-  checks cover interval recognition, labels, reversed bounds, and context reset.
-- Extraction diagnostics and triage reports describe uncertain completeness without asserting
-  that bibliography entries were necessarily lost. Citation-like numbers can also be table data.
+- Extraction diagnostics and triage reports describe uncertain completeness without asserting that
+  bibliography entries were necessarily lost, since citation-like numbers can also be table data.
 
 ## [2.5.0] - 2026-09-28
 
 ### Changed
 
-- **An unsupported bibliography layout stops the run instead of warning.** Extraction problems
-  ended in a warning line and exit 0, which an agent reads past: an installed 1.9.0 audited an
-  IEEE TSE proof whose small-caps `R EFERENCES` heading it could not match (the 1.12.1 fix), wrote
-  0 references and "0 unverified", and exited 0, so the paper looked checked when none of its
-  references had been. The audit now prints
-  `HALLUCITE_EXTRACTION_UNSUPPORTED: <paper_id>: <problems>` for each such paper, exits 4, and
-  records the problems under `extraction.problems` in the paper's JSON and
-  `extraction_unsupported` in `summary.json`. The other papers in a batch are written as before.
-  `SKILL.md` makes the line a stop condition: tell the user that hallucite does not support the
-  template and needs an update, check that the install is current, and do not triage the paper,
-  read its bibliography by hand, or patch the extraction to get past it. The triage report opens
-  the paper's own page and the rollup with a *Not fully checked* section, so that a "nothing
-  flagged" line cannot cover a paper whose references did not all arrive.
+- An unsupported bibliography layout stops the run. It used to end in a warning and exit 0, so a
+  paper with no extracted references looked checked. For each such paper, the audit now prints
+  `HALLUCITE_EXTRACTION_UNSUPPORTED: <paper_id>: <problems>`, exits 4, and records the problems
+  under `extraction.problems` in the paper's JSON and `extraction_unsupported` in `summary.json`.
+  The other papers in a batch are written as before. `SKILL.md` makes the line a stop condition:
+  tell the user that hallucite does not support the template and needs an update, check that the
+  install is current, and do not triage the paper, read its bibliography by hand, or patch the
+  extraction. The triage report opens the paper's page and the rollup with a *Not fully checked*
+  section, so that a "nothing flagged" line cannot cover a paper whose references did not all
+  arrive.
 
-  The problems are the ones the input exposes on its own: no recognized heading, no entries under
-  it, an entry number the bibliography prints that no reference carries, two author-year blocks in
-  one entry, and the new one below. Over the 55-paper corpus they name one paper,
-  `tse-2607.29422v1.pdf`, whose `[1]` beside a figure is a real miss; the other 54 still exit 0.
+  The problems that stop the run are no recognized heading, no entries under it, a printed entry
+  number that no reference carries, two author-year blocks in one entry, and body citations past
+  the last extracted entry (see Added).
 
 ### Added
 
-- **The body's citations count the bibliography's tail.** A tail lost from a plain-numeric
-  bibliography left no gap and no label to find, so nothing reported it. `_cited_beyond` reads the
-  bracketed citations before the References heading, and a number past the last extracted entry is
-  a reference that never arrived. A subscript glued to an identifier is not a citation: without
-  that lookbehind the only hit over the corpus was `field_3329[52]` in a code listing, and with it
-  there is none. Tier 4k drives the check through `extract_references` and the audit's exit status
-  through `run.sh`, and seven mutation entries guard it; all 87 fail the suite when reverted.
+- Extraction detects a lost tail in a plain-numeric bibliography. A bracketed citation before the
+  References heading with a number past the last extracted entry marks a reference that never
+  arrived. A subscript glued to an identifier, such as `field_3329[52]` in a code listing, is not
+  read as a citation.
 
 ## [2.4.4] - 2026-09-18
 
 ### Added
 
-- **The two backend-name drift tripwires are a function, and guarded.** They ran inline in the
-  audit's closing block, where nothing could call them, so either could be disabled with the suite
-  green -- and a silent name mismatch has defeated them once in each direction already
-  (`DOI Resolver` never disabling `DOI`; a backend running under `--offline`). `drift_warnings` is
-  pure and both directions are checked. A title too short to ask the mirror about is guarded as
-  `skipped` rather than `no_match`, since a negative claims a search that never happened.
+- The backend-name drift warnings, for configured online backends that never appear and for live
+  backends under `--offline`, run in a function, `drift_warnings`, that tests cover in both
+  directions. Tests also hold that a title too short to ask the mirror about is reported `skipped`,
+  not `no_match`.
 
 ## [2.4.3] - 2026-09-18
 
 ### Fixed
 
-- **A backend that raised named the failure after its own method.** `_map` read the backend's name
-  off the bound method's `__name__`, so a rename or a wrapper would attribute the failure to a
-  backend called "backend" -- a name no disable list and no drift tripwire knows, on the one code
-  path whose job is to report a failure. The caller passes the name it already has. Found by a
-  guard written for something else, which is the second time a probe has paid for itself.
+- A backend that raises an error is reported under its own name. The name was read off the bound
+  method's `__name__`, so a rename or a wrapper would have attributed the failure to a backend
+  called "backend", which no disable list or drift warning knows.
 
 ### Added
 
-- **Guards for six behaviors the tests never held to**, each of them a documented intention that
-  a revert left green: a backend raising on one reference must not cost the paper its whole
-  verification; an unverified reference a backend failed to answer for must be marked degraded,
-  which is what stops triage reading it as a clean negative; a retraction the verifier found must
-  reach the record triage reads; DBLP's homonym suffix is not a second name, and left on, a byline
-  of one bare surname reads as a complete author list; and evidence an earlier backend gathered --
-  a DOI that does not resolve -- must survive a later backend confirming the title. All 77
-  mutation entries now fail the suite when reverted.
+- Tests now guard documented behaviors that a revert could break unnoticed: a backend error on one
+  reference does not cost the paper its whole verification, an unanswered unverified reference is
+  marked degraded, a retraction reaches the record that triage reads, DBLP's homonym suffix is not
+  a second name, and earlier evidence, such as a DOI that does not resolve, survives a later
+  backend confirming the title.
 
 ## [2.4.2] - 2026-09-18
 
 ### Changed
 
-- **The mutation run takes three minutes instead of an hour and a half, and no longer owns the
-  tree.** It copied nothing and reverted each fix in the working tree itself, so it had to run
-  serially, nothing else could be edited or measured while it ran, and 71 entries at 84 s apiece
-  came to about 98 minutes -- which is how a check that CLAUDE.md requires after every fix turns
-  into one that gets put off. It now snapshots the tracked tree into a scratch directory per
-  worker, runs the entries concurrently (`--jobs`, default: cores less two), and asks each suite
-  run to stop at its first failing check (`SMOKE_FAIL_FAST`), since the only question here is
-  whether any check noticed. Measured on this repo: 71 entries in 2 min 39 s. The tree-freeze rule
-  in CLAUDE.md is gone with it.
+- `measure/mutations.py` no longer reverts fixes in the working tree. It copies the tracked tree
+  into a scratch directory per worker, runs the entries concurrently (`--jobs`, default: cores less
+  two), and stops each suite run at its first failing check (`SMOKE_FAIL_FAST`). A full run takes
+  about three minutes instead of an hour and a half, and the tree stays free to edit while it runs,
+  so `CLAUDE.md` drops its tree-freeze rule.
 
 ### Fixed
 
-- **Five behaviors no test covered, found by probing rather than by reading.** Adding a mutation
-  entry first and reading what it reports is what surfaced them: the downloaded file's digest was
-  never checked against the bytes written, so a digest of nothing would satisfy any published
-  checksum; the harvesting fallback's pacing could be removed, and unpaced requests are what earn
-  the block it exists for; the OpenAlex query could stop asking `is_authors_truncated`, which
-  arrives as absent and reads as a complete byline, reopening the lenient-tier hole 2.2.1 closed;
-  and arXiv's hundred-identifier batch and three-second pause were unpinned. Each now has a guard
-  and an entry, and the suite pins the re-check and fallback caps as literals too.
+- Tests now cover the check of the downloaded dump's digest against the bytes written, the pacing
+  of the arXiv harvesting fallback, the OpenAlex query's request for `is_authors_truncated`, arXiv's
+  hundred-identifier batch and three-second pause, and the re-check and fallback caps.
 
-- **Four more British spellings**, in `organisation`, `centred` and `recognising`, which the first
-  pass's word list had missed.
+- Four more British spellings, in `organisation`, `centred`, and `recognising`, are now American.
 
 ## [2.4.1] - 2026-09-18
 
 ### Fixed
 
-- **The CrossRef contact gate covered one sender and not the other.** The verifier dropped a value
-  CrossRef will not read as an address, but the audit's candidate lookup passed `--mailto` straight
-  into its own request, so a typo still went to a third party from the one call site the verifier
-  does not own. Both senders now apply the same check, and a guard asserts the junk value produces
-  a request without `mailto` while a real address produces one with it.
+- The audit's CrossRef candidate lookup applies the same contact-address check as the verifier, so
+  a malformed `--mailto` value is no longer sent to CrossRef from that call.
 
-- **The dump fetcher's checksum check could be removed without a test noticing.** Reverting the
-  `accept()` call left the suite green, which is the failure mode `measure/mutations.py` exists to
-  catch; the check ran only inside a function that talks to the network, so nothing could call it.
-  The check and the move now live in one `install()`, tested against a temp directory: a saved web
-  page is refused, a mismatched checksum is refused, the dump already on disk survives both, and a
-  verified download replaces it. Both defects came out of an adversarial pass that added the
-  mutation entry first and read what it reported.
+- The dump fetcher's checksum check and install step are one function, `install()`, which tests
+  call without the network. A saved web page or a mismatched checksum is refused and leaves the
+  dump on disk in place, and a verified download replaces it.
 
 ### Changed
 
-- **Spelling is American throughout, and `CLAUDE.md` says so.** The two forms had drifted to
-  roughly even -- behaviour 7 against behavior 2, normalis- 9 against normaliz- 8, recognis- 8
-  against recogniz- 3 -- and 27 occurrences across 11 files are now American. The guidance file's
-  claim about em dashes was itself wrong (`refresh_vendor.py` carries five), and its list of synced
-  files that must not be hand-edited had omitted that file, so both are corrected.
+- Spelling is American throughout, and `CLAUDE.md` says so. The file also corrects its claim about
+  em dashes (`refresh_vendor.py` carries five) and lists that file among the synced files that must
+  not be hand-edited.
 
-- **Figures in the documentation now match what the artifacts hold.** The mirror's share of
-  confirmations is 89.4%, measured as 2109 of the 2026-09-17 recording's 2359, where the docs and
-  the `--offline` help text still carried the 91.5% the replaced package's 1669-confirmation
-  recording gave. The mirror is ~3.8 GB rather than ~3.5 GB. The coverage table's header said 2357
-  confirmations where the repaired recording holds 2359. Two claims that cannot be checked are
-  gone rather than restated: a "95-paper corpus" that never existed here, the corpus having gone
-  from 41 papers to 55, and a count of `--` occurrences that was wrong by a factor of three.
+- The documentation and the `--offline` help text give the mirror's share of confirmations as
+  89.4%, from the 2026-09-17 recording, instead of the 91.5% from the replaced package's recording.
+  The mirror size reads ~3.8 GB instead of ~3.5 GB, the coverage table's header says 2359
+  confirmations instead of 2357, and two claims that cannot be checked are removed: a "95-paper
+  corpus" and a count of `--` occurrences.
 
 ## [2.4.0] - 2026-09-18
 
 ### Changed
 
-- **`fetch-dblp-dump` takes dblp's monthly snapshot, and needs no browser to do it.** dblp
-  publishes a snapshot a month through Schloss Dagstuhl's DROPS, each release under its own DOI
-  (`10.4230/dblp.xml.2026-09-01`), CC0, served by an ordinary web server with an MD5 file beside
-  it. That is now the default: the fetcher streams it, computes the digest as it goes, and refuses
-  to install bytes the release disagrees with or that are not a gzip. Two things follow. The
-  default path has no Python dependency at all, where Playwright existed only to answer the
-  proof-of-work challenge fronting dblp.org's daily dump. And a mirror becomes nameable -- "built
-  from the 2026-09-01 release" is a file anyone can fetch again, where "yesterday's dblp.xml.gz" is
-  not, which matters because the fabricated-citation set is sampled from whichever mirror built it
-  and cannot be rebuilt on another without changing what it measures.
+- `fetch-dblp-dump` takes dblp's monthly snapshot by default and needs no browser. dblp publishes
+  each snapshot through Schloss Dagstuhl's DROPS under its own DOI (`10.4230/dblp.xml.2026-09-01`)
+  with an MD5 file beside it. The fetcher streams the release, computes the digest as it goes, and
+  refuses bytes that disagree with the published digest or are not gzip. The default path has no
+  Python dependency, and a mirror can be named by the release that built it, which anyone can fetch
+  again.
 
-  `-- --daily` keeps the browser path, for when currency is the point: a paper indexed last week is
-  in the daily dump and not in a snapshot dated the first of the month. A release appears during
-  the month it is dated, so the newest published one is found by asking for the current month and
-  stepping back, up to six, rather than assuming which exists.
+  `-- --daily` keeps the browser path, which answers the proof-of-work challenge in front of
+  dblp.org's daily dump, for when currency matters, since a snapshot is dated the first of the
+  month. The newest published snapshot is found by asking for the current month and stepping back
+  up to six months.
 
 ## [2.3.1] - 2026-09-17
 
 ### Fixed
 
-- **A malformed contact address no longer buys CrossRef concurrency CrossRef does not grant.** The
-  verifier raised CrossRef from one request at a time to three whenever `--mailto` or
-  `$CROSSREF_MAILTO` held anything at all, but CrossRef admits a caller to its polite pool only for
-  a value it reads as an address -- so a typo left three concurrent requests hitting the public
-  pool, which is the combination most likely to earn a 429. CrossRef reports the pool it used in
-  `x-api-pool`, and asked what it accepts: `admin@example.de`, `a@b`, `a@b.c`, `a@` and even
-  `a b@c.de` come back `polite-array`, while `@b.de`, `not-an-email` and an empty value come back
-  `public-array`. The rule is a non-empty local part before an `@`; hallucite now applies exactly
-  that, no stricter, since a tighter check would forfeit the pool for an address CrossRef would
-  have honoured, and it drops a value that fails the check rather than sending something CrossRef
-  ignores.
+- A malformed contact address no longer raises CrossRef from one concurrent request to three. The
+  verifier did so whenever `--mailto` or `$CROSSREF_MAILTO` held any value, but CrossRef admits a
+  caller to its polite pool only for a value it reads as an address, so a typo sent three
+  concurrent requests to the public pool. hallucite now applies CrossRef's own rule, a non-empty
+  local part before an `@`, and drops a value that fails it.
 
 ## [2.3.0] - 2026-09-17
 
 ### Added
 
-- **arXiv's harvesting interface, for when its search API will not answer.** On 2026-09-17
-  `export.arxiv.org/api/query` answered 406 to every `id_list` request for a day, while OAI-PMH on
-  the same host, the abstract pages and the arXiv DOI all answered in under half a second. Nothing
-  about the request was ours to correct: the headers, the scheme, the user agent and the query form
-  each made no difference, retries at 2, 4, 8 and 16 seconds were refused alike, and ten probes over
-  five hours all failed. An identifier the search API will not answer about now goes to `oai2`
-  instead, one paced request each and at most 60 in a run, with `idDoesNotExist` read as the
-  repository answering that it holds no such preprint -- fabrication signal (D) -- where any other
-  error code is not an answer. Over the corpus recording that recovered arXiv's evidence for 38
-  references and its 16 confirmations, of which 2 are references no other backend confirms; the rest
-  OpenAlex would have caught a step later.
+- When arXiv's search API (`export.arxiv.org/api/query`) will not answer about an identifier, the
+  verifier asks arXiv's harvesting interface (OAI-PMH, `oai2`) instead, with one paced request each
+  and at most 60 in a run. An `idDoesNotExist` reply counts as arXiv answering that it holds no
+  such preprint, which is fabrication signal (D), and any other error code is not an answer.
 
-- **`CROSSREF_MAILTO`, so a contact address is configuration rather than an argument.** CrossRef
-  routes a caller that identifies itself into a pool allowing three requests at a time where an
-  anonymous caller gets one. `--mailto` now defaults to that variable, which belongs in the
-  gitignored `.env.local` beside the API keys, and `SKILL.md` no longer shows an agent typing an
-  address on a command line. An address is a person's: configured it is used, and it stays out of
-  every command line, tracked file and commit message.
+- `--mailto` defaults to `$CROSSREF_MAILTO`, which belongs in the gitignored `.env.local` beside
+  the API keys. CrossRef allows a caller that identifies itself three concurrent requests and an
+  anonymous caller one. `SKILL.md` no longer shows an agent typing an address on a command line, so
+  the address stays out of command lines, tracked files, and commit messages.
 
 ### Changed
 
-- **The online results file is re-recorded, and now covers every backend that runs.** The corpus
-  replay took 49 minutes against the previous recording's 102 and confirms 2359 of 2857 references,
-  up from 2290: the mirror decides 2109, CrossRef 181, OpenAlex 32, arXiv 16, the DOI resolver 11
-  and Semantic Scholar 10. Its parse half is the current parser's, where the 2026-09-11 recording
-  predated the parser fixes and differed on 100 references. Unverified references carrying a backend
-  failure fall from 458 to 232, and all 232 are Semantic Scholar, which refuses part of the residue
-  whatever the day. Recorded without a contact address, so none left this machine.
+- The online results file is re-recorded with the current parser and covers every backend that
+  runs, including OpenAlex. Its remaining backend failures are all Semantic Scholar's. It was
+  recorded without a contact address.
 
 ## [2.2.2] - 2026-09-16
 
 ### Fixed
 
-- **A question mark in a cited title no longer loses the work.** OpenAlex's title filter answers 0
-  works for a value carrying one and 1 for the same value without it, so any title that asks a
-  question was reported as not held -- 4 of the 250 correct citations in the fabricated set. It now
-  comes out of the value along with the quotation marks. A trailing period, a colon, a comma and an
-  exclamation mark were each measured against the API and cost nothing, so they stay. Correct
-  citations against OpenAlex alone confirm 236 of 250, up from 232, and the padded and swapped
-  columns stay at 0.
-
-  Of the 14 correct citations it still does not confirm, 12 name works OpenAlex does not index: a
-  proceedings volume, a conference demo, recent preprints. The other 2 are records whose byline is
-  worse than the paper's -- one lists 1 of the 2 authors without flagging the list as cut, and one
-  stores a name as `nBoris Lippe`, in the printed form and the resolved form alike. A record that
-  does not say its list is cut refuses a citation naming someone it does not carry, which is the
-  direction to be wrong in: the reference goes to triage rather than being confirmed against a
-  byline that disagrees with it.
+- A question mark in a cited title no longer makes OpenAlex miss the work. OpenAlex's title filter
+  finds nothing for a value that contains one, so the mark is removed from the query along with
+  the quotation marks. A trailing period, colon, comma, and exclamation mark do not affect the
+  filter and stay. An OpenAlex record that lists fewer authors without marking the list as cut
+  still refuses a citation that names the missing ones, which sends the reference to triage.
 
 ## [2.2.1] - 2026-09-15
 
 ### Fixed
 
-- **A byline of one-word names no longer clears any author list on its title.** The completeness
-  tier read a byline with no two-word name as a collaboration credited to a group, like `OpenAI`,
-  which lists no person and so clears on the title alone. OpenAlex stores some works with every
-  author as one word, in the name as printed and the resolved name alike (`Hildmann`, `Nicolas`,
-  `Saffre`; `Weiwei`, `Qing-JiZeng`), and through two such works it confirmed 2 of the 250 padded
-  citations in the fabricated set, one of them pairing none of its three names. A group is credited
-  once, so a byline now names people when it has two or more entries that are not a group name or a
-  truncation mark, however short; a lone one-word entry still reads as a group. The rule is shared,
-  so the mirror moves too: 77 of its 8.7 million records carry such a byline, every one of them
-  people under mononyms, glued names, handles or a surname and given name stored as two entries,
-  and each had cleared any author list. Against OpenAlex alone after the fix, the 250 padded and
-  the 250 swapped citations confirm 0 each, 234 of each refused under the right title. The offline
-  replay moves nothing and every fabricated set confirms exactly as recorded. The cost is recall
-  on those records: a citation that writes a glued name apart (`Wei Wei` for `Weiwei`) no longer
-  pairs, and goes to triage. How many correct citations OpenAlex confirms on its own is not yet
-  scored.
+- A byline of one-word names no longer clears any author list on its title. The completeness tier
+  read a byline without a two-word name as a group credit, such as `OpenAI`, which clears on the
+  title alone, and some OpenAlex works store every author as one word, such as `Hildmann`,
+  `Nicolas`, and `Saffre`. A byline now names people when it has two or more entries that are not a
+  group name or a truncation mark, however short, and a lone one-word entry still reads as a group.
+  The rule is shared, so mirror records with such bylines change too. A citation that writes a
+  glued name apart (`Wei Wei` for `Weiwei`) no longer pairs with such a record and goes to triage.
 
 ### Changed
 
-- `measure/fabricated_citations.py score` prints each fabricated citation a backend confirms, with
-  the record, the byline as cited and the byline it confirmed on, in the columns each set requires
-  to stay at zero; takes `--limit N` to fit a metered backend's day; reports how many citations a
-  backend refused under the right title; and counts "other record" only for the mirror, whose
-  records the set's keys name. The two records it named are what located the fix above.
+- `measure/fabricated_citations.py score` prints each fabricated citation that a backend confirms
+  in the columns that must stay at zero, with the record, the cited byline, and the byline it
+  confirmed on. It also reports how many citations a backend refused under the right title, counts
+  "other record" only for the mirror, and takes `--limit N` to fit a metered backend's daily budget.
 
 ## [2.2.0] - 2026-09-14
 
 ### Added
 
-- **OpenAlex is the sixth backend, asked after arXiv and before Semantic Scholar.** Its works
-  search by title, one reference at a time, through the same title and author rules every backend
-  shares; the record is read as the paper printed its byline (`raw_author_name`), a byline OpenAlex
-  cut at a hundred names becomes the `et al.` row the completeness tier already reads, a work it
-  marks retracted carries the retraction, and a record it types as a review of a book is not the
-  book. It is asked with or without a key and meters the day rather than the second, a hundred
-  searches for an anonymous caller and a thousand under a free key (`--openalex-api-key`,
-  `$OPENALEX_API_KEY`), reset at midnight UTC, so a refusal is the budget gone: it is not retried,
-  and after three in a row the rest of the batch is reported `skipped`, never asked, which the
-  triage worklist shows as such. The filter reads a bare comma as the end of its value and refuses
-  a stray quotation mark, so the title travels quoted with every quote mark removed; a citation
-  carrying a subtitle the record lacks is asked a third time by its head, because the filter wants
-  every word it is given on the record.
+- OpenAlex is the sixth backend, asked after arXiv and before Semantic Scholar. It searches works by
+  title, one reference at a time, under the same title and author rules as every backend. It reads
+  the byline as printed (`raw_author_name`), treats a byline cut at a hundred names as an `et al.`
+  row, carries a work's retraction, does not take a review of a book for the book, and asks again by
+  the main title when the record lacks the cited subtitle. It is asked with or without a key and
+  meters by the day: a hundred searches anonymously and a thousand under a free key
+  (`--openalex-api-key`, `$OPENALEX_API_KEY`), reset at midnight UTC. A refusal means the budget is
+  gone, so it is not retried, and after three in a row the rest of the batch is reported `skipped`
+  without being asked, which the triage worklist shows.
 
-  Measured on the 567 references the online recording left unverified, 813 requests in seven
-  minutes under a free key: OpenAlex confirms 25, finds the cited title under other authors for 35,
-  and nothing for 507. Every one of the 25 is a real work carrying the cited names -- 8 books, 4
-  technical reports, 2 dissertations, 2 chapters, 2 software or artifact records and 7 papers, among
-  them a 1970 IBM technical report, a 1987 Bell Labs memo and a thesis on HAL -- and the recorded
-  Semantic Scholar had refused 23 of them, so what that backend would add with a working quota is
-  not known. Three land on a journal's review of the book rather than the book, because OpenAlex
-  lists the book's author in the review's byline; the verdict is right and the record shown is
-  not, and only the one review OpenAlex types `book-review` can be told apart. Of the 35 near
-  misses, 24 were already `mismatch` and 11 move from `not_found`: one real slipped byline (a
-  co-author that a Google Scholar export invents), one parse defect, one record OpenAlex holds
-  with a single author of three, and eight websites, standards and blog posts cited under a title
-  some book chapter also carries. No fabricated citation confirmed: the offline replay and the
-  fabricated-citation sets are unchanged, and scoring the 250-record set against OpenAlex alone is
-  the next day's budget. Tier 5d holds the guards, 24 checks, and ten mutation entries, each
-  of which fails the suite.
+  Some book citations confirm through a journal's review of the book, because OpenAlex lists the
+  book's author in the review's byline. The verdict is right but the record shown is the review,
+  and only reviews that OpenAlex types `book-review` are told apart.
 
-- `measure/fabricated_citations.py score --backend NAME` scores one backend alone, every other
-  disabled, with `--sets` and `--columns` to bound what an online backend is asked; a full pass is
-  about 6,500 requests.
+- `measure/fabricated_citations.py score --backend NAME` scores one backend alone with every other
+  disabled, and `--sets` and `--columns` bound what an online backend is asked. A full pass is about
+  6,500 requests.
 
 ## [2.1.0] - 2026-09-13
 
 ### Removed
 
-- **Three measurement scripts whose job was done, and the last import of the AGPL package with
-  them.** `measure/head_to_head.py` scored hallucite's parser and DBLP path against the external
-  verifier it replaced; the cutover shipped in 2.0.0 and the comparison is recorded there, and the
-  script was the last file importing `hallucinator`. Nothing does now.
-  `measure/residue_evidence.py` was the measurement tool for the evidence that every triage
-  worklist entry now carries as `skipped_dbs`, `dblp_nearest` and `identifiers`.
-  `measure/extraction_census.py`
-  and its `census.json` held the same five numbers per corpus paper as the committed
-  `tests/fixtures/corpus/EXPECTED.tsv`, which CI checks and which `make_corpus_fixtures.py` refuses
-  to write unless the real paper agrees. Gone with them from `~/hallucite/`: the previous offline
-  recording, kept after the mirror rebuild although its three-move diff was already in this file,
-  and the online run's log.
+- Three finished measurement scripts are removed, and with them the last import of the AGPL
+  package. `measure/head_to_head.py` compared hallucite's parser and DBLP path with the verifier it
+  replaced and was the last file importing `hallucinator`. `measure/residue_evidence.py` measured
+  the evidence that every triage worklist entry now carries as `skipped_dbs`, `dblp_nearest`, and
+  `identifiers`. `measure/extraction_census.py` and its `census.json` duplicated the committed
+  `tests/fixtures/corpus/EXPECTED.tsv`. Also removed from `~/hallucite/`: the previous offline
+  recording and the online run's log.
 
 ### Changed
 
-- `PLAN.md` now states what the design document had left to the contract and to CLAUDE.md: that the
-  author rule is asymmetric and why, how the completeness tier is decided, and what the three
-  measurement artifacts and the mutation run each check.
+- `PLAN.md` states that the author rule is asymmetric and why, how the completeness tier is
+  decided, and what the three measurement artifacts and the mutation run each check.
 
-- **Each fact is stated in one document.** The `run.sh` bootstrap contract, the plugin packaging
-  layout, the triage protocol and the fan-out example were each written out in three or four of
-  README, PLAN, CLAUDE.md and SKILL.md, which is how the resolver came to be documented with four
-  branches in one file and five in another. `SKILL.md` holds the triage protocol and the wrapper's
-  promises, `PLAN.md` the packaging, and CLAUDE.md points at them. The two inventories of what the
-  smoke suite covers, in README and PLAN, had both gone stale; the suite's own docstring is the list
-  now.
+- Each fact is stated in one document. `SKILL.md` holds the triage protocol and the `run.sh`
+  wrapper's promises, `PLAN.md` the packaging layout, and `CLAUDE.md` points at them. The smoke
+  suite's docstring replaces the stale inventories of what it covers in README and PLAN.
 
-- **The remaining measurement tools and their files are named for what they are.**
-  `characterize.py` is `verification_results.py`, and the three files it records and replays are
-  `verification-results-offline.json`, `verification-results-online.json` and
-  `verification-results-hallucinator.json`: hallucite's result for every corpus reference with the
-  mirror only, with every backend, and the old external tool's result, frozen, which nothing reads
-  and which is kept as the black-box recording the modules were written against. `corruptions.py`
-  is `fabricated_citations.py`, and `corruptions.json` and `corruptions-truncated.json` are one
-  file, `fabricated-citations.json`: real citations and fabricated variants of them, three sets
-  with their seeds, which scores byte-identically to the two files it replaces. The corpus
-  manifest is `MANIFEST.csv`; nothing reads it, and TSV only avoided quoting three titles.
+- The measurement tools and their files are renamed. `characterize.py` is
+  `verification_results.py`, and its files are `verification-results-offline.json`,
+  `verification-results-online.json`, and `verification-results-hallucinator.json`: hallucite's
+  result for every corpus reference with the mirror only, the same with every backend, and the old
+  external tool's result, frozen and read by nothing. `corruptions.py` is `fabricated_citations.py`,
+  and `corruptions.json` and `corruptions-truncated.json` are merged into
+  `fabricated-citations.json`, which scores byte-identically. The corpus manifest is `MANIFEST.csv`.
 
-- **The mirror is rebuilt from the 2026-09-12 dump, and the rebuild was measured before anything
-  depended on it.** 8,732,550 publications and 4,301,275 authors, 246,600 of them with a non-ASCII
-  name, against 8,720,206, 4,295,062 and 246,351 in the mirror it replaced. The fabricated-citation
-  set scores byte-identically, so the rules are unchanged by the data. Replaying the old results
-  file against the new mirror moves exactly three references, all `not_found` to `verified`, and
-  all three are August-2026 arXiv preprints DBLP indexed between the two dumps; two are cited as
-  conference papers whose published records DBLP does not hold yet, so they land on the CoRR
-  record. Four already-verified references change only their reported byline, because DBLP added a
-  homonym suffix to an author on their record ("Rishabh Singh" became "Rishabh Singh 0001"), with
-  the record key and the status untouched. Nothing else moves. `verification-results-offline.json`
-  is re-recorded offline at v2.0.1 (63 s; 2857 cases, 2109 verified through the mirror, 702
-  `not_found`, 46 `mismatch`) and replays against itself with no parse difference and no move.
-  `verification-results-online.json` is not re-recorded, since that is a network run, so a replay
-  of it will show those three references as moves until it is.
+- The mirror is rebuilt from the 2026-09-12 dump, and `verification-results-offline.json` is
+  re-recorded against it. `verification-results-online.json` is not, so replaying it shows three
+  references that DBLP indexed between the two dumps as moves until it is re-recorded.
 
 ### Fixed
 
-- `characterize.py record --help` crashed inside argparse with `%o format: an integer is
-  required`, because the `--offline` help text carried a bare `91.5%` and argparse formats help
-  strings with `%`. Escaped, and the smoke suite now runs `--help` on every argparse entry point
-  and subcommand in the repo and requires a usage line and a zero exit, so the next one cannot
-  ship.
+- `characterize.py record --help` no longer crashes inside argparse with
+  `%o format: an integer is required`. The bare `91.5%` in the `--offline` help text is escaped.
 
 ## [2.0.1] - 2026-09-13
 
 ### Fixed
 
-- **Fourteen claims in the four documents no longer matched the code, and a straight-through read
-  found what two mechanical passes could not.** `VERIFICATION-SPEC.md` named the `db_results` field
-  `db` where the code has `db_name`, and described a lenient author tier that counts unmatched names
-  where the code requires one matched one. `README.md` documented the `run.sh` resolver with four
-  branches where it has five, promised a `/hallucite` command that does not ship, said a
-  marketplace-installed plugin reads the clone's `.env.local` when it cannot, sent the plugin
-  reader to build the mirror with mise tasks they do not have, and never mentioned the closing
-  warnings that separate an audit from a silent no-op. `CLAUDE.md` said nothing imports
-  `hallucinator` when `measure/head_to_head.py` does, called `--` an em dash, never named
-  `pdftotext`, and named things in `~/hallucite/` throughout without saying what is there; its
-  Conventions had grown to 21 flat bullets, four pairs of them saying one thing twice, and are now
-  18 under four subheadings with every measurement kept. `PLAN.md` described a `run.sh`
-  auto-provision path that no longer exists.
+- Fourteen documentation claims that no longer matched the code are corrected.
+  `VERIFICATION-SPEC.md` names the `db_results` field `db_name`, not `db`, and describes the lenient
+  author tier as requiring one matched name. `README.md` documents the five-branch `run.sh`
+  resolver, no longer promises a `/hallucite` command or says that a marketplace-installed plugin
+  reads the clone's `.env.local`, no longer tells plugin users to build the mirror with mise tasks,
+  and mentions the closing warnings that separate an audit from a silent no-op. `CLAUDE.md` names
+  `pdftotext` and what `~/hallucite/` holds, and its conventions are regrouped under four
+  subheadings. `PLAN.md` no longer describes a `run.sh` auto-provision path.
 
-- **`titles_match` strips a `(Reprint)` suffix from a record's title**, as it already stripped an
-  edition one. Boehm's *Software Engineering Economics*, cited as the Springer 2002 reprint, could
-  not reach `books/sp/02/Boehm02a` ("Software Engineering Economics (Reprint).") at all. It is a
-  candidate now, though still not the record shown: the ICSE 2002 tutorial of that title carries
-  the cited year too, and the citation prints no DOI, page range or volume, so row order decides.
-  Both fabricated-citation sets come back identical and the offline results file replays with no
-  parse difference and no status move, so the widening costs nothing.
+- `titles_match` strips a `(Reprint)` suffix from a record's title, as it already stripped an
+  edition suffix, so Boehm's *Software Engineering Economics*, cited as the Springer 2002 reprint,
+  can match `books/sp/02/Boehm02a`. The ICSE 2002 tutorial of that title is still the record shown,
+  because it carries the cited year too and the citation prints no DOI, page range, or volume.
 
-- **`fetch-dblp-dump` no longer overwrites the dump you have before checking what arrived.** It saved
-  the download straight over `~/hallucite/dblp.xml.gz` and read the gzip magic afterwards, so the
-  failure the script exists to catch -- dblp.org's proof-of-work challenge page saved under a
-  `.gz` name -- overwrote a working 1 GB dump before it was detected. It downloads to a
-  `.part` file beside the destination and swaps only after the check, which is what `build-dblp`
-  already does with the database it builds. Run as the shipped task for the first time rather than
-  as a scratch equivalent: Playwright's bundled Chromium, headed, answers dblp.org's proof-of-work
-  challenge and saves 1.10 GB of valid gzip.
+- `fetch-dblp-dump` no longer overwrites the existing dump before checking the download. It saves
+  to a `.part` file beside the destination and swaps only after the gzip check, so a saved
+  proof-of-work challenge page no longer replaces a working dump.
 
-- **A repo-wide prose pass.** `/ai-slop:review-repo` over the Markdown, the comments and
-  docstrings of the scripts, the config comments and the ten commit messages since `4dff7bc`,
-  against the general rules and the 49-trope catalog. 114 findings, of which the 52 worth applying
-  were applied. The one repo-wide pattern was dash convention: 186 ASCII `--` against 10 real em
-  dashes, every one of them in `VERIFICATION-SPEC.md`, which alone did not follow the house style.
-  The rest were local -- an arrow standing in for words in `SKILL.md`, negative parallelism in the
-  triage report's own output and in four docstrings, "quietly" where "silently" is meant, and
-  figurative phrasing in assertion messages a reader only ever sees on a failure. The vendored
-  tree, the three files synced with it, and the 55 generated corpus fixtures were excluded; the
-  fixtures' words are a same-length cipher, not prose. All 39 mutation entries are still found
-  after the edits, since a prose pass rewrites the comments the runner keys on.
+- A repo-wide prose pass with `/ai-slop:review-repo` covered the Markdown, the comments and
+  docstrings of the scripts, the config comments, and the ten commit messages since `4dff7bc`.
+  `VERIFICATION-SPEC.md` uses the house `--` dash instead of em dashes, and the triage report's own
+  output no longer uses negative parallelism.
 
-- `requirements.txt` still said `characterize.py record` needs `hallucinator` to make a new
-  recording; it had not for a release. The file now names the one script that still imported it,
-  `measure/head_to_head.py`, and Playwright as the one task-level dependency.
+- `requirements.txt` no longer says that `characterize.py record` needs `hallucinator`. It names
+  `measure/head_to_head.py` as the one script that still imports it, and Playwright as the one
+  task-level dependency.
 
 ### Removed
 
-- **`TODO.md` is gone**, its last item closed. What it carried that outlives a task list went
-  where the conventions say it goes. The inventory of `~/hallucite/`, and what each recording can
-  and cannot answer, is in `CLAUDE.md` beside the measurement scripts. The widenings of name and
-  title matching that were measured and rejected are a three-line pointer there and their numbers
-  are in the 2.0.0 entry, which also gains the three facts that had lived only in the task list:
-  the 22-author CoRR record with no `et al.` row, the five grey-literature references one JSS
-  paper keeps, and the three DOIs wrong as printed. Earlier entries still name the file; they
-  describe what it said at the time.
+- `TODO.md` is removed, its last item closed. The inventory of `~/hallucite/`, and what each
+  recording can and cannot answer, is in `CLAUDE.md`. The widenings of name and title matching that
+  were measured and rejected are listed in the 2.0.0 entry.
 
 ## [2.0.0] - 2026-09-12
 
 hallucite no longer depends on the package it was built around. Stages 1 and 2 are its own
-extraction, parsing, verification and DBLP ingest, written against a black-box recording of the
-external verifier rather than from its source, which is what lets this MIT repo drop an
-AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
+extraction, parsing, verification, and DBLP ingest, written against a black-box recording of the
+external verifier rather than from its source, which lets this MIT repo drop an AGPL-3.0-or-later
+dependency.
 
 ### Added
 
-- **The audit runs on hallucite's own modules.** `audit_references.py` builds a `Verifier` and
-  parses through `reference_parser`; nothing on the audit path imports `hallucinator`.
-  `DEFAULT_ONLINE_DBS` is the four backends `verifier` emits and `KNOWN_LOCAL_DBS` is `["DBLP"]`,
-  or the two drift tripwires would fire on every run. `_second_opinion_pass` and
-  `_author_absence_pass` are gone: the DBLP backend *is* the all-candidates check, and the author
-  tier is decided inside the rule rather than by a pass over whatever a lenient backend cleared.
+- The audit runs on hallucite's own modules: `audit_references.py` builds a `Verifier` and parses
+  through `reference_parser`, and nothing on the audit path imports `hallucinator`. The separate
+  second-opinion and author-absence passes are gone, because the DBLP backend checks all
+  candidates and the author rule decides inside the check.
 
-  `parse_reference` reads one segmented entry, recognizing each style by the mark that separates
-  the author list from the title -- a standalone year, a parenthesised one, an "et al.", an opening
-  quote, a colon after inverted names, a comma after initials-led ones, the surname-and-initials
-  run the medical styles print -- and falling back to the leading sentence. Measured over the 2065
-  references of the 41-paper corpus with the offline mirror as arbiter, so that a reading is better
-  when a real record confirms it, it is confirmed for 1480 references against the recording's 1399.
-  Most of the difference is a venue following the title without an "In", which used to be read as
-  part of it. Two references the recording confirms and this does not each name a person DBLP
-  spells differently ("Rick Schlichting" for "Richard D. Schlichting", "Tom Zimmermann" for
-  "Thomas Zimmermann"); the recorded parser stopped at 15 authors, so on the longer of the two
-  there were fewer names to match. Both reach triage as `mismatch` carrying DBLP's record, where
-  the name difference is the first thing a reader sees.
+  `parse_reference` recognizes each citation style by the mark that separates the author list from
+  the title, such as a standalone or parenthesized year, an "et al.", an opening quote, or a colon
+  after inverted names, and falls back to the leading sentence. A venue that follows the title
+  without an "In" is no longer read as part of the title.
 
-  `check` asks five backends, cheapest first, each only about what the ones before it missed: the
+  `check` asks five backends, cheapest first, each only about what the earlier ones missed: the
   offline DBLP mirror, CrossRef's bibliographic search, DOI resolution through CrossRef and then
-  doi.org content negotiation, arXiv by identifier a hundred at a time, and Semantic Scholar's
-  paper search one reference at a time. Open Library, PubMed and Europe PMC are not covered; over
-  the corpus they decide 1.4% of confirmations between them, the statistics classics an empirical
-  paper cites and the books it cites without a DOI, and a reference only they would have matched is
-  reported `not_found`, which records a weaker search rather than a stronger claim. Retraction
-  status rides along wherever CrossRef answered anyway, so it costs no extra request; a reference
-  the mirror confirms is not retraction-checked, which would cost a request per confirmation.
+  doi.org content negotiation, arXiv by identifier a hundred at a time, and Semantic Scholar's paper
+  search one reference at a time. Open Library, PubMed, and Europe PMC are not asked, so a reference
+  that only they would match is reported `not_found`. Retraction status is read wherever CrossRef
+  answered anyway, so a reference that the mirror confirms is not checked for retraction.
 
-  Held to the recorded verdicts of all 2065 references, the new modules confirm 1666 against the
-  recording's 1669, losing 44 and gaining 41. Reading the 44: 19 are a `mismatch` the recording
-  cleared, five of which name a real paper under an author list mostly not on it; eight are a tool
-  or a web page with no author, which the recording confirmed by matching a title against an
-  unrelated record; four are citations dropping a word from the real title ("An in-depth study" for
-  "An In-depth Empirical Study", "Advanced compiler design implementation" for "Advanced Compiler
-  Design and Implementation"), which the triage rules say a human should confirm rather than a
-  matcher. Of the recording's verdicts, 266 unverified references carried a backend failure, so not
-  one was a clean negative; 53 of the new run's do. Fed the *recorded* parse instead, so the two
-  halves stay separable, `check` confirms 266 of the same 295: the gap is the recorded parser's
-  output meeting a stricter check, where a venue glued into the title no longer passes a DOI that
-  resolves to the real title and a surname-only author list no longer passes the author rule. Both
-  gaps close when the new parser feeds the new verifier.
+  Semantic Scholar is asked only when `--s2-api-key` or `$S2_API_KEY` supplies a key. Anonymous
+  callers share one small quota, and asking anyway would mark a different handful of references
+  degraded on each run and move the boundary between `verified` and "needs triage" between
+  identical audits.
 
-  Semantic Scholar is asked only where `--s2-api-key` or `$S2_API_KEY` supplies one. Anonymous
-  callers share one small quota: asked about 106 real residue references, paced three and a half
-  seconds apart, it refused 102 and confirmed none of the four it answered, and asking anyway would
-  mark an arbitrary handful degraded and a different handful next run -- the churn that moves the
-  boundary between `verified` and "needs triage" between identical audits. With a key it answers
-  102 of those 106, and over the whole 510-reference set decides two confirmations no other backend
-  reaches, both books or technical reports. The recording credits it 24 of its 1669 because it was
-  asked about a different residue: this implementation puts CrossRef and the DOI resolver ahead of
-  it. It is kept because nothing else covers that material, and both numbers are here so the next
-  person can decide from the same measurement.
+  A word that a two-column layout splits without a hyphen ("distributed sy stems") is also queried
+  glued to its neighbor when nothing else matched. A citation that drops an elided particle
+  ("Marcelo Amorim" for "Marcelo d'Amorim") still matches, provided the given name pairs.
 
-  Two regressions the cutover produced and the tests caught, both the new modules being stricter
-  than what they replaced. A word a two-column layout splits with no hyphen to mark it ("distributed
-  sy stems") went into the FTS query as a token the index does not hold, so a title the mirror held
-  was never retrieved, though `titles_match` compares on letters and never saw the space; retrieval
-  now asks one more query per short fragment, glued to its neighbour, only where nothing else
-  matched. And a citation dropping an elided particle ("Marcelo Amorim" for "Marcelo d'Amorim") no
-  longer reads as a different person, the given name still having to pair, so it widens the surname
-  rather than the rule.
+- The offline mirror is hallucite's own ingest. `build_dblp.py` replaces
+  `hallucinator-cli update-dblp`, and with it the Rust toolchain, the prebuilt binary,
+  `install-cli`, `install-cli-patched`, and `dblp-entity-fix.patch`. It resolves the dump's
+  character entities as numeric character references, so authors with diacritics survive without
+  mojibake ("JÃ¼rgen" for "Jürgen"). An edited book's `<editor>` entries are read where it has no
+  author, and `<www>` person homepages are skipped. The ingest needs only the standard library and
+  takes 4.8 minutes instead of 20 to 30.
 
-- **The offline mirror is hallucite's own ingest.** `build_dblp.py` replaces `hallucinator-cli
-  update-dblp`, and with it the Rust toolchain, the prebuilt binary, `install-cli`,
-  `install-cli-patched` and `dblp-entity-fix.patch` -- which existed because the stock ingest could
-  not resolve the dump's character entities and dropped every author whose name carries a diacritic.
+- The triage worklist and report show evidence that the audit already had about an unverified
+  reference. No status changes.
 
-  The entities are resolved in the byte stream as *numeric* character references rather than as
-  characters: the dump declares ISO-8859-1, so UTF-8 spliced into it decodes as Latin-1 and
-  "Jürgen" arrives as "JÃ¼rgen" -- the same mangled-name failure one layer down, which the first
-  version of this script had. An edited book records its people in `<editor>`, and that is who a
-  citation of it names, so those are read where there is no author; a `<www>` person homepage is
-  not a publication and would otherwise put three million people's names in the title index.
+  - A `not_found` shows whether the mirror was asked at all. The DBLP backend reports `skipped` for
+    a title it does not query, such as a one- or two-word title, which used to read as a clean
+    negative. The worklist entry carries `skipped_dbs`, and the report prints
+    `Not asked: DBLP, ...`.
 
-  Held to the mirror it replaces: 5000 records agree on title, year, type, electronic edition and
-  the full author list, with none differing. Built end to end it produces 8,720,206 publications and
-  4,295,062 authors, 246,351 of them with a non-ASCII name, and over the 2065-reference corpus the
-  two mirrors confirm the same 1502 references with **not one** deciding differently. It takes 4.8
-  minutes against the previous ingest's 20 to 30, and needs nothing but the standard library.
-
-- **The evidence the audit already had reaches the triager.** Three things `verifier` knew about an
-  unverified reference that no worklist or report showed, each re-measured over the 55-paper
-  corpus's offline residue -- 788 of 2857 references -- before anything was built against it,
-  because the numbers `TODO.md` carried came from a residue whose PDFs are gone. Nothing here
-  changes a status.
-
-  - *That the mirror was asked at all.* The DBLP backend reports `skipped` for a title `queryable`
-    refuses, and a `not_found` read the same whether the mirror came back empty or was never asked.
-    Over the residue that is 123 references, not the seven the head-to-head had counted: most are
-    tools and web pages with a one-word title the mirror would not hold anyway, but Breiman's
-    "Random Forests", Cochran's "Sampling Techniques", Hubert and Arabie's "Comparing partitions",
-    Seaman's "Qualitative Methods", Dolan's "Algebraic subtyping" and a dozen more real two-word
-    publications are among them, and every one read as a clean negative. `skipped_dbs` travels with
-    the worklist entry and the report prints `Not asked: DBLP, ...`, keyed on the one status string
-    `verifier` emits and never on a list of names.
-
-  - *What the cited identifier resolves to.* `verifier` fills `doi_info` and `arxiv_info` with the
-    resolved title and `triage.py` read neither. Resolved for the 169 residue references carrying a
-    DOI or an arXiv id, those two backends only, no request refused. Of the 127 DOIs, 88 resolve to
-    the cited title, 34 to a different one and 5 are dead; of the 54 arXiv ids, six were never
-    reached because the DOI ahead of them had confirmed the reference, 25 resolve to the cited title
-    and 23 to a different one. Reading the 57 that differ: most are the parser's title carrying
-    venue text or cut short, where the resolved title is exactly what a reviewer needs; about a
-    dozen are a preprint renamed between versions; a few are artifact DOIs whose deposit title
-    differs from the paper's; and four name another work outright -- a DOI *and* an arXiv id for
-    "Benchmarking LLM Test Generation on Complex Control-Flow Structures" both resolving to "A
-    Systematic Approach for Assessing Large Language Models' Test Case Generation Capability", a
-    second DOI in the same paper, BashExplainer's DOI resolving to a paper on AutoML tools, and a
-    "Syntax-aware Retrieval Augmented Code Generation" arXiv id resolving to a paper on narrative
-    XAI. The worklist entry carries `identifiers` -- kind, id, whether it resolves, the resolved
-    title, and whether that is the cited title under `titles_match` -- and the report prints one
+  - The worklist entry carries `identifiers`, with each cited identifier's kind, id, whether it
+    resolves, its resolved title, and whether that matches the cited title. The report prints one
     line per identifier: dead, resolves to the cited title, or resolves to a different title, named.
 
-  - *The mirror's nearest title, gated on authorship.* `dblp_check.nearest_title` is a sibling of
-    `record_context`: asked only where the DBLP backend answered `no_match`, it offers a record
-    whose title is within two word-level edits of the cited one and requires every cited person to
-    be on it. Retrieval leaves every pair of the title's selective words out of an AND query, so a
-    record still carrying all but two of them comes back whichever two moved. Over the 619 residue
-    references the mirror answered `no_match` for, 66 have a title within two edits ungated, and 33
-    of the 66 are different works -- Roy and Cordy's clone-detection survey against a 2019 paper of
-    nearly the same title, Ford and Fulkerson's "Maximal flow through a network" against Strang's
-    "Maximal flow through a domain", Kaplan and Meier against an encyclopedia entry, three
-    Technometrics *reviews* of the cited statistics books, six Apache Software Foundation pages
-    against one Computer column -- each of which would have argued a correct citation of an
-    uncovered work into a "citation error". Gated, 32 remain and all 32 are the cited work. The gate
-    costs one real lead: Holmqvist's eye-tracking handbook, cited under its six authors where DBLP
-    lists only the first, is refused because the record does not mark itself truncated. The lookup
-    takes 47 s over the residue.
+  - Where the DBLP backend answered `no_match`, `dblp_check.nearest_title` offers a record with a
+    title within two word-level edits of the cited one, provided that every cited person is on it.
+    The authorship requirement keeps out different works with nearly the same title, at the cost of
+    refusing a record that lists fewer authors without marking itself truncated.
 
-  Guarded by smoke tier 3j through `attach_mirror_evidence`, `cmd_worklist` and `cmd_report`, and
-  by six mutation entries; the mutation run fails for each.
+- `measure/` holds the measurements that this entry cites, as scripts. `extraction_census.py`
+  tabulates what each corpus paper extracts against a baseline. `corruptions.py` builds a
+  fabricated-citation set once from a fixed seed and scores an implementation against it.
+  `head_to_head.py` compares the old and new parser and DBLP check offline. `mutations.py` reverts
+  one fix at a time, requires the suite to fail, and stops if a tracked file changes mid-run.
+  `residue_evidence.py` prints, per unverified reference, what the three evidence items above found.
 
-- **`measure/`: the measurements this entry cites, as scripts.** `extraction_census.py` tabulates
-  what every corpus paper extracts and what moved against a baseline; `corruptions.py` builds the
-  corruption harness once, from a fixed seed, and scores an implementation against a built set;
-  `head_to_head.py` scores the old and new parser and DBLP check over the recorded cases or the
-  corpus, and keeps the old verifier off the network by construction; `mutations.py` reverts one fix
-  at a time and requires the suite to fail, and fingerprints the tracked tree between entries so a
-  file edited mid-run stops it rather than being read half-written, where the failure it causes is
-  indistinguishable from the revert's and reports an unguarded fix as guarded; `residue_evidence.py`
-  reads an offline audit's output and prints, per unverified reference, what the three items above
-  found. The built sets live beside the other anchors in `~/hallucite/`.
-
-- **Every corpus bibliography shape, as a committed test fixture.** The 55-paper corpus is the
-  measurement baseline for extraction and it lives outside the repo, because the papers are other
-  people's manuscripts; a clone and CI had no extraction net beyond two hand-written fixtures.
-  `tests/fixtures/make_corpus_fixtures.py` derives one synthetic paper per corpus paper: the real
-  `pdftotext -layout` output with every author name and title word replaced by an invented word of
-  the same length, so column positions, hanging indents, running heads, margin numbers and trailing
-  biographies all survive and nobody's authorship does. What has to survive substitution is the
-  structure the parser reads -- the connectors, the venue and locator vocabulary, the section
-  heading, and the name particles, taken from `pdf_references._PARTICLE` so the two cannot drift.
-
-  The generator refuses to write a fixture whose extraction does not match the real paper's, and
-  that check found two ways a cipher silently destroys a bibliography. Ciphering the particle in
-  "de Castro-Cabrera" ends the hanging-indent block on the spot, because the particle is what tells
-  the entry gate a line opens an entry. And ciphering the "EFERENCES" half of the small-caps
-  heading `pdftotext` renders as "R EFERENCES" loses the section for a whole paper -- eight of the
-  fifty-five, every one an IEEE template, and invisible on a two-column page where the heading
-  shares its text line with the right-hand column.
-
-  All 55 reproduce their paper's style, reference count, unparsed count and missing-number set
-  exactly: 2857 references, 0 unparsed, and the one printed entry number no reference carries.
-  Checked for leakage too: of 69,200 words of four letters or more across the fixtures, the only
-  ones that also occur in the paper they came from are seven of the generator's own invented
-  syllables, and no corpus paper's title survives anywhere. Smoke tier 4j drives all 55 through
-  `extract_references` against `corpus/EXPECTED.tsv`, which is written from the real papers rather
-  than from the fixtures, so the net is anchored to the corpus and not to the thing it checks. It
-  adds 1.8 s to the suite.
+- `tests/fixtures/make_corpus_fixtures.py` derives one synthetic test fixture per corpus paper,
+  since the papers are other people's manuscripts and stay outside the repo. Each fixture is the
+  real `pdftotext -layout` output with every author name and title word replaced by an invented
+  word of the same length, so the layout survives and nobody's authorship does. The generator
+  refuses to write a fixture whose extraction differs from the real paper's, and smoke tier 4j
+  checks all 55 fixtures against `corpus/EXPECTED.tsv`, which is written from the real papers.
 
 ### Fixed
 
-- **Five corpus papers lost their whole bibliography, and three more were losing entries silently.**
-  Adding EMSE and JSS put the unnumbered hanging-indent author-first bibliography in front of the
-  extractor for the first time -- Elsevier's Harvard style, ending the author list with a bare year
-  (`Cao, S., Sun, X., 2024.`), and Springer's plainnat, putting the year in the venue field hundreds
-  of characters later. `_dominant_style` counted an entry as author-year only on a *parenthesised*
-  year, so two papers read as no style at all and were never segmented, and three read as numeric on
-  a handful of continuation lines opening with digits and segmented as one entry. The same gate was
-  already costing the three author-year papers among the original 41: the ACM author-year paper lost
-  every two-author entry (`Haipeng Cai and Raul Santelices. 2014.` does not match `_AUTHORYEAR`) and
-  the two Springer papers lost every organization (`OpenAI (2024)`, `GitHub (2021)`), all glued into
-  the entry before them where only a second `(year)` gave them away.
+- Unnumbered hanging-indent author-year bibliographies are segmented: Elsevier's Harvard style,
+  which ends the author list with a bare year (`Cao, S., Sun, X., 2024.`), and Springer's plainnat,
+  which puts the year in the venue field. Such bibliographies had been read as no style or as
+  numeric and lost all or most of their entries. Author-year bibliographies also keep two-author ACM
+  entries (`Haipeng Cai and Raul Santelices. 2014.`) and organization entries (`OpenAI (2024)`)
+  separate instead of gluing them into the entry before.
 
-  The hanging indent is the structural signal, and four things had to change for it to carry the
-  weight. The right column of a two-column page is shifted to the left column's text edge before
-  anything reads the indents, because the gutter cut leaves the right column two characters in under
-  an ACM template and seven under Elsevier's, where "entry" in one column meant "continuation" in
-  the other; the centered page number the cut lands inside is dropped rather than moved. With a
-  hanging indent only a line at the entry column can vote for a style, so a digit-led continuation
-  is not a numeric label. At the entry column an entry needs no year, only to open with a name or an
-  organization and go on to more names, an "and", an "et al.", a year in any form, or a lone
-  author's period and the title's capital; `_AUTHORYEAR` stays the gate where there is no hanging
-  indent. And the block ends where the layout does: Elsevier prints the authors' biographies after
-  the bibliography under no heading, as justified paragraphs at the entry column, and one paper
-  carried nine "references" of prose about where its authors studied.
+  Extraction now reads the hanging indent, and the bibliography ends where the layout does, so the
+  author biographies that Elsevier prints after it under no heading are not read as references. An
+  ACM footer (`Received 2023-09-29; accepted 2024-01-23`) stays appended to the last reference.
 
-  | paper | before | after |
-  |---|---|---|
-  | `emse-2605.16646v1` (Springer, plainnat) | none, 0 | 22 |
-  | `jss-2606.08553v1` (Elsevier, two-column) | none, 0 | 38 |
-  | `jss-2601.12148v3` (Elsevier, abbrvnat) | numeric, 1 | 45 |
-  | `jss-2605.26609v1` (Elsevier) | numeric, 1 | 59 |
-  | `jss-2609.08953v1` (Elsevier, two-column, biographies) | numeric, 1 | 43 |
-  | `fse-2607.23355v1` (ACM author-year) | 52 | 67 |
-  | `emse-2607.13820v1` (Springer) | 22 | 25 |
-  | `emse-2608.11965v1` (Springer) | 59 | 79 |
+- A bibliography no longer loses whole references unnoticed. Extraction reports the entry numbers
+  that a numbered bibliography prints but no reference carries, counting from 1, and the audit
+  warns about them. Three causes of lost references in `pdf_references.py` are fixed:
 
-  Every entry-column line in the eight now opens an entry except one ACM footer (`Received
-  2023-09-29; accepted 2024-01-23`), appended to the last reference where it stays visible. The
-  other 47 corpus papers extract exactly as before; the corpus goes from 2615 references (2
-  unparsed) to 2857 (0 unparsed), and the five recovered bibliographies confirm 19 of 22, 34 of 38,
-  37 of 45, 34 of 59 and 37 of 43 against the mirror. Guarded by smoke tier 4i, which drives the column alignment, the
-  style vote, the entry gate and the biography stop through `extract_references` on a three-page
-  synthetic paper, so no one of them can be reverted without the others noticing.
+  - A running head that spans both columns no longer costs a short final page its column split.
+  - A line that runs into the column gutter no longer loses a letter to the column cut, which had
+    glued the next entry onto its predecessor.
+  - Entries that differ only in their number, such as five `[N] "CVE-2022-1975," https://...`
+    lines, are no longer filtered as running heads.
 
-- **A bibliography could lose whole references and nothing downstream could tell.** Over the
-  41-paper corpus, 15 references the bibliographies' own numbering prints never reached
-  verification: seven at the tail of one paper, eight swallowed by the entry before them. A
-  reference that never arrives cannot be reported as unverified, so the audit had no way to say so.
-  Extraction now produces 2081 references against 2066, with no gap left in any of the 41 numbering
-  runs, and the offline mirror alone confirms 1503 against 1483. Three causes, all in
-  `pdf_references.py`:
+  The check for a swallowed tail applies only to bracket styles, because a plain-numeric label such
+  as `30.` is not distinctive.
 
-  - The running head hides the gutter. It spans both columns, so the column gap is not blank on its
-    line, and `_gutter` weighed such lines as a *proportion* of the page -- the same head passing on
-    a full page and failing on a short one. A final bibliography page of 33 lines gives one bridging
-    line 3% of the vote and loses the column split for the whole page, and with it seven references.
-    Page furniture is now removed before the gutter is measured.
-  - The cut was placed at the midpoint of a band found at 97% tolerance, so on a page where one line
-    runs into the band it landed inside that line's word, leaving a letter behind and gluing the
-    next entry onto its predecessor. It now falls in the longest run of columns blank on every line.
-  - A reference can trip both running-head filters at once. Five entries in one paper read `[N]
-    "CVE-2022-1975," https://nvd.nist.gov/...`: the justification gap is the wide gap a head keeps,
-    and `_head_norm` strips the digits that are the only thing telling the five apart. `_segment`
-    now asks whether a line opens the next entry in the sequence *before* the noise filters, which
-    a head cannot satisfy: it would have to carry the one number the sequence expects next.
+- Parser fixes for citation shapes that kept a reference from reaching the backends with the right
+  fields:
 
-  Comparing furniture needed narrowing too. What varies between one page's head and the next is the
-  page number, at one end of the line, so only a leading and a trailing number are removed. And
-  `_missing_numbers` walked the run from the lowest number that arrived, so a bibliography whose
-  extraction begins at `[2]` reported no gap; walking from 1 found a sixteenth lost reference,
-  `tse-2607.29422v1.pdf`'s `[1] Aider, "Aider," 2026`, printed in the right column beside a figure.
-  The matching check for a swallowed *tail* was measured and cut back to the bracket styles: a
-  plain-numeric bibliography prints `30.`, which is not a distinctive label, and over the 41 papers
-  the bare-number form found exactly one thing, an access date broken across a line, and no real
-  swallowed entry at all. Extraction now reports the entry numbers a numbered bibliography prints
-  that no reference carries, and the audit warns about them -- the one invariant such a bibliography
-  gives for free, and what caught all three faults above.
-
-- **Nineteen parser gaps, each one a real citation the backends could not be asked about.** Over the
-  55-paper corpus verified against the mirror alone, the three the new bibliographies exposed lift
-  confirmations from 1981 to 2057: 75 references from `not_found` to `verified`, 2 to `mismatch` on
-  a name form the record now retrieves, none the other way. Elsevier joins the venue to the title
-  with a comma rather than a period, so no sentence break separated them and the venue was read as
-  part of the title -- over the JSS residue that was most of the `not_found`. A hyphenated initial
-  (`K.-W. Chang`) was neither an initial in the IEEE comma reading nor an abbreviation in the
-  sentence reading, so `..., B. Ray, and K.-W. Chang. Unified pre-training ...` parsed to the title
-  `and K.-W`. And LaTeX abbreviates an accented given name to `J.ã.P.`, which pdftotext renders
-  `J.a.P.`, so `Fernandes, J.a.P.` read as two people.
-
-  The six the residue evidence surfaced were measured together over the 55-paper corpus against
-  the mirror alone: 35 references move from `not_found` to `verified` and two to `mismatch`, and
-  751 of 2857 are left for triage where 786 were. Every one of the 35 is the cited work, with the
-  cited people on the matched record. The corruption harness is unchanged on every deciding column,
-  the head-to-head over the recorded cases is unchanged in all four combinations (1519 / 1509 /
-  1462 / 1543, no reference moved), and the extraction census is unchanged. Over the whole corpus,
-  DBLP only, the new path confirms 2106 against the old path's 2009, where it confirmed 2070
-  before. Individually: Springer's `URL https://...` cost eleven references in two EMSE papers;
-  Elsevier's comma-joined venue changed the title of 19 of one JSS paper's 44 references, 13 of
-  which then verify, and moved two statistics books to a `mismatch` against the Technometrics
-  review of each rather than a `not_found`. Measured and rejected alongside them: reading a `?` as
-  a subtitle mark in `titles_match`. Over the 35 corpus residue titles carrying one it gains a
-  record for four -- three are the parser cuts fixed here, which now verify on the whole title, and
-  the fourth pairs Conway's "How do committees invent?" with an ACM Queue column of that head by
-  another author.
-
-  The rest, each reaching triage as an honest `not_found` on a title no database holds:
-
-  - A particle surname written surname-first parsed to no authors at all. `_name_like` wanted a
-    capitalised word and `d'Amorim` -- which `VERIFICATION-SPEC.md` names -- has none, so the whole
-    Springer-style byline failed to read as an author list. A reference with no authors cannot be
-    confirmed by anything. `van den Bergh` and `De Lucia` were already right in both orders.
-  - An organization was split on its own `and`: "Institute of Electrical and Electronics Engineers"
-    became two authors, "Barnes & Noble Research" two more, and under the author rule both halves
-    then had to be matched by a real person. A byline with no comma, no initials, a lowercase
-    function word and eight words or fewer is one body's name. The bounds matter: without them a
-    whole entry whose title carries "for" and "and" reads as a single corporate author, which cost
-    one corpus reference its title.
-  - A suspended hyphen was closed like a line break, making "Joining Player- and Data-Driven
-    Analytics" into "Player-and". A hyphen before a conjunction elides the second half of a
-    compound and the space after it is the word boundary, not the layout's.
-  - One inverted author split across two chunks read as two people. `Zeller, Andreas. 2009.` parsed
-    to `['Zeller', 'Andreas']`, and because pairing is one-to-one the two competed for the single
-    record author, leaving one unmatched -- which the author rule read as a person the record does
-    not have. The record settles it: two cited entries pairing with exactly one record author, the
-    same one, whose words together are contained in that author's name, are one person written
-    apart. An invented "Mallory Fake" pairs with nobody and is never excused. Merging the two chunks
-    in the parser instead was measured and rejected: it is not decidable there -- `Akhavan,
-    Hosseinpour` is two people and `Zeller, Andreas` is one -- and over the corpus it changed no
-    author list and no confirmation either way.
-  - A stray mark between two names disqualified the whole author list: "OpenAI, :, Aaron Hurst, et
-    al." parsed to no authors.
-  - A version number the layout broke across a line read as two sentences, so "Deepseek-v3. 2:
-    Pushing the frontier" was cited as "Deepseek-v3". A period between two digits is not a sentence
-    end; a period between a letter and a digit still is, which keeps a venue opening with its year
-    out of the title.
-  - The parenthesis an entry appends to its own title stayed in it: the conference acronym ACM
-    prints ("Phraselette: A Poet's Procedural Palette (DIS '25)"), an edition, a year with no comma.
-  - A year printed after the title with no comma to mark the field stayed in it ("Causes and
-    canonicalization for unreproducible builds in java (2025)").
-  - `URL https://...` is the identifier's label, not a title word; a Springer entry read as the
-    title `URL`.
-  - A title was cut at its own `!` or `?`; the mark ends the title only when what follows reads as a
-    venue, judged on the text up to the next mark.
-  - A title opening with its own roman numeral was cut to the numeral (`VII`), and the role after
-    IEEE's comma-delimited names was read as the title (`editors`).
-  - An `et al.` followed by a comma says the venue is the next comma field, and a bare publisher
+  - Elsevier's comma between title and venue is read as a field break, so the venue no longer
+    becomes part of the title.
+  - A hyphenated initial (`K.-W. Chang`) is read as an initial, not as the title `and K.-W`.
+  - An accented given name that LaTeX abbreviates and pdftotext renders as `J.a.P.` is read as one
+    person, not two.
+  - A particle surname written surname-first, such as `d'Amorim`, is read as an author instead of
+    leaving the whole byline with no authors.
+  - An organization is not split on its own "and" ("Institute of Electrical and Electronics
+    Engineers"). A byline with no comma, no initials, a lowercase function word, and eight words or
+    fewer is one body's name.
+  - A suspended hyphen ("Player- and Data-Driven") keeps the space after it instead of being closed
+    as a line break.
+  - One inverted author split across two chunks (`Zeller, Andreas.`) no longer counts as two people
+    when both chunks pair with the same record author and together are contained in that name. An
+    invented name pairs with nobody and is never excused. Merging the chunks in the parser instead
+    was measured and rejected, since `Akhavan, Hosseinpour` is two people.
+  - A stray mark between two names ("OpenAI, :, Aaron Hurst, et al.") no longer disqualifies the
+    whole author list.
+  - A period between two digits, as in a version number broken across a line ("Deepseek-v3. 2"), is
+    not a sentence end.
+  - A parenthesis that an entry appends to its title, such as an ACM conference acronym
+    (`(DIS '25)`), an edition, or a year, is removed from the title, and so is a year printed after
+    the title without a comma.
+  - `URL https://...` is read as the identifier's label, not as a title.
+  - A title is not cut at its own `!` or `?` unless what follows reads as a venue.
+  - A title that opens with a roman numeral is not cut to the numeral, and the role after IEEE's
+    comma-delimited names (`editors`) is not read as the title.
+  - An `et al.` followed by a comma marks the next comma field as the venue, and a bare publisher
     field ends the title.
-  - `Al` is a name particle and the tokenizer was deleting it as the tail of "et al." -- 3,999 DBLP
-    authors carry it, and "Fahmid Al Rifat" could not match a citation of itself.
+  - `Al` is a name particle, not the tail of "et al.", so a name such as "Fahmid Al Rifat" matches a
+    citation of itself.
 
-  Two shapes stay as they are, by decision. Five references in one JSS paper keep a comma-joined
-  field the parser has no name for -- `, GitHub repository` on three tool citations, a working-paper
-  field, and a NIST special publication whose corporate author reads as the title -- and all five
-  are grey literature no database holds, so each reaches triage as `not_found` with a title a human
-  can read. And three corpus DOIs are wrong as printed and now travel whole rather than as a dead
-  front half, a TVCG identifier, a TPAMI one and an ACM `10.5555` pseudo-DOI doi.org has never
-  resolved; each reference verifies by other means, so the identifier evidence that would show a
-  reader the dead DOI never prints.
+  Reading a `?` as a subtitle mark in `titles_match` was measured and rejected. A comma-joined field
+  that the parser has no name for, such as `, GitHub repository`, stays in the title, and such a
+  reference reaches triage as `not_found`.
 
-- **A DOI broken across a line was emitted as the half before the break.** At one of its own
-  hyphens, after a period, between `10.48550/arXiv` and the identifier, or at an underscore.
-  Eighteen corpus references carried a DOI that resolves to nothing, which triage reads as
-  fabrication signal (D), and thirty more carried none at all, their identifier broken at the slash.
-  The underscore case is the sharpest: `_looks_cut` knew a trailing hyphen and a digit-free suffix,
-  but a break at `_` leaves a suffix ending in a digit and looking finished, and what survives is
-  the *book's* DOI where the citation named a chapter -- `10.1007/978-1-84800-044-5` for `..._2` --
-  which resolves, to another work. pdftotext renders the underscore as a space, so the far side is
-  still in the text: four corpus references are now rejoined and every one resolves to the title its
-  entry names. Over the corpus 60 DOIs break after one of the identifier's own periods and every
-  one resumes with digits -- an article number, a year-led segment, an Elsevier `03.006` -- which
-  nothing but the entry's own year does, and that is the one shape refused. 42 corpus DOIs change
-  across 19 papers; resolved through the DOI backend alone, 38 come back as the cited title, three
-  are dead as printed (the paper's own wrong identifier, now whole rather than half) and one named
-  a title the parser was still cutting. Withholding a bare ISBN suffix instead was measured and rejected, being also what a
-  citation of the *whole book* correctly carries, which two corpus references do, one of them a
-  confirmation the DOI resolver made. The rejoin fires only where the text actually continues, and
-  not on a four-digit year, which is the entry's own date running on. All 590 DOIs the corpus
-  carries still come through. An arXiv identifier written as a CoRR volume is read too (`arXiv, vol.
-  abs/2410.15631`, `CoRR, vol. abs/1901.09102`), which is how the IEEE styles print one and how 17
-  corpus references carry theirs.
+- A DOI broken across a line is rejoined: at one of its own hyphens, after a period, between
+  `10.48550/arXiv` and the identifier, or at an underscore, which pdftotext renders as a space.
+  Previously only the part before the break was kept, or nothing when the break fell at the slash.
+  The fragment could resolve to nothing, which triage reads as fabrication signal (D), or to
+  another work, such as a book's DOI where the citation named a chapter. The rejoin applies only
+  where the text continues the identifier, not when a four-digit year follows, and a DOI that is
+  wrong as printed now travels whole rather than as a dead front half. An arXiv identifier written
+  as a CoRR volume (`arXiv, vol. abs/2410.15631`), as the IEEE styles print it, is read too.
 
-- **A citation could append invented authors to a real paper and still verify.** The rule was that
-  greedy pairing had to match `min(cited, stored)` authors, and padding the citation raises only the
-  cited side, so the stored side kept fixing the threshold. Measured over 250 real DBLP records,
-  appending one, two or three invented names to the true author list was confirmed 250 times out of
-  250 -- signal (A) in `SKILL.md` and the pattern `VERIFICATION-SPEC.md` calls the one this tool
-  exists to catch: a real title, a real venue, correct pages, and people who did not write the
-  paper. `_author_absence_pass` could not catch it either, comparing only lists of equal length.
+- A citation that appends invented authors to a real paper no longer verifies. Every cited name
+  that reads as a person must be matched by an author of the record, which catches signal (A) in
+  `SKILL.md`. A citation may still name fewer authors, which is what "et al." means, and the
+  requirement of at least two matched names is dropped, so a real work cited as "First Author et
+  al." verifies.
 
-  Every cited name that reads as a person must now be matched by an author of the record. The
-  citation may still name *fewer*, which is what "et al." means.
+  Names are paired rather than compared as subsets. A middle initial that the record lacks, a
+  particle on one side only, or a generational suffix no longer refutes ("Mohammed F Kharma" is
+  "Mohammed Kharma"), but a contradicted given name still does ("Q. Muñoz Barón" for "Marvin Muñoz
+  Barón"). Author lists are paired by augmenting paths rather than first fit, so one cited name
+  cannot take the record author that another needs ("Xin Xia" fits both "Xin Xia 0001" and "Xin
+  Xiao").
 
-  | author rule | corpus confirmed | clean | "et al." | first author only | +1 invented | +2 | +3 | one swapped |
-  |---|---|---|---|---|---|---|---|---|
-  | `min(cited, stored)`, >=2 matched | 1459 | 250 | 250 | 0 | 250 | 250 | 250 | 0 |
-  | every cited name, >=2 matched | 1455 | 250 | 250 | 0 | 0 | 0 | 0 | 0 |
-  | every cited name | **1478** | 250 | 250 | 250 | 0 | 0 | 0 | 0 |
+- The author rule has two tiers, as `VERIFICATION-SPEC.md` requires, decided per run and per
+  record. `mirror_authors_complete` checks whether this mirror's ingest kept its accented authors,
+  and `record_authors_complete` checks whether the byline in hand is a list of people. Against an
+  incomplete record, such as an LLM technical report that DBLP credits to `OpenAI` or a record that
+  ends in `et al.`, an unmatched cited name does not refute, but a name that the record contradicts
+  still does.
 
-  The "at least two matched" rule went with it: it refuses 23 corpus references, every one a real
-  work cited as "First Author et al.", and refuses no corruption that one matched name lets through.
-  What the change buys on the corpus rather than on constructed corruptions: 18 references the
-  recording confirmed are now a `mismatch`, five of them naming a real paper under an author list
-  mostly not on it. `RepoFuse` and `BashExplainer` pair one cited name in five with the record,
-  `RepoHyper` none in three, `RepoFormer` two in four -- a correct title and DOI, and people who did
-  not write the paper. The old verifier cleared all five without a human seeing them. Of the other
-  13, eight differ by one or two names and five carry a title the mirror does not hold at all.
+  The lenient tier has a floor: a citation must pair with at least one person whom a truncated
+  record lists, so a real title under invented names no longer verifies against it. A record
+  credited to a group rather than to people still clears on the title alone, so "GPT-4 Technical
+  Report" under invented names verifies, and only the arXiv backend, asked by identifier, can say
+  otherwise.
 
-  Name comparison is a pairing rather than a subset test. A middle initial the record does not carry
-  no longer refutes ("Mohammed F Kharma" is "Mohammed Kharma"), nor does a particle on one side only
-  ("Emiliano De Cristofaro" is "Cristofaro, E."), nor a generational suffix. What still refutes is a
-  contradicted given name: "Q. Muñoz Barón" for "Marvin Muñoz Barón" was confirmed 22 times in 250
-  by the first version of this rule and is confirmed none. Author *lists* are paired by augmenting
-  paths rather than first-fit, because taking the first partner that fits lets one cited name consume
-  the record author another needs -- "Xin Xia" fits both "Xin Xia 0001" and "Xin Xiao" -- and refuses
-  a correctly cited paper.
+- Titles are compared on letters alone, tolerating a subtitle on one side only, as the contract
+  requires, so "Model Driven" and "Model-Driven" are the same title. Related retrieval and
+  comparison fixes:
 
-- **The phantom-author rule had one tier where the contract asks for two, and the lenient tier was a
-  wildcard.** `verifier` applied "every cited name must be matched" to every backend and every
-  record, with no equivalent of `_complete_author_dbs`, so a record that is not a complete author
-  list was read as one. Over the 2065-reference corpus that refused 42 references the recording
-  confirms: 18 are an LLM technical report DBLP credits to the group rather than the people
-  (`OpenAI`, `Qwen Team`, `Llama Team`, `DeepSeek-AI` -- one stored author against a citation that
-  correctly names ten), one is StarCoder 2, whose record holds 57 of 66 authors and writes `et al.`
-  for the rest, and the remainder are name forms. Five are the citations the rule exists to catch.
+  - The mirror query no longer misses a matching record past its first 50 FTS hits, which SQLite
+    returns in row order rather than by match quality.
+  - A title with `ł`, `ø`, or `ß` matches its own record, since both foldings are queried, and the
+    word-wise query offers both readings of every hyphen.
+  - An edition suffix on the record is trimmed before the comparison, and a parenthesized alias
+    (`Tse-Hsun (Peter) Chen`) no longer keeps a name from pairing.
+  - Retrieval finds a title with a word split inside the record's title or in the citation, or with
+    an article glued to its neighbor.
+  - Apostrophes are folded, so `O’Donoghue` and `O'Donoghue` are one person. A capital B where a
+    PDF renders an eszett (`LeBenich` for `Leßenich`) is also read as `ß`. The German
+    transliteration of an umlaut ("Buettcher" for "Büttcher") pairs with the letter, taken only from
+    the side that carries the umlaut. Contracting `ue` in every name is not done, because it would
+    rewrite names such as "Miguel" into spellings that an invented author could hide behind.
 
-  The tier is now read off the data, per run and per record, as `VERIFICATION-SPEC.md` requires:
-  `mirror_authors_complete` asks whether this mirror's ingest kept its accented authors, and
-  `record_authors_complete` whether the byline in hand is a list of people at all. Against an
-  incomplete record an unmatched cited name is absence of evidence and does not refute; a name the
-  record *contradicts* still does. Over 250 real records the corruption columns are unchanged --
-  none of those 250 is incomplete, which is the point. Over the 2081 references the 41 papers
-  produce the mirror now confirms 1521 against 1503; the references the recording confirms and this
-  refuses fall from 42 to 24, and the 24 are the five bad citations plus name forms a human should
-  read. Against a mirror built by the stock ingest, which drops every author whose name carries a
-  diacritic, the 154 correctly cited references it refused fall to 8.
+- Two-word titles are not looked up in the mirror (`_MIN_TOKENS` stays at 3) and reach triage as
+  `skipped`. Lowering it to 2 was measured and rejected, because it confirmed Sommerville's
+  textbook "Software engineering" against his 1983 conference paper of that title. A record-side
+  title prefix tolerance was also rejected, since it would confirm the Jest documentation page
+  "Getting Started" against a 1991 keynote of that name. A DBLP record that lists fewer authors with
+  no `et al.` row, such as the CoRR record of a 22-author preprint that lists 19, refutes a correct
+  citation that names the missing ones.
 
-  A lenient tier needs a floor, and this one had none: nothing required any cited name to be
-  *present*, so "StarCoder 2" cited under two invented names verified against its 57-person record,
-  and any author list at all on "Book Reviews" verified through the one record with an `et al.` row.
-  The people a truncated record does list are evidence, and a citation pairing with none of them has
-  had every name it offered come back foreign. DBLP keeps the first authors when it truncates and a
-  citation names them first, so a correct citation pairs at least one. Measured on a third set of 90
-  records carrying an `et al.` row: cited correctly, 90 confirm before and after; cited under two
-  invented names, 90 confirmed before and 0 after; one invented name appended to three real ones
-  still confirms, which is the tier doing what it is for. Nothing moves on the recorded cases or the
-  corpus. A record credited to a group rather than to people still has no person to pair against and
-  clears on the title -- "GPT-4 Technical Report" under two invented names verifies, and only the
-  arXiv backend, asked by identifier, can say otherwise. `VERIFICATION-SPEC.md` states the bar.
+- Of several records that share a title, the published record comes first instead of the one with
+  the lower row id, and where none matches the authors, the near miss reported is the record that
+  accounts for most of them. Among records that all match, the citation's own text decides:
+  `title_candidates` orders them by the DOI, page range, and volume read off the raw text and the
+  parsed DOI (`cited_dois`, `pages_match`, `volume_match`), then by the year that the citation
+  prints (`cited_years`). The published record stays first whatever these say. No status changes,
+  only the record shown.
 
-- **Title comparison and retrieval.** Titles are compared on letters alone, tolerating a subtitle on
-  one side only, as the contract requires: removing a hyphen without leaving a space had made "Model
-  Driven" and "Model-Driven" different titles, and a suspended hyphen different from itself.
-  Measured over 250 real records: exact 250, respaced and rehyphenated 250, subtitles dropped 41 of
-  the 71 that carry one; one content word changed 0, word order reversed 0, a wholly invented title
-  0. Around that:
+  A page range must equal the record's `pages` at both ends. An IEEE DOI's year segment and an
+  arXiv identifier are not counted as cited years, and a page range that looks like a year can be
+  misread as one. Ranking books ahead of articles ahead of conference papers, matching the record's
+  venue text in the citation, and preferring a book record for an entry that names a publisher
+  were turned down.
 
-  - The query took the 50 lowest row ids rather than the 50 best matches, SQLite returning FTS hits
-    in row order, and 3 of the corpus's 1,478 confirmations come from a record past row 50, one at
-    row 2,507. Raising the ceiling costs no measurable time.
-  - A title carrying a letter with a stroke or bar did not match its own record: the query folded
-    `ł`, `ø` and `ß` to plain letters, which an author comparison must do, but the FTS index holds
-    them as they are. Both foldings are asked now, and the word-wise AND query offers both readings
-    of every hyphen at once, which a phrase query cannot.
-  - An edition suffix on the record, in both shapes DBLP writes it, is trimmed before the
-    comparison; the parser already trimmed the citation's. An alias DBLP writes in parentheses
-    (`Tse-Hsun (Peter) Chen`) kept `Peter` from pairing.
-  - Retrieval missed titles the decision would have accepted: a word split inside the *record's* own
-    title, a word split in the citation with both halves too long for `_glued_query`, and an article
-    the layout glued to its neighbour. AND queries over the title's words with one adjacent pair
-    left out cover all three, asked last and only where nothing else matched. It also confirms the
-    one record of the 250-record harness the clean citation had been missing, a title carrying
-    `ℒ2-gain`.
-  - An apostrophe was compared rather than folded, so `O’Donoghue` and `O'Donoghue` were two people;
-    that alone cost seven corpus confirmations. An eszett a PDF renders as a capital B is read as
-    one -- `Leßenich` comes out of pdftotext as `LeBenich` -- offered alongside the literal reading,
-    and measured by disabling it over the corpus it is worth three confirmations, not the five first
-    counted. The German transliteration of an umlaut pairs with the letter, "Buettcher" answering to
-    "Büttcher", taken off the side that carries the umlaut so that only a name that really has one
-    gains the second spelling; contracting `ue` in every name would rewrite "Miguel" and "Rodriguez"
-    into spellings an invented author could hide behind. The corruption harness is unchanged on
-    every column that decides, the head-to-head goes from 1508 to 1509 confirmations, and exactly
-    the two corpus references `TODO.md` named move from `mismatch` to `verified`.
+- A backend answer that cannot be read is reported as a backend failure, not a clean negative. An
+  arXiv response that is not a feed, such as an HTML outage page, had read as "arXiv holds none of
+  these identifiers", producing fabrication signal (D) for up to a hundred identifiers. The same
+  applies to a 404 from the CrossRef or Semantic Scholar search endpoint, a CrossRef 200 without an
+  `items` key, and Semantic Scholar's 200 carrying `{"message": "Too Many Requests"}`, which also
+  reset its give-up counter. An arXiv identifier missing from a batch response is asked again on
+  its own before it is called dead.
 
-- **The DBLP path against the verifier it replaced.** Reproduced head to head over the 2065 recorded
-  citations, DBLP only and offline: the old parser and old DBLP check confirm 1519, the new ones
-  1502, gaining 34 and losing 51. The 51 read one at a time against the record the old path matched:
-  23 are `mismatch` -- five citations naming people who did not write the paper, nine real
-  discrepancies the rule exists to flag, nine name forms -- and 28 are `not_found`, of which fifteen
-  cite a title differing from the record's in a content word and are refused on purpose, seven are
-  two-word titles the mirror is not asked about, and six are the retrieval and comparison defects
-  fixed above. Those six move, ending the recorded head-to-head at 1508 against 1519. Two of the
-  eleven `TODO.md` called defects are not: the old path had confirmed the Jest documentation page
-  "Getting Started" against a 1991 keynote of that name, and a standards body's "Security Framework
-  1.1" against a 1988 paper called "A Security Framework"; a record-side prefix tolerance would
-  reproduce both, and they stay unverified. Over the whole 55-paper corpus, where the recovered
-  bibliographies count, the new path confirms 2068 against 2009. One refusal is neither a name
-  form nor a defect: DBLP's CoRR record for a 22-author preprint lists 19 people and no `et al.`
-  row, so the completeness tier cannot see the gap and the three missing names refute. Correct by
-  the contract, and nothing short of counting the authors on arXiv could say otherwise.
+- Semantic Scholar's give-up counter now trips under an intermittent block. It counted consecutive
+  refusals, which a bursty throttle never reaches, so every refused reference paid the full retry
+  ladder. After 25 refusals in total (`_S2_PATIENCE`), the retries are dropped and every remaining
+  reference is still asked.
 
-  `_MIN_TOKENS` was measured at 2 and stays at 3, scored on corruptions built once and handed to
-  both settings -- the same 250 real records, plus a second set of 250 with two-token titles, which
-  is the population the constant changes and the one the first set cannot see:
+  A rate limit without `Retry-After` now doubles its wait on each attempt instead of retrying after
+  a fixed two seconds. doi.org content negotiation and Semantic Scholar search get a 45-second
+  timeout instead of 15, so artifact and dataset DOIs that resolve slowly through DataCite, such as
+  Zenodo DOIs, are no longer reported unresolvable. A title with a line-break hyphen is also sent
+  to the online searches in its joined form when the first query matched nothing, though a title
+  that carries both a real compound and a line break is still asked in neither spelling that would
+  find it.
 
-  | `_MIN_TOKENS` | cases | corpus | 3+ tokens: clean / et al. / first / +1 / +2 / +3 / swapped | 2 tokens: clean / +1 / +2 / +3 / swapped |
-  |---|---|---|---|---|
-  | 3 | 1508 | 2068 | 250 / 250 / 250 / 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 / 0 |
-  | 2 | 1513 | 2077 | 250 / 250 / 250 / 0 / 0 / 0 / 0 | 250 / 1 / 1 / 1 / 0 |
+- When every name in a parsed author list is a venue fragment, the verdict is `no_match` instead of
+  `author_mismatch`, so a triager is no longer shown a near miss where nothing was compared.
 
-  The padded two-token citation that confirms is `Book Reviews`, a title 922 records share, one
-  carrying an `et al.` row and listing a name the padded citation also lists. On the corpus the nine
-  confirmations include one that is wrong -- Sommerville's textbook "Software engineering", tenth
-  edition, confirmed against his 1983 conference paper of that title -- and six references move from
-  `not_found` to `mismatch` against records of different works ("Github copilot", Fowler's
-  "Continuous integration" page, "Virtual threads", "Logistic regression"). A false confirmation is
-  the outcome the tool must not produce, and the three real two-word titles it would recover reach
-  triage as `skipped`, which is true.
+- `authors_absent` is filled again. It is derived where it is read, from the record that the
+  verdict rests on, so the report line it feeds prints and the signal (A) that `SKILL.md` describes
+  is there. `triage.py` decides that a record matched from `match` and `author_mismatch` instead of
+  by excluding failure statuses by name, which had let a `timeout` read as a matched record.
 
-- **Which record a triager is pointed at, of several sharing a title.** 17% of corpus references
-  carry a shared title. The published record now comes first instead of whichever has the lower row
-  id, and where none matches the authors the near miss reported is the record accounting for most of
-  them. Among records that all match, the citation's own text decides, in two steps measured
-  separately over an `--offline` audit of the 55-paper corpus. 2106 references verify through the
-  mirror, 679 on a title more than one record matches; for 631 the others are all CoRR preprints,
-  which the published-first order settles, and 48 share their title with another published record.
-
-  The year the citation prints, read off the raw text (`cited_years`: an IEEE DOI's year segment and
-  an arXiv identifier are not years the citation prints; a page range that looks like one is the
-  documented cost), names one record for 32 of the 48 and moves 21 -- five journal-first papers
-  shown as their re-presentation at the SE conference, Fagan's 1976 and Brooks's 1977 articles shown
-  as their 1999 reprints, Zimmermann's TSE 2010 article as the FSE 2008 paper, Fowler's *Refactoring*
-  at the XP 2002 talk rather than the 1999 book, Tokuda and Batory's 2001 journal article at their
-  1999 conference paper, Wohlin's 2012 book at its 2024 edition -- and the cited year names the right
-  record in all 21. A rule preferring the cited year outright would also have moved 51 references
-  from the published record to the CoRR one -- 39 that cite the arXiv version with its year, and 12
-  whose journal issue DBLP dates a year after the online-first year the citation prints -- and the
-  published record is the one a triager needs.
-
-  For the other 16 the year names none: ten are two records of one year, five are Fowler's
-  *Refactoring* cited as a 2018 edition DBLP does not hold, one is Murphy-Hill's TSE article cited
-  with an online-first year no record carries. Ten of the sixteen name the record they mean outright
-  in a field the mirror holds too, so `title_candidates` now reads the DOI, the page range and the
-  volume off the raw text and the parsed DOI (`cited_dois`, `pages_match`, `volume_match`) and orders
-  by those before the year. The DOI fires on 200 of the 679, the page range on 345, the volume on
-  105; with the cited DOI as arbiter the page range names the same record 126 times and a different
-  one once, on a DBLP duplicate carrying the same range twice, and the volume 36 times and never a
-  different one. The locator names one record for 42 of the 48 and leaves 6. The published record
-  stays first whatever either says, which keeps the 8 citations printing an arXiv DOI off the CoRR
-  record that carries it as its `ee`.
-
-  Diffed reference by reference against the audit before each step: no status moves, and the record
-  shown changes for the 21 the year moves plus three `mismatch` near misses that tie on matched
-  authors, then for exactly six more -- Goodenough and Gerhart's 1975 TSE article shown as their
-  Reliable Software paper of the same year (in two papers), "Why Should I Trust You?" cited from
-  SIGKDD and shown as the NAACL demo, Kim's TSE 44(11) 1024-1038 shown as the ICSE journal-first
-  entry, Murphy-Hill's TSE 38(1) 5-18, and Thorup's JCSS 69 330-353 shown as the STOC paper. Every
-  one lands on the record its own citation names. Both corruption harness sets come back identical
-  and cannot see either rule: their stand-ins carry no raw citation and no DOI.
-
-  A page range must equal the record's `pages` at both ends. The single-page and ACM article-number
-  forms were measured and left out, settling one further reference that row order already shows
-  right. The locator goes ahead of the year because a DOI or a page range identifies one record
-  where a year identifies a set; on this corpus the two orders make the same six changes, so the
-  order is the design choice and not the finding. Measured on top of the shipped key and turned
-  down: ranking a book ahead of an article ahead of a conference paper where no matching record
-  carries a cited year moves 5, every one right, but all five are one work and the restriction is
-  fitted to it, and unrestricted the same ranking is wrong once in six; the record's venue text
-  appearing in the citation moves the same five and nothing else, but only because the locator now
-  settles ahead of it the reference that made it wrong under 1.19.0, where "Software Engineering"
-  matched inside "European Software Engineering Conference"; author count and non-DOI `ee` URLs
-  change nothing at all. Also turned down: preferring a book record for an entry that names a
-  publisher, whose list of publisher names fired on a co-author surnamed Pearson.
-
-  Guarded by smoke tier 5c through `Verifier.check` -- one citation per key over a same-year pair
-  that nothing else separates, one printing its DOI only through the parsed field, one printing none
-  of the three, one printing one record's locator beside the other's year, and one printing the
-  arXiv DOI the pair's preprint carries as its `ee`. Without that last, no fixture preprint carried a
-  locator field and the published-first key could be moved below the locator with the suite still
-  green. Ten mutation entries cover the two rules; the run fails for every one.
-
-- **A backend that answered 200 with a body it could not read was reported as a clean negative.**
-  `_arxiv_entries` returned an empty dict both for "arXiv holds none of these identifiers" and for
-  "that was not a feed", and an HTML outage page is well-formed XML with no entries. The result was
-  `no_match`, an empty `failed_dbs`, `degraded: false` -- and `arxiv_info.valid=False`, the shape of
-  fabrication signal (D). One bad batch response covers up to a hundred identifiers. The root tag
-  now separates the two, which is what `_fetch_json` already did for the JSON backends. Three
-  siblings went with it: a 404 from the CrossRef or Semantic Scholar *search* endpoint said the
-  endpoint moved, not that the work does not exist; a CrossRef 200 carrying no `items` key is an
-  error envelope, not an empty result set; and Semantic Scholar's soft refusal is a 200 carrying
-  `{"message": "Too Many Requests"}`, which was read as an empty result and also reset the give-up
-  counter. A backend that did not answer must never be equivalent to `no_match`, because triage is
-  told to weigh a `not_found` from an incomplete run less, and an empty `failed_dbs` is what tells
-  it the run was complete. An arXiv identifier a batch request omits is asked for again on its own
-  before it is called dead: arXiv answers 200 and drops what it will not serve, such as an old-form
-  id written with its subject class, as citations write it.
-
-- **Semantic Scholar's give-up counter never tripped under an intermittent block.** It counted
-  *consecutive* refusals and this backend throttles in bursts -- one answer in twenty resets it --
-  so on a real corpus it never reached 25 and every refused reference still paid the full retry
-  ladder: four attempts at 2, 4, 8 and 16 seconds on top of a 45-second ceiling each. A
-  2065-reference replay spent most of three hours there for the 1.4% of confirmations this backend
-  decides. The ladder is the expense, not the question, so the fix is to stop retrying rather than
-  to stop asking: a refusal costs 31 s with the ladder and about a second without it, while an
-  answer takes 3 to 18 s either way, and after 25 refusals however they fall (`_S2_PATIENCE`) the
-  extra attempts are dropped and every remaining reference is still asked. Capping the *asking* was
-  tried first and measured against the same corpus: it cut the run from three hours to 57 minutes
-  and the references carrying a backend failure from 177 to 60, and it cost five confirmations no
-  other backend reaches. Asked again with the ladder dropped instead, Semantic Scholar matches 8 of
-  the 49 references that replay lost.
-
-  Three more network rules went with it. A rate limit naming no `Retry-After` was retried after a
-  fixed two seconds, which walks straight back into the same limit; each attempt now doubles its
-  wait, as the API asks. doi.org's content negotiation timed out on the records only it can resolve,
-  redirecting to whichever registry holds the DOI, and DataCite took 8 to 32 seconds for real Zenodo
-  DOIs against a 15-second ceiling -- so the artifact and dataset references with no other identifier
-  were the ones reported unresolvable; that path gets 45 seconds, and so does Semantic Scholar's
-  search, whose ordinary answers the 15-second ceiling was turning into timeouts. And a line-break
-  hyphen went out to the online searches verbatim, which no index holds: the joined reading is asked
-  too, though only when the first matched nothing, which is weaker than what the mirror does for its
-  own queries -- the 16 corpus titles carrying a real compound and a line break at once are asked in
-  neither of the two spellings that would find them.
-
-- **A verdict of `author_mismatch` where nothing had been compared.** When every name in a parsed
-  author list is a venue fragment the parser bled in, `matched_authors` reports nothing comparable,
-  and the reference was reported as a record whose authors disagree -- a near miss a triager is shown
-  and asked to weigh. It is `no_match`, which is what `_verdict`'s own docstring said all along.
-
-- **`authors_absent` was read and never written.** The audit pass that filled it went with the
-  cutover, so every worklist entry carried an empty list, the report line it fed never printed, and
-  `SKILL.md` went on telling the triager the audit had found signal (A). It is derived where it is
-  read, from the record the verdict rests on, and it names at least one person for every one of the
-  46 `mismatch` references the mirror decides. And `triage.py`'s matched-record test is named
-  positively: it excluded the failure statuses by name, which is how a `timeout` came to read as a
-  matched record, and adding `timeout` to the list would have left the next new status to do the
-  same. `match` and `author_mismatch` are the two that mean a candidate came back.
-
-- **`run.sh` died on an ordinary `.env.local` line without its sentinel.** An indented comment or an
-  `export FOO=bar` produced `export: not a valid identifier`, and under `set -e` that ended the run
-  with a bash error and no `HALLUCITE_BOOTSTRAP_FAILED:` line -- the one thing the wrapper promises
-  never to do, and the sentinel `SKILL.md`'s stop conditions key on. A CRLF file exported the API key
-  with a trailing carriage return. mise's dotenv reader accepts all three, so the two did not in fact
-  see the same values; they do now. Separately, `record_context` compared titles through a copy of
-  `_letters` whose comment called it looser than the confirmation path: it is the same reduction and
-  stricter, carrying none of `titles_match`'s tolerance for a subtitle on one side only, which it
-  needs to be. The duplicate is gone.
-
-- **Seven of the fixes in this release could be reverted with the smoke suite still green.** A
-  mutation run -- revert one fix, run the tests -- found the `timeout` fix, the Semantic Scholar
-  threshold, the FTS row ceiling, the apostrophe fold, doi.org's ceiling and both extraction fixes
-  unguarded. The pattern was guards written as `C.eq(x, MODULE.THE_CONSTANT)`, which pass whichever
-  value the constant holds, and helpers asserted directly while the caller that ignores them is not.
-  Tiers 6, 6b, 6c and 6d pin the measured numbers as literals and exercise the callers; every
-  mutation above is now caught.
+- `run.sh` reads `.env.local` the way mise's dotenv reader does. An indented comment or an
+  `export FOO=bar` line had ended the run with a bash error and no `HALLUCITE_BOOTSTRAP_FAILED:`
+  line, and a CRLF file exported the API key with a trailing carriage return.
 
 ### Changed
 
-- `.env.local` in the repo root, gitignored, holds the API keys the online backends want. mise
+- `.env.local` in the repo root, gitignored, holds the API keys that the online backends want. mise
   reads it through `[env]` and `run.sh` reads it directly, so a dev clone and an installed plugin
-  see the same values, and a variable already set in the environment still wins. Both tolerate the
-  file being absent.
+  see the same values. A variable already set in the environment wins, and a missing file is fine.
 
-- `characterize.py record` takes `--s2-api-key`, or `$S2_API_KEY`, and warns when it has neither.
-  It never passed one through, so the recording ran unauthenticated whatever the environment held,
-  and Semantic Scholar rate-limited exactly the residue the recording exists to capture. A
-  41-paper recording had not finished after three and a half hours.
+- `characterize.py record` takes `--s2-api-key` or `$S2_API_KEY` and warns when it has neither. It
+  never passed a key through, so recordings ran unauthenticated and Semantic Scholar rate-limited
+  the residue that a recording exists to capture.
 
-- `characterize.py compare` now covers `check` as well as `parse`. Field-by-field equality is the
-  wrong question for the verdicts -- a replacement consults different backends, so `source`,
-  `failed_dbs` and `db_results` differ by construction -- so it reports the recorded status against
-  the implementation's as a matrix, and lists every reference that crosses the verified line in
-  either direction. `--out` writes the whole divergence list as JSON, `--limit` compares a sample,
-  and `--no-check` compares the parse alone and makes no network request.
+- `characterize.py compare` covers `check` as well as `parse`. It reports the recorded status
+  against the implementation's as a matrix and lists every reference that crosses the verified line
+  in either direction. `--out` writes the whole divergence list as JSON, `--limit` compares a
+  sample, and `--no-check` compares the parse alone without network requests.
 
 ## [1.21.0] - 2026-09-09
 
 ### Fixed
 
 - A two-column bibliography no longer loses half its references. `_gutter` required four wholly
-  blank character columns, and an ACM two-column reference page sets its columns three apart in
-  `pdftotext -layout` output -- tighter than the body text above it. No gutter was found on exactly
-  the pages that matter, the page was read as one column, the right column's text was appended to
-  the left column's lines, and roughly half of each bibliography silently disappeared: 8 references
-  of 16, 21 of 52, 24 of 62, 10 of 26. Four of the first seventeen papers tested extracted nothing
-  at all.
-
-  Measured over 37 arXiv papers spanning ICSE, FSE, ASE, ESEM in both templates, TSE and TOSEM: a
-  four-column minimum recovers 1752 of 1864 references (94.0%) and leaves four papers below 80%
-  recall; three recovers 1848 (99.1%) with none below 80%. Two gains nothing over three, so the
-  looser setting buys no recall and only risks reading a coincidental gap as a column break.
+  blank character columns, but an ACM two-column reference page sets its columns three apart in
+  `pdftotext -layout` output, so the page was read as one column and the right column's text was
+  appended to the left column's lines. Three blank columns now make a gutter, since two gain
+  nothing over three.
 
 ### Added
 
-- `characterize.py`, which records what the current implementation returns for `parse_reference`
-  and `Validator.check` on real references and holds a replacement to that recording. hallucite
-  reaches into `hallucinator` at those two points only; replacing the dependency needs an oracle,
-  and observing the current behavior from the outside is both the specification and the
-  differential test.
+- `characterize.py` records what the current implementation returns for `parse_reference` and
+  `Validator.check` on real references, and holds a replacement to that recording. hallucite calls
+  `hallucinator` at those two points only, so the recording is the specification and the
+  differential test for replacing it.
 
 ## [1.20.0] - 2026-09-09
 
 ### Added
 
 - `--s2-api-key` (or `$S2_API_KEY`) and `--rate-limit-retries`, and a note when no key is set.
-  Semantic Scholar answered on one of twelve audit runs; on the other eleven it returned
-  `rate_limited` in about 2.4 s for three to five references each. Those references carry a
-  degraded verification -- not a clean negative -- and the boundary between "verified" and "needs
-  triage" moved by one reference between otherwise identical runs. That was the entire source of
-  churn observed across the session; a free key removes it. `ValidatorConfig` had `s2_api_key` and
-  `max_rate_limit_retries` all along and the audit set neither.
+  Without a key, Semantic Scholar mostly answered `rate_limited`, which left references degraded
+  and moved the boundary between "verified" and "needs triage" between otherwise identical runs. A
+  free key removes this churn.
 
 ## [1.19.0] - 2026-09-09
 
 ### Added
 
-- The mirror also stores `volume`, `number` and `pages` (4,478,005 / 2,666,380 / 7,144,917 records
-  on the rebuilt file), so a citation's "49(3):1152-1170" can be checked against the record it
-  claims to be.
+- The mirror also stores `volume`, `number`, and `pages`, so a citation's "49(3):1152-1170" can be
+  checked against the record it claims to be.
 
-- A reference that reaches triage now carries DBLP's own metadata for its title -- key, year,
-  venue, volume/number/pages, DOI and record type -- in the worklist and the per-paper report.
-  Evidence for the person reviewing it, beside the citation.
+- A reference that reaches triage carries DBLP's key, year, venue, volume, number, pages, DOI, and
+  record type for its title, in the worklist and the per-paper report.
 
 ### Changed
 
-- The three field checks (year, venue, DOI) were measured against the corpus and **not** built as
-  automatic demotions; the fields are surfaced as evidence instead. Over the 579 verified
-  references a repaired mirror can be compared against:
+- The year, venue, and DOI checks were measured and not built as automatic demotions, because each
+  disagrees too often with verified references: venue 28%, year 10%, and DOI 6.7%, against 0.22%
+  for the author-absence check that does demote. The fields are shown as evidence instead.
 
-  | Candidate check | Disagreement rate | Why it is not a check |
-  |---|---|---|
-  | Venue | 157/561 (28%) | DBLP stores abbreviations (`CoRR`, `ESEC/SIGSOFT FSE`, `ICCSA (5)`) that a citation has no reason to contain |
-  | Year | 60/575 (10%) | hallucinator parses no year, so this mostly measures which four-digit number a regex found in the raw citation; off-by-one is usually preprint vs issue year |
-  | DOI | 12/179 (6.7%) after excluding truncated citations, arXiv DOIs and IEEE duplicates | a work legitimately carries several DOIs (preprint and published, ACM Queue and CACM), and DBLP's `ee` is sometimes a publisher URL or points at a review |
-
-  For comparison the author-absence check that does demote flags 0.22%. Shipping any of these at
-  6.7% or worse would bury the signal that works.
-
-- `insert_or_get_publication` takes the full record in one signature; the three-argument wrapper is
-  gone. It existed only to keep the upstream diff off the crate's twenty test call sites, and its
-  `ON CONFLICT` cleared `year`/`venue`/`ee`/`kind` back to NULL -- a metadata-stripping footgun for
-  any later caller. The call sites are updated instead.
+- The three-argument wrapper of `insert_or_get_publication` is gone, because its `ON CONFLICT`
+  cleared `year`, `venue`, `ee`, and `kind` back to NULL for any later caller. Callers pass the
+  full record in one signature.
 
 ### Fixed
 
-- `record_context` finds a record whose title was broken across a line. `_phrase_queries` asks both
-  hyphen readings of the whole title, which fails when one title needs both at once ("Refactoring
-  ... de-velopers keep up-to-date" matches neither `uptodate` nor `de velopers`); it now falls back
-  to an AND over the words carrying no hyphen, and compares titles with punctuation removed. The
-  reference this was built for is exactly the kind that hits it.
+- `record_context` finds a record with a title broken across a line that needs both hyphen readings
+  at once ("de-velopers keep up-to-date"). It falls back to an AND over the words without a hyphen
+  and compares titles with punctuation removed.
 
 ## [1.18.0] - 2026-09-09
 
 ### Added
 
-- The offline DBLP mirror now stores the record metadata the dump carries: `year`, `venue`, `ee`
-  (the electronic edition, usually the DOI) and `kind` (the DBLP element -- article,
-  inproceedings, book). Added to `dblp-entity-fix.patch`. The ingest parsed `<ee>` and discarded
-  it, and never looked at `<year>` or the venue at all, so the mirror could answer only "does a
-  work with this title by these authors exist". Two of the four fabrication signals were therefore
-  uncheckable in `--offline` runs: a wrong or impossible venue and year (V), and a DOI belonging
-  to another work (D). On the rebuilt mirror 8,720,203 of 8,720,206 records carry a year, 8,542,357
-  a venue and 8,541,662 an electronic edition.
+- The offline DBLP mirror stores `year`, `venue`, `ee` (the electronic edition, usually the DOI),
+  and `kind` (the DBLP element, such as article, inproceedings, or book), added to
+  `dblp-entity-fix.patch`. This makes two fabrication signals checkable in `--offline` runs: a wrong
+  or impossible venue and year (V), and a DOI that belongs to another work (D). `kind` and `year`
+  also separate same-title records that authors alone could not, such as the six "Experimentation
+  in Software Engineering" entries.
 
-  `kind` and `year` also separate same-title records that authors alone could not. The six
-  "Experimentation in Software Engineering" entries now resolve as Wohlin's books (2000, 2012,
-  2024), Basili's 1986 TSE article, Pfleeger's 1997 Adv. Comput. note and a 2008 FECS paper --
-  the ambiguity `dblp_check.py`'s all-candidates pass exists to work around.
-
-- `second_opinion()` carries that metadata on a confirmation (`year`, `venue`, `ee`, `kind`),
-  reading whichever columns the mirror actually has. A database built before the ingest stored
-  them reports them as absent and everything else keeps working.
+- `second_opinion()` carries `year`, `venue`, `ee`, and `kind` on a confirmation, reading whichever
+  columns the mirror has. A database built before the ingest stored them reports them as absent,
+  and everything else keeps working.
 
 ### Fixed
 
-- `dblp_check`'s author folding handles letters carrying a stroke or bar. It shared the NFKD gap
-  fixed in the audit: `ł`, `ø`, `đ` and `ß` carry no combining mark to strip, so `Przybyłek` and
-  `Przybylek` compared as different people. Now that the mirror actually holds accented names,
-  this decides whether a real reference is confirmed or sent to triage.
+- `dblp_check`'s author folding handles `ł`, `ø`, `đ`, and `ß`, which carry no combining mark for
+  NFKD to strip, so `Przybyłek` and `Przybylek` are the same person.
 
 ## [1.17.0] - 2026-09-09
 
 ### Fixed
 
-- A reference naming authors the matched work does not have is caught again when DBLP is what
-  cleared it. `COMPLETE_AUTHOR_DBS` excluded DBLP because the local mirror dropped its accented
-  authors; repairing the mirror made that exclusion wrong, and the TSE reference carrying two
-  invented authors verified again -- DBLP now holds all five real authors, hallucinator sees three
-  of them in the citation and reports a match, and the absence check skipped it. Which backends
-  count is now decided per run from the mirror in hand (`_complete_author_dbs`): DBLP counts when
-  its accented authors survived the ingest, and does not when they did not. Measured over the 459
-  corpus references a repaired mirror can be compared against, including DBLP flags one (0.22%),
-  a genuine discrepancy.
+- A reference that names authors the matched work does not have is caught again when DBLP cleared
+  it. `COMPLETE_AUTHOR_DBS` excluded DBLP because the local mirror had dropped its accented authors,
+  which became wrong once the mirror was repaired. Which backends count is now decided per run from
+  the mirror in hand (`_complete_author_dbs`): DBLP counts when its accented authors survived the
+  ingest.
 
-- Letters carrying a stroke or bar now fold to their ASCII form. NFKD leaves `ł`, `ø`, `đ` and `ß`
-  alone -- they carry no combining mark to strip -- so `Przybyłek` and `Przybylek` compared as
-  different people and the citation read as inventing an author. Two of the three flags in the
-  corpus measurement were this, not a citation error. DBLP's homonym suffix (`Márcio Ribeiro
-  0001`) needs no special case: digits already fall to the letters-only filter.
+- Letters with a stroke or bar, such as `ł`, `ø`, `đ`, and `ß`, fold to their ASCII form, so
+  `Przybyłek` and `Przybylek` no longer compare as different people and the citation no longer
+  reads as inventing an author. DBLP's homonym suffix (`Márcio Ribeiro 0001`) needs no special
+  case, since digits are already filtered out.
 
-- `mise run build-dblp` removes the `-wal`/`-shm` files on both sides of the swap. Moving only the
-  database left the scratch pair orphaned and the destination's stale pair in place.
+- `mise run build-dblp` removes the `-wal` and `-shm` files on both sides of the swap, so neither an
+  orphaned scratch pair nor a stale destination pair is left.
 
 ## [1.16.0] - 2026-09-09
 
 ### Added
 
-- `mise run fetch-dblp-dump` downloads `dblp.xml.gz` with a real browser, for the `--from-file`
-  build. dblp.org and both its mirrors front the dump with an Anubis proof-of-work challenge, so
-  every plain HTTP client gets the challenge page instead of the file. A browser answers it with
-  its own JS engine, the way it does for a person clicking the link; nothing forges or replays a
-  token, and Playwright's `--enable-automation` marker is left in place. It has to run headed --
-  Anubis refuses the headless browser outright ("Access Denied") while the headed one completes
-  the proof-of-work normally -- so it needs a display, and the script says so when refused. The
-  dump lands beside `$HALLUCITE_DBLP`, so relocating the database relocates the dump.
+- `mise run fetch-dblp-dump` downloads `dblp.xml.gz` with a real browser for the `--from-file`
+  build, because dblp.org and both its mirrors serve every plain HTTP client an Anubis
+  proof-of-work challenge instead of the file. The browser answers the challenge with its own JS
+  engine, and nothing forges or replays a token. It runs headed, since Anubis refuses the headless
+  browser, so it needs a display. The dump is saved beside `$HALLUCITE_DBLP`.
 
-- A dependency table in the README. "A web browser" was doing too much work as a dependency
-  specification: Playwright with its own Chromium is the concrete, installable form of it, and
-  the Rust toolchain is likewise needed only for `install-cli-patched`.
+- A dependency table in the README names Playwright with its own Chromium as the concrete form of
+  "a web browser", and the Rust toolchain as needed only for `install-cli-patched`.
 
 - `mise run install-cli-patched` builds `hallucinator-cli` from the pinned upstream source with
-  `dblp-entity-fix.patch` applied, and fails if the built binary does not carry the fix. The
-  patched binary was previously something you had to produce by hand, which is no basis for a
-  dependency the audit's correctness rests on.
+  `dblp-entity-fix.patch` applied, and fails if the built binary does not carry the fix.
 
 ### Changed
 
-- `mise run install-cli` refuses to overwrite a binary carrying the patch. It fetches the stock
-  upstream build, which drops every author whose name has a diacritic, and the loss is invisible
-  downstream -- publication counts, titles and record keys all look right -- so a routine
-  reinstall would silently reintroduce it. `FORCE=1` overrides.
+- `mise run install-cli` refuses to overwrite a binary carrying the patch, since the stock upstream
+  build drops every author with a diacritic and the loss is invisible downstream. `FORCE=1`
+  overrides.
 
 ## [1.15.0] - 2026-09-09
 
 ### Added
 
 - `update-dblp --from-file <XML_GZ>` builds the mirror from a dump already on disk, added to
-  `dblp-entity-fix.patch`. dblp.org and both its mirrors front `dblp.xml.gz` with an Anubis
-  proof-of-work bot check, so every plain HTTP client -- `curl`, and the downloader inside
-  `update-dblp` -- receives the challenge page instead of the dump and ingests it as zero
-  publications. `hallucinator-dblp` could already build from a local file; the CLI exposed no way
-  to ask for it. Verified end to end on a dump whose author names are entity-encoded: all five
-  authors of `journals/tse/SoaresRGAS23` and all six of `books/sp/WohlinRHOR00` land with their
-  accents intact.
+  `dblp-entity-fix.patch`. dblp.org and both its mirrors serve every plain HTTP client, including
+  the downloader inside `update-dblp`, an Anubis proof-of-work challenge instead of the dump, which
+  was then ingested as zero publications.
 
 ### Changed
 
 - `mise run build-dblp` forwards `$DBLP_XML_GZ` to `--from-file` when it is set, so a dump
-  downloaded in a browser can be ingested without touching the download path. README documents
-  the route.
+  downloaded in a browser can be ingested. README documents the route.
 
 ## [1.14.0] - 2026-09-08
 
 ### Added
 
-- A patch for the upstream ingest bug, `dblp-entity-fix.patch`, against hallucinator 0.2.3. DBLP
-  writes Latin-1 letters as the named entities its DTD declares (`&aacute;`, `&ouml;`), and
-  `hallucinator-dblp`'s XML parser calls quick-xml's `unescape()`, which without the crate's
-  `escape-html` feature knows only the five predefined XML entities. On failure the parser dropped
-  the whole text chunk, so the author name came out empty and the author was never recorded. The
-  patch enables `escape-html` and falls back to the raw text instead of discarding the field.
-  Verified against the real records: `journals/tse/SoaresRGAS23` and `books/sp/WohlinRHOR00`
-  recover Márcio Ribeiro, André Santos, Martin Höst, Björn Regnell and Anders Wesslén, and the
-  crate's 50 tests still pass. Apply it, rebuild `hallucinator-cli`, then rebuild the mirror.
+- `dblp-entity-fix.patch`, against hallucinator 0.2.3, fixes the upstream ingest bug that dropped
+  every author whose name DBLP writes with a named entity such as `&aacute;` or `&ouml;`. It enables
+  quick-xml's `escape-html` feature and falls back to the raw text instead of discarding the field.
+  Apply it, rebuild `hallucinator-cli`, then rebuild the mirror.
 
-- The audit warns when the offline DBLP database holds almost no publications. `update-dblp`
-  writes a database and exits 0 even when the download returned a bot-check HTML page instead of
-  the dump, which is exactly what dblp.org serves at the moment. Nothing downstream separates that
-  empty mirror from a paper whose references DBLP genuinely does not hold.
+- The audit warns when the offline DBLP database holds almost no publications, as happens when
+  `update-dblp` ingests a bot-check HTML page instead of the dump and still exits 0.
 
 ### Changed
 
-- `mise run build-dblp` builds to a scratch file and swaps it in only after checking that the
-  result holds over a million publications and that accented author names survived. Writing
-  straight to the destination replaced a working 2.6 GB mirror with an empty one, silently, on a
-  download that returned a bot-check page.
+- `mise run build-dblp` builds to a scratch file and swaps it in only after checking that it holds
+  over a million publications and that accented author names survived. Writing straight to the
+  destination had replaced a working mirror with an empty one after a bot-check download.
 
 ### Fixed
 
-- An empty offline mirror is no longer reported as one that dropped its accented authors. Zero
-  authors trivially means zero accented authors, so the entity check now requires a
-  mirror-sized author table before making that claim.
+- An empty offline mirror is no longer reported as one that dropped its accented authors. The
+  entity check requires a mirror-sized author table first.
 
 ## [1.13.1] - 2026-09-08
 
 ### Added
 
-- The audit warns when the offline DBLP database holds no author name with a non-ASCII character.
-  DBLP is carefully curated and full of accented names, so a mirror containing none of them was
-  built by an ingest that mangles the dump's character entities. On a 4.0M-author build every such
-  author was absent outright -- Márcio Ribeiro, Martin Höst, Björn Regnell, Petr Tuma and Jácome
-  Cunha appeared in no record, folded or otherwise -- which strips them from the author list of
-  every paper they wrote. DBLP then reports an author mismatch for references that are cited
-  correctly, and its all-candidates second opinion fails to confirm real work. Nothing else made
-  this visible: publication counts, titles and keys all look right.
+- The audit warns when the offline DBLP database holds no author name with a non-ASCII character,
+  which means that the ingest mangled the dump's character entities and dropped those authors from
+  every paper they wrote. DBLP then reports an author mismatch for correctly cited references, and
+  its second opinion fails to confirm real work.
 
 ### Fixed
 
-- Corrected why `COMPLETE_AUTHOR_DBS` omits DBLP. 1.13.0 attributed the missing co-authors to
-  truncated DBLP rows. They are not DBLP's: the local mirror's ingest drops them, and the Wohlin
-  book keeps 3 of its 6 authors because Höst, Regnell and Wesslén are absent from the whole
-  database. The exclusion stands while a build behaves this way; once one preserves those names,
-  DBLP should be measured against the corpus again and added.
+- Corrected why `COMPLETE_AUTHOR_DBS` omits DBLP. The missing co-authors are dropped by the local
+  mirror's ingest, not truncated in DBLP as 1.13.0 said. The exclusion stands while a build behaves
+  this way, and DBLP should be added once a build preserves those names.
 
 ## [1.13.0] - 2026-09-08
 
 ### Added
 
-- The audit flags a reference that names an author the matched publication does not have. A
-  backend confirms on the title, so a real title carrying an invented author list was cleared as
-  `verified` and never reached triage: a TSE proof cited "Refactoring Test Smells With JUnit 5"
-  with the right venue, volume and pages but two authors who are not on the paper, CrossRef
-  matched the title, and no human ever saw it. After verification the audit compares the cited
-  authors with the ones the clearing backend holds and demotes the reference to `author_mismatch`,
-  carrying the absent names into the worklist (`authors_absent`) and the per-paper report.
+- The audit flags a reference that names an author the matched publication does not have.
+  Previously a real title with an invented author list verified on the title and never reached
+  triage. After verification the audit compares the cited authors with those of the clearing
+  backend, demotes the reference to `author_mismatch`, and carries the absent names into the
+  worklist (`authors_absent`) and the per-paper report.
 
-  Precision is the design, because every demotion asks a human to judge named authors. Only the
-  clearing backend's own authors count, and only from a backend that returns complete author lists;
-  the two lists must be the same length, so an abbreviated citation is never read as a fabricated
-  one; venue fragments, the sentence the parser bleeds into the last author, and single-token
-  remains of a split name are skipped; and diacritics, hyphenation, middle initials, compound
-  surnames and swapped given/surname order all compare equal. Measured over 1016 database-verified
-  references from a 95-paper corpus it flags one.
-
-  Demoting on a backend's own `author_mismatch` verdict was measured on the same corpus and is
-  deliberately not used: it flags 22, almost all of them DBLP's truncated author rows
-  (`Experimentation in Software Engineering` stores 3 of 6 authors) or a same-title record for a
-  different work, against references that are cited correctly.
+  Only the clearing backend's authors count, and only from a backend that returns complete author
+  lists. The two lists must be the same length, so an abbreviated citation is never read as a
+  fabricated one. Venue fragments, the sentence that the parser bleeds into the last author, and
+  single-token remains of a split name are skipped, and diacritics, hyphenation, middle initials,
+  compound surnames, and swapped given name and surname order compare equal. A backend's own
+  `author_mismatch` verdict is not used, because on correctly cited references it mostly reflects
+  truncated author rows or a same-title record of a different work.
 
 ## [1.12.1] - 2026-09-08
 
 ### Fixed
 
-- A section heading letter-spaced by `pdftotext` now opens the bibliography. IEEE-style journal
-  proofs set headings in small caps with a full-size initial, and `pdftotext` renders the size
-  change as a space, so `REFERENCES` arrives as `R EFERENCES`. `_references_section` matched the
-  heading text exactly, found nothing, and the audit reported 0 references for a TSE proof whose
-  bibliography holds 32 entries -- exit 0, one warning line, and a paper that contributed nothing
-  to triage. Headings are now compared on their space-stripped spelling as well, which covers the
-  fully spaced `R E F E R E N C E S` too, and the Appendix/Acknowledgment heading that ends the
-  section is matched the same way so author biographies cannot land inside the bibliography. The
-  comparison still runs against a whole short heading line, so a sentence opening with
-  "References" cannot start the section.
+- A section heading that `pdftotext` letter-spaces, such as `R EFERENCES` from the small caps of
+  IEEE journal proofs, now opens the bibliography. Such a paper had reported 0 references with exit
+  0. Headings are also compared on their space-stripped spelling, which covers
+  `R E F E R E N C E S`, and the Appendix or Acknowledgment heading that ends the section is
+  matched the same way, so author biographies cannot land inside the bibliography. The comparison
+  still needs a whole short heading line, so a sentence that opens with "References" cannot start
+  the section.
 
 ### Changed
 
-- The zero-reference warning names the right next step. It used to end "Verify these by hand or
-  fix the extraction", which reads as license to do the one thing the stop conditions forbid; it
-  now says the run is an extraction failure to report and fix, and that reading the bibliography
-  by eye yields no verdict. `SKILL.md` gains the matching stop condition, because the audit exits
-  0 on this path and nothing else marks it as a failed run.
+- The zero-reference warning says that the run is an extraction failure to report and fix, and that
+  reading the bibliography by eye yields no verdict, instead of "Verify these by hand or fix the
+  extraction". `SKILL.md` gains the matching stop condition, since the audit exits 0 on this path.
 
 ## [1.12.0] - 2026-07-20
 
 ### Added
 
-- A second-opinion pass over the offline DBLP database (`dblp_check.py`). hallucinator's
-  offline backend compares a reference with a single FTS candidate, so a cited title that
-  several publications share is judged against whichever ranks first -- "Experimentation in
-  Software Engineering" hit Basili's 1986 TSE article and reported the Wohlin book `not_found`
-  -- and the database's own author rows can be truncated (the Wohlin book stores 3 of its 6
-  authors; `conf/sigsoft/MeyerFMZ14` lacks Meyer). After hallucinator's pass, the audit re-asks
-  the same SQLite file over all same-title candidates: exact normalized-title equality plus an
-  initials-aware match of every comparable author confirms the reference as `verified` with
-  source `DBLP (hallucite)`. The pass only ever clears references, never flags one, and it is
-  hallucite's own code written against the database schema -- hallucinator (AGPL, compiled
-  extension) is neither vendored nor patched. On the line-numbered author-year test paper it
-  clears 6 of the 13 offline-unverified references, every one to the correct DBLP record, while
-  wrong, padded, and invented citations stay unverified.
+- A second-opinion pass over the offline DBLP database (`dblp_check.py`). hallucinator's offline
+  backend compares a reference with a single FTS candidate, so a title that several publications
+  share is judged against whichever ranks first. After hallucinator's pass, the audit re-asks the
+  same SQLite file over all same-title candidates, and exact normalized-title equality plus an
+  initials-aware match of every comparable author confirms the reference as `verified` with source
+  `DBLP (hallucite)`. The pass only clears references and never flags one, and hallucinator is
+  neither vendored nor patched.
 
 ## [1.11.0] - 2026-07-20
 
 ### Fixed
 
-- A stale verdict is quarantined instead of reattached. A verdict is keyed by
-  `paper_id:number`, but author-year numbers are extraction-order, so a re-audit can renumber the
-  bibliography and leave a verdict pointing at a different reference. `report` used to detect
-  exactly this (via the stored reference fingerprint), warn on stderr, and then print the old
-  category anyway -- flagging an innocent reference as likely-hallucinated, with the desk-reject
-  banner, in every written artifact, while the actually-suspect reference reverted silently to
-  pending. `report` now shows the verdict as stale and the reference as pending, `worklist
-  --pending` resurfaces it, and `status` counts it as pending.
-- A hedged verdict can no longer reach **Desk-reject candidates**. `is_fabrication` now requires
-  the `likely-hallucinated` category alongside `title_match=no`, and `record` rejects `unclear`
-  with `title_match=no` as contradictory (that signal asserts the likely-hallucinated finding).
-  Previously an `unclear` verdict carrying `title_match=no` was escalated into the report's most
-  severe section, which does not display the category.
-- A running head that appears only once inside the References section is now dropped.
-  Repetition is counted over the whole document instead of the section, so a two-page
-  bibliography (which contains its head exactly once) no longer glues the citing paper's own
-  title and page number into a reference -- the corruption that sent a real paper to triage as
-  `not_found` with zero candidate leads.
+- A stale verdict is quarantined instead of reattached. Author-year numbers follow extraction
+  order, so a re-audit can renumber the bibliography and leave a verdict keyed `paper_id:number` on
+  a different reference. `report` warned and then printed the old category anyway, flagging an
+  innocent reference as likely-hallucinated. It now shows the verdict as stale and the reference as
+  pending, `worklist --pending` resurfaces it, and `status` counts it as pending.
+- A hedged verdict can no longer reach the Desk-reject candidates section. `is_fabrication`
+  requires the `likely-hallucinated` category alongside `title_match=no`, and `record` rejects
+  `unclear` with `title_match=no` as contradictory.
+- Running heads are counted over the whole document instead of the References section, so a head
+  that appears only once in a two-page bibliography is dropped instead of gluing the citing paper's
+  own title and page number into a reference.
 - A wrapped page number alone on a line ("...19(3):619–" / "654") is no longer blanked as a
-  `lineno` margin number: blanking is gated on the margin column, so short numbers at a
-  continuation indent survive as citation content.
+  `lineno` margin number, since only numbers in the margin column are blanked.
 - `record` rejects a `paper_id:number` that matches no audited reference instead of storing a
   verdict that could never appear in any report.
 
 ### Added
 
-- Verification retries failed references with their line-break hyphens removed. The extractor
-  keeps the hyphen when joining a wrapped line ("Experimen-tation"), which is right for a real
-  compound and wrong for a soft-hyphenated word -- and FTS backends miss the wrong form, sending
-  real, DBLP-indexed works into triage as `not_found`. Each segmented reference now carries the
-  dehyphenated variant, and the audit re-verifies with it when the original fails, keeping the
-  result only when it verifies.
-- The audit warns about suspected merged entries: an author-year reference carrying two
-  "(year)" author-block labels is the shape left behind when a flat layout glues an entry whose
-  year wrapped onto the next line into its predecessor -- the second entry is then never verified
-  on its own. Flagged per paper and stored in the extraction record.
-- A closing warning aggregates papers that yielded 0 references (unsupported bibliography
-  layout, or no References section found), so an unchecked paper cannot scroll out of sight in a
-  long batch.
+- Verification retries a failed reference with its line-break hyphens removed ("Experimen-tation"),
+  and keeps the result only when it verifies.
+- The audit warns about suspected merged entries: an author-year reference with two "(year)" author
+  blocks, the shape left when a flat layout glues an entry onto its predecessor. The warning is per
+  paper and stored in the extraction record.
+- A closing warning lists the papers that yielded 0 references, so an unchecked paper cannot scroll
+  out of sight in a long batch.
 
 ### Changed
 
 - The triage rules bound the partial-match rescue: an independent identifier rescues one or two
-  slipped title words, never a wholly different title -- a real record stapled to an invented
+  slipped title words, never a wholly different title, so a real record stapled to an invented
   title is `title_match=no`, not a citation error.
-- The verify sheets label the triager's text "Triage finding" (it is written by the LLM triage
-  step, not by the database check the sheet also shows).
+- The verify sheets label the triager's text "Triage finding", since the LLM triage step writes it,
+  not the database check that the sheet also shows.
 
 ## [1.10.2] - 2026-07-20
 
 ### Changed
 
-- The repeated-entry guidance recommends what the evidence carries rather than banning an action.
-  1.10.1 ended with "do not advise merging the conflicting one", which restated the bullet above it
-  and forbade a conclusion that further evidence can legitimately reach: a conflict resolved by
-  checking the in-text usage of each key may well be one work, and consolidating it is then the
-  right advice. The rule now states the asymmetry instead -- wrongly merging destroys distinct
-  citations while leaving entries separate stays fixable, so an unresolved conflict defaults to no
-  action.
+- The repeated-entry guidance states an asymmetry instead of banning a recommendation: wrongly
+  merging destroys distinct citations, while separate entries stay fixable, so an unresolved
+  conflict defaults to no action. It replaces 1.10.1's "do not advise merging the conflicting one",
+  since the in-text usage of each key can show a conflict to be one work.
 
 ## [1.10.1] - 2026-07-20
 
 ### Changed
 
-- Repeated bibliography entries are classified instead of hedged. 1.10.0 reported every group of
-  same-author, same-title entries as "indistinguishable" and referred the whole question to the
-  author, which threw away the cases where the evidence is conclusive. Entries matching on *every*
-  field -- authors, title, venue, volume, pages -- are now reported as **duplicates** and stated as
-  fact, since two distinct articles cannot share a venue, volume, and article number. Only entries
-  whose venue, volume, or pages disagree are reported as **conflicting**, where an extended version
-  or a preprint sharing a title is a real possibility and the in-text usage of each key decides. A
-  group can produce both findings: of two groups in the paper that prompted this, one is a plain
-  duplicate, and the other holds a duplicate pair plus a third entry that conflicts with it.
+- Repeated bibliography entries are classified instead of hedged. Entries that match on authors,
+  title, venue, volume, and pages are reported as duplicates and stated as fact. Entries with a
+  venue, volume, or pages that disagree are reported as conflicting, and the in-text usage of each
+  key decides. A group can produce both findings.
 
 ## [1.10.0] - 2026-07-20
 
 ### Added
 
-- Unverified references carry `candidates`: the closest real records from CrossRef's fuzzy
-  bibliographic search, with title similarity, DOI, venue, and year. The validator's exact-title
-  lookups miss a citation that abbreviates or expands a term, and a quoted web search for such a
-  title returns only the authors' *other* papers -- which reads exactly like the fabrication
-  signature, and nearly produced a false accusation. A reference cited as "Llms as assistants in
-  software architecture design" now resolves at 0.855 similarity to "Large Language Models as
-  Assistants in Software Architecture Design" (IEEE Software, doi 10.1109/ms.2026.3663353) before
-  any searching. Candidates are leads to confirm or reject, never verdicts; an invented title
-  matches nothing, so an empty list carries information too. `--no-candidates` skips the lookup and
-  `--offline` implies it.
+- Unverified references carry `candidates`: the closest records from CrossRef's fuzzy bibliographic
+  search, with title similarity, DOI, venue, and year. They catch a citation that abbreviates or
+  expands a term, which exact-title lookups miss and a quoted web search can mistake for
+  fabrication. Candidates are leads to confirm or reject, never verdicts, and an empty list carries
+  information too. `--no-candidates` skips the lookup and `--offline` implies it.
 - Worklist entries and reports carry `matched`: the record each backend matched and the authors it
-  holds. A `mismatch` is only judgeable against the thing that mismatched -- and the matched record
-  is sometimes not the same work at all (for one reference, CrossRef matched a thesis sharing its
-  paper's title while DBLP matched the right paper under an incomplete author list).
-- Reports list **indistinguishable entries**: different citation keys whose entries carry the same
-  authors and title, so the bibliography asserts distinct works while giving no way to tell them
-  apart. Database verification cannot surface this, since every such entry verifies on its own.
-  The report states the problem without diagnosing it: these are as likely to be one duplicated
-  work as several works with wrong metadata, and only the in-text usage of each key settles which.
-- `--retry-degraded N` (default 1) re-checks references a backend failed to answer for, keeping the
-  retried result only when it improves.
+  holds, so a `mismatch` can be judged against what mismatched.
+- Reports list indistinguishable entries, that is, different citation keys with the same authors
+  and title. The report states the problem without diagnosing it, since only the in-text usage of
+  each key settles whether they are one work or several.
+- `--retry-degraded N` (default 1) re-checks references that a backend failed to answer for,
+  keeping the retried result only when it improves.
 
 ### Changed
 
-- References are named by the handle a reader can find. A numbered bibliography keeps its printed
-  `[12]`; an unnumbered author-year one is named by the citation key the paper itself uses
-  (`de Dieu et al. (2025c)`). Reports previously printed the extractor's sequential index as though
-  it were a reference number, sending a reviewer hunting a `[22]` that appears nowhere in the
-  paper. Where that index is still needed -- it is what `triage record` takes -- it is shown as
-  `[#n]` and the report says it is hallucite's own.
+- References are named by a handle the reader can find. A numbered bibliography keeps its printed
+  `[12]`, and an unnumbered author-year one uses the paper's own citation key
+  (`de Dieu et al. (2025c)`). The extractor's sequential index, which `triage record` takes, is
+  shown as `[#n]` and marked as hallucite's own.
 
 ### Fixed
 
-- A `not_found` produced while a backend errored or rate-limited is flagged `degraded` and is no
-  longer presented as a clean negative. Verification stops at the first backend that matches, so
-  later backends are only ever asked about the residue -- the same references that reach triage --
-  and that is where rate limiting lands: on the run that prompted this, every one of the 9 triaged
-  references had a backend that never answered, one of them three, with nothing to indicate it. The
-  audit now prints a per-backend failure tally, `record` warns when a `likely-hallucinated` verdict
-  rests on a degraded check, and the skill instructs triage to treat such an absence as no evidence
-  at all. `degraded` is a separate flag rather than a new status value, so `status != "verified"`
-  remains the single definition of "needs triage".
-- The triage rules no longer point at a false accusation for an abbreviated title. An abbreviation
-  and its expansion of the same term ("LLMs" / "Large Language Models") are now stated to be the
-  same title, where the previous wording made them a wrong *content word* -- which demands an
-  identifier to rescue the citation and otherwise lands on `likely-hallucinated`. The rules also
-  name the escalation trap explicitly: a narrow search returning the same authors under different
-  titles is the trigger to broaden, not a conclusion.
+- A `not_found` produced while a backend errored or rate-limited is flagged `degraded` and no
+  longer presented as a clean negative. The audit prints a per-backend failure tally, `record` warns
+  when a `likely-hallucinated` verdict rests on a degraded check, and the skill tells triage to
+  treat such an absence as no evidence. `degraded` is a flag rather than a new status value, so
+  `status != "verified"` still defines "needs triage".
+- The triage rules treat an abbreviation and its expansion ("LLMs" / "Large Language Models") as the
+  same title, not as a wrong content word that leads to `likely-hallucinated`. They also say that a
+  narrow search returning the same authors under different titles is the trigger to broaden, not a
+  conclusion.
 
 ## [1.9.0] - 2026-07-20
 
 ### Added
 
 - `run.sh upgrade` upgrades `hallucinator` in the managed venv, and `check-env` warns when PyPI has
-  a newer release. `resolve_python` reuses that venv as soon as it can import hallucinator, so the
-  unpinned `pip install hallucinator` ran only when the venv was first created: an install stayed on
-  whatever version was current the day it was built, for as long as it lived, with nothing to
-  indicate it. `upgrade` refuses when `$HALLUCITE_PYTHON` is set, since run.sh does not modify an
+  a newer release. Previously an install stayed on whatever version was current when its venv was
+  created. `upgrade` refuses when `$HALLUCITE_PYTHON` is set, since `run.sh` does not modify an
   interpreter it did not provision, and `$HALLUCITE_NO_VERSION_CHECK` skips the PyPI lookup for
   offline and CI runs. `mise run upgrade` covers the repo venv and the managed venv together.
 
 ### Fixed
 
 - Reference extraction handles a Springer author-year bibliography ("Bacchelli A, D'Ambros M (2009)
-  ...") printed under LaTeX `lineno` margin numbers. Three faults compounded. `lineno` detection
-  required two or more digits followed by text, so single-digit numbers and numbers rendered alone
-  on a line went uncounted, and every margin digit survived into the text as data. The numbered
-  lines then read as a plain-numeric bibliography, so each physical line became its own reference,
-  splitting entries mid-title and truncating them. The author-year entry pattern matched only
-  "Surname, I.", never the Springer "Surname AB," convention, leaving the correct style unreachable.
-  Margin numbers are now overwritten with spaces rather than deleted, preserving the column
-  positions that carry the bibliography's hanging indent -- the only delimiter an author-year entry
-  has, given that it carries no label and its `(year)` may wrap onto the following line. Running
-  heads and text outside the bibliography's column block are dropped, so a page header no longer
-  becomes a reference and an editorial system's "Click here to download" slip no longer lands inside
-  the last one. On the paper that surfaced this, extraction goes from 32 mangled references (17
-  unparsed, entries split mid-sentence) to 93 cleanly segmented references, none unparsed, and
-  database verification from 7 to 85. Smoke tier 4c drives a generated fixture PDF that reproduces
-  the layout with invented references.
+  ...") printed under LaTeX `lineno` margin numbers, where each physical line had become its own
+  reference. Single-digit margin numbers and numbers alone on a line are detected, and margin
+  numbers are overwritten with spaces rather than deleted, which keeps the hanging indent that
+  delimits author-year entries. The author-year entry pattern accepts the Springer "Surname AB,"
+  form. Running heads and text outside the bibliography's column block are dropped, so a page
+  header or an editorial system's "Click here to download" slip no longer ends up in a reference.
 
 ## [1.8.4] - 2026-06-24
 
 ### Fixed
 
 - The `SKILL.md` `run.sh` resolver scans the Claude Code plugin cache
-  (`${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache`) for the highest installed version before
-  falling back to the Codex plugin cache. Branch 1 (the `CLAUDE_PLUGIN_ROOT` path) is skipped when
-  that variable is unset in the tool shell, as it is for an ordinary Bash call, which left the Codex
-  cache as the only version-scanning branch; a `/plugin marketplace update` on the Claude side then
-  had no effect, and a stale Codex-cached copy (e.g. an older `se-uhd/hallucite`) ran instead of the
-  current install. The new branch resolves to the newest Claude-cached version regardless of
-  `CLAUDE_PLUGIN_ROOT`, and is ordered ahead of the Codex fallback so a current Claude install
-  always wins.
+  (`${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/cache`) for the highest installed version, ahead of
+  the Codex plugin cache. When `CLAUDE_PLUGIN_ROOT` was unset in the tool shell, as it is for an
+  ordinary Bash call, a stale Codex-cached copy could run instead of the current Claude install,
+  and `/plugin marketplace update` had no effect.
 
 ## [1.8.3] - 2026-06-24
 
 ### Fixed
 
 - Reference extraction handles a bracket-numeric bibliography ("[1]" ... "[59]") printed under
-  LaTeX `lineno` margin numbers that `pdftotext -layout` renders inconsistently and that restart on
-  each page. The bibliography was read as plain numeric, so segmentation anchored on the margin
-  numbers rather than the "[N]" labels: it dropped the first entry and, at every per-page
-  line-number reset, merged the remaining references into a single segment. A new bracket-numeric
-  style anchors on the bracketed label and strips the gutter margin number from both entry and
-  continuation lines, so margin numbers no longer masquerade as entries. On the paper that surfaced
-  this, extraction goes from 45 mangled references (6 unparsed; references 22-59 merged into one) to
-  59 cleanly segmented references, none unparsed. Smoke tier 4b reproduces the layout with invented
-  references and guards the fix.
+  LaTeX `lineno` margin numbers that restart on each page. A new bracket-numeric style anchors on
+  the `[N]` labels and strips the margin number from entry and continuation lines. Segmentation had
+  anchored on the margin numbers, dropped the first entry, and merged the references after each
+  page's line-number reset into one segment.
 
 ## [1.8.2] - 2026-06-11
 
 ### Changed
 
-- Synced the vendored PyMarkdown linter to pymarkdown-skill 0.2.2. The lint wrapper now
-  invokes PyMarkdown under the `explicit` return-code scheme (a scan system error or a
-  file PyMarkdown refuses to scan now exits 2 instead of being reported as clean), the
-  pre-pass recognizes tilde and indented fences and follows the config's front-matter
-  settings, and `check_baseline.py`/`refresh_vendor.py`/the sync tooling carry the
-  accompanying robustness fixes. No change to hallucite's own behavior.
+- Synced the vendored PyMarkdown linter to pymarkdown-skill 0.2.2. The lint wrapper uses
+  PyMarkdown's `explicit` return-code scheme, so a scan system error or a file that PyMarkdown
+  refuses to scan exits 2 instead of being reported as clean. The pre-pass recognizes tilde and
+  indented fences and follows the config's front-matter settings, and the sync tooling carries
+  robustness fixes. No change to hallucite's own behavior.
 
 ## [1.8.1] - 2026-06-10
 
 ### Fixed
 
 - `mise run audit` forwards everything after the target to the audit script, so the documented
-  flags (`--offline`, `--mailto`, `--no-verify`, ...) work; the task previously hard-coded
-  `--dblp`/`--out` and errored on any flag. The output directory is now set with `--out` instead
-  of a second positional argument (the script's own defaults already cover `--dblp` and `--out`).
+  flags, such as `--offline`, `--mailto`, and `--no-verify`, work. The output directory is set with
+  `--out` instead of a second positional argument.
 - The Codex plugin-cache resolver in `SKILL.md` compares cached versions with `sort -V`, so
-  `1.10.0` beats `1.9.0`; plain `sort` picked the lexicographically highest and would have run a
-  stale cached plugin once the version reached two digits.
-- Docs and plugin manifests no longer claim OpenAlex verification: hallucinator's OpenAlex backend
-  is key-gated and the audit never configures a key, so it never ran. The database lists now name
-  Semantic Scholar and the other backends that actually run.
-- `--offline` is documented as "no network" rather than "DBLP-only", and now enforces it:
-  hallucinator's built-in Standards matcher (local, pattern-based) stays live and can set the
-  verification status for standards references, and a missing offline DBLP file disables the DBLP
-  backend for the run (hallucinator would otherwise silently fall back to querying dblp.org). A
-  second drift tripwire warns when a backend outside `KNOWN_LOCAL_DBS` appears in `--offline`
-  results -- the inverse direction of the `DEFAULT_ONLINE_DBS` warning, which only catches
-  configured names that never appear.
-- `triage.py` skips a stray JSON file whose `paper_id`/`pdf_path`/`num_references` are missing or
-  malformed (e.g. null) instead of crashing `status`/`report`, matching `load_papers`' documented
-  skip-don't-crash contract; a near-miss record is skipped with a warning, and a smoke check
-  feeds the audit's real output through `load_papers` so an audit schema drift cannot silently
-  empty Stage 3.
-- `run.sh check-env` warns (non-fatally) when `pdftotext` (poppler) is missing, and README's setup
-  section names the prerequisite; previously only `SKILL.md` and the extractor's error mentioned
-  it. `run.sh` also appends the common install dirs (Homebrew, `~/.local/bin`, ...) to `PATH`
-  before running the scripts, so the extractor resolves `pdftotext` the same way the preflight
-  probe does even in a plugin shell with a minimal `PATH`.
+  `1.10.0` beats `1.9.0`.
+- Docs and plugin manifests no longer claim OpenAlex verification, which never ran because
+  hallucinator's OpenAlex backend needs a key that the audit never configures. The database lists
+  name the backends that actually run.
+- `--offline` is documented as "no network" rather than "DBLP-only" and enforces it. hallucinator's
+  local Standards matcher stays live and can set the status of standards references. A missing
+  offline DBLP file disables the DBLP backend instead of falling back to dblp.org, and a second
+  drift warning flags any backend outside `KNOWN_LOCAL_DBS` in `--offline` results.
+- `triage.py` skips a JSON file with a missing or malformed `paper_id`, `pdf_path`, or
+  `num_references`, such as null, instead of crashing `status` or `report`, and warns about a
+  near-miss record.
+- `run.sh check-env` warns when `pdftotext` (poppler) is missing, and README's setup section names
+  it. `run.sh` also appends common install directories, such as Homebrew's and `~/.local/bin`, to
+  `PATH`, so the extractor finds `pdftotext` the way the preflight does in a plugin shell with a
+  minimal `PATH`.
 
 ### Changed
 
-- README and PLAN no longer list Markdown lint as part of the `run_smoke.py` suite; it runs as a
-  separate CI step and locally via `mise run lint-md`. The smoke suite's docstring now also lists
-  tiers 3b (triage concurrency) and 3c (title-first gate), which `main()` already ran.
-- Documented the existing `--disable-dbs` audit flag and the `$HALLUCITE_VENV` override in README
-  and `SKILL.md`; removed the stale "GitHub once pushed" hedge from README's install section.
-- Reworded the stage summary in README, `SKILL.md`, and `CLAUDE.md`: stages 1+2 use no LLM, and
-  verification queries online databases unless `--offline`; the old "local and deterministic"
-  claim only held for offline runs. `CLAUDE.md` also states which smoke tier guards the
-  stop-conditions rule (tier 1 for the SKILL.md text, tier 1b for the fail-loud `run.sh` contract)
-  and how status strings vs backend names are validated.
+- README and PLAN no longer list Markdown lint as part of `run_smoke.py`. It runs as a separate CI
+  step and locally through `mise run lint-md`.
+- README and `SKILL.md` document the `--disable-dbs` audit flag and the `$HALLUCITE_VENV` override,
+  and README drops the stale "GitHub once pushed" hedge.
+- README, `SKILL.md`, and `CLAUDE.md` say that stages 1 and 2 use no LLM and that verification
+  queries online databases unless `--offline` is set, replacing the "local and deterministic"
+  claim. `CLAUDE.md` also states how status strings and backend names are validated.
 
 ## [1.8.0] - 2026-06-06
 
 ### Changed
 
-- Renamed the plugin marketplace from `se-uhd` to `hallucite` in both the Claude Code
+- The plugin marketplace is renamed from `se-uhd` to `hallucite` in both the Claude Code
   (`.claude-plugin/marketplace.json`) and Codex (`.agents/plugins/marketplace.json`) manifests, so
   it installs as `hallucite@hallucite` and lists under `--marketplace hallucite`. The Codex plugin
-  cache resolver now prefers the `hallucite` marketplace's cached copy. The GitHub repo location
-  (`se-uhd/hallucite`), owning org, and plugin author/developer are unchanged.
+  cache resolver prefers the `hallucite` marketplace's cached copy. The GitHub repo
+  (`se-uhd/hallucite`), owning org, and plugin author and developer are unchanged.
 
 ## [1.7.1] - 2026-06-01
 
@@ -1686,15 +981,14 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   `.agents/plugins/marketplace.json`, `plugins/hallucite` as the marketplace compatibility shim,
   `.agents/skills/hallucite` for repo-local Codex skill discovery, and `AGENTS.md` as a pointer to
   the canonical repo guidance in `CLAUDE.md`.
-- Smoke coverage for dual manifests, Claude-vs-Codex marketplace shapes, Codex symlink shims,
-  `AGENTS.md`, the expanded runner resolver, and an optional isolated Codex CLI marketplace-list
-  check when `codex` is installed.
+- Smoke tests for the dual manifests, the Codex symlink shims, and the expanded runner resolver,
+  with an optional Codex CLI marketplace-list check when `codex` is installed.
 
 ### Changed
 
-- The bundled skill now resolves `run.sh` across Claude Code installs, repo-local Codex discovery,
-  direct repo clones, and Codex plugin caches, while keeping one shared skill and script tree.
-- README, PLAN, CLAUDE.md, `run.sh`, and `mise.toml` now describe support for both Claude Code and
+- The bundled skill resolves `run.sh` across Claude Code installs, repo-local Codex discovery,
+  direct repo clones, and Codex plugin caches, with one shared skill and script tree.
+- README, PLAN, CLAUDE.md, `run.sh`, and `mise.toml` describe support for both Claude Code and
   Codex CLI.
 
 ## [1.6.0] - 2026-05-30
@@ -1702,41 +996,38 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
 ### Added
 
 - `run.sh`, a single bootstrap entry point for the pipeline (`doctor` / `audit` / `triage` /
-  `lint` / `python`). It resolves -- or, on first use, provisions at
-  `${XDG_CACHE_HOME:-~/.cache}/hallucite/venv` -- a Python 3.12 that can `import hallucinator`,
-  preferring `uv` and falling back to a stdlib `venv` over a discovered 3.12 (PATH, common install
-  dirs, or `mise where`). It never relies on a bare `python`/`uv`/`mise` being on the plugin
-  shell's PATH, which is what made the pipeline silently un-runnable when installed as a plugin.
-  Set `$HALLUCITE_PYTHON` to reuse an existing hallucinator environment and skip provisioning.
-- `run.sh doctor` preflight: prints `HALLUCITE_OK: <python> (hallucinator <version>)` on success,
-  or a `HALLUCITE_BOOTSTRAP_FAILED:` sentinel line and a non-zero exit on any setup failure.
-- Smoke tier 1b exercises the `run.sh` contract (syntax check, unknown-command rejection, fail-loud
-  on a Python without hallucinator), and tier 1 now asserts SKILL.md drives the pipeline through
-  `run.sh` and carries the stop conditions.
+  `lint` / `python`). It resolves, or on first use provisions at
+  `${XDG_CACHE_HOME:-~/.cache}/hallucite/venv`, a Python 3.12 that can `import hallucinator`,
+  preferring `uv` and falling back to a stdlib `venv` over a 3.12 found on PATH, in common install
+  directories, or through `mise where`. It does not rely on a bare `python`, `uv`, or `mise` on the
+  plugin shell's PATH, which had made the pipeline silently unrunnable as a plugin.
+  `$HALLUCITE_PYTHON` reuses an existing hallucinator environment and skips provisioning.
+- `run.sh doctor` prints `HALLUCITE_OK: <python> (hallucinator <version>)` on success, or a
+  `HALLUCITE_BOOTSTRAP_FAILED:` line and a non-zero exit on any setup failure.
+- Smoke tier 1b tests the fail-loud `run.sh` contract, and tier 1 checks that `SKILL.md` drives the
+  pipeline through `run.sh` and carries the stop conditions.
 
 ### Changed
 
-- SKILL.md adds a **Stop conditions -- never fabricate a verdict** section and routes every stage
-  through `run.sh`: no script output means no verdict, and any non-zero exit or
-  `HALLUCITE_BOOTSTRAP_FAILED:` line is a blocking error to surface, never to work around by reading
+- `SKILL.md` adds a "Stop conditions -- never fabricate a verdict" section and routes every stage
+  through `run.sh`. No script output means no verdict, and any non-zero exit or
+  `HALLUCITE_BOOTSTRAP_FAILED:` line is a blocking error to report, never to work around by reading
   the bibliography by hand.
-- README, CLAUDE.md, and PLAN.md document `run.sh` as the entry point (and the mise-free plugin
-  path), the stop conditions, and smoke tier 1b, so the downstream docs match the pipeline.
+- README, CLAUDE.md, and PLAN.md document `run.sh` as the entry point, the mise-free plugin path,
+  and the stop conditions.
 
 ## [1.5.1] - 2026-05-29
 
 ### Fixed
 
 - `triage.py record --signals` accepts `venue_match=partial`, which the documented signal
-  vocabulary lists but the validator's enum had omitted (a worker following the docs would have hit
-  a spurious rejection).
+  vocabulary lists but the validator had omitted.
 
 ### Changed
 
-- `PLAN.md` is brought in sync with the title-first triage design: the triage step, the verdict
-  contract (structured fabrication signals plus the `fcntl` lock on `triage_verdicts.json`), the
-  reports (the Desk-reject candidates section), per-paper `worklist --paper` slicing, and the
-  smoke-test inventory.
+- `PLAN.md` describes the title-first triage design: the triage step, the verdict contract
+  (structured fabrication signals and the `fcntl` lock on `triage_verdicts.json`), the
+  Desk-reject candidates section, and `worklist --paper` slicing.
 
 ## [1.5.0] - 2026-05-29
 
@@ -1744,46 +1035,41 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
 
 - Title-first triage with structured fabrication signals. `triage.py record` takes a `--signals`
   JSON object (`title_match`, `matched_title`, `authors_match`, `venue_match`, `doi_status`) and
-  enforces the rule that separates a citation error from a fabrication: a `partial-match` must name
+  enforces the rule that separates a citation error from a fabrication. A `partial-match` must name
   the real publication it matched (`title_match=yes` plus `matched_title`, or `na` for a
-  non-publication resource), and a `likely-hallucinated` must assert the cited title was not found
-  (`title_match=no`). A title that matches no real publication can no longer be filed as a citation
-  error because a different paper by the same authors happens to exist.
+  non-publication resource), and a `likely-hallucinated` must assert that the cited title was not
+  found (`title_match=no`).
 - `triage.py report` shows each flagged reference's matched title and signal summary, warns on a
-  `partial-match` whose signals say the title was not found, and adds a **Desk-reject candidates**
-  section listing references whose cited title matches no real publication, compounded by a
+  `partial-match` whose signals say the title was not found, and adds a Desk-reject candidates
+  section. It lists references with a cited title that matches no real publication, compounded by a
   fabricated author constellation, venue, or DOI.
-- `triage.py worklist --paper <id>` writes one paper's slice (exact id match, errors on an unknown
-  id), so a parallel Stage 3 worker reads only its own references instead of self-filtering the
-  shared worklist -- closing a fan-out hazard where a prefix id (`paper6` vs `paper66`) could pull
-  the wrong paper.
+- `triage.py worklist --paper <id>` writes one paper's slice by exact id and errors on an unknown
+  id, so a parallel triage worker no longer risks pulling the wrong paper through a prefix id
+  (`paper6` and `paper66`).
 
 ### Fixed
 
-- `triage.py record` serializes its read-modify-write of `triage_verdicts.json` under an `fcntl`
-  lock, so concurrent workers no longer drop each other's verdicts (a lost update the atomic write
-  alone did not prevent).
+- `triage.py record` holds an `fcntl` lock on `triage_verdicts.json` during its read-modify-write,
+  so concurrent workers no longer drop each other's verdicts.
 
 ## [1.4.1] - 2026-05-29
 
 ### Fixed
 
-- Extraction no longer drops references in several edge cases (validated against the prior corpus
-  with no count regressions; one real reference that had been silently dropped was recovered):
-  a numeric bibliography that starts above `[1]` is segmented from its true first entry instead of
-  being dropped (anchored on the first real ascending run, skipping stray page/DOI numbers); the
-  References section is taken from the first heading, so a repeated "References" running page header
-  no longer truncates it to the last page; a trailing Appendix/Acknowledgments heading still ends
-  the section but a reference whose text merely begins with one of those words does not; and the
-  author-year detector finds the year within the first 300 (was 100) characters, so a reference
-  with a long author list is no longer missed.
-- `triage.py report` deletes previously generated files first (no orphan `verify-<pid>.md`),
-  surfaces retracted-but-"verified" references, shows a "Not verified" line for `--no-verify`
-  references, stores a reference fingerprint and warns on a stale verdict after a re-audit, and
-  identifies records by content so a stray `.json` no longer crashes the run.
-- `find_pdfs` matches `.pdf` case-insensitively and errors on an empty directory;
-  `dblp_build_info` tolerates a non-string `last_updated`; `install-cli` refuses non-Darwin hosts;
-  the `requirements.txt` comment was corrected.
+- Extraction no longer drops references in several edge cases. A numeric bibliography that starts
+  above `[1]` is segmented from its first real entry, skipping stray page and DOI numbers. The
+  References section is taken from the first heading, so a repeated "References" running header no
+  longer truncates it to the last page. A trailing Appendix or Acknowledgments heading still ends
+  the section, but a reference that merely begins with one of those words does not. The author-year
+  detector looks for the year in the first 300 characters instead of 100, so a reference with a
+  long author list is no longer missed.
+- `triage.py report` deletes previously generated files first, so no orphan `verify-<pid>.md`
+  remains. It shows retracted references that verified, prints a "Not verified" line for
+  `--no-verify` references, stores a reference fingerprint to warn about a stale verdict after a
+  re-audit, and identifies records by content, so a stray `.json` no longer crashes the run.
+- `find_pdfs` matches `.pdf` case-insensitively and errors on an empty directory,
+  `dblp_build_info` tolerates a non-string `last_updated`, `install-cli` refuses non-Darwin hosts,
+  and the `requirements.txt` comment is corrected.
 
 ### Changed
 
@@ -1793,54 +1079,47 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
 
 ### Fixed
 
-- `--offline` now actually disables the DOI backend. The disable list named it "DOI Resolver",
-  but hallucinator emits the backend as "DOI", so the name matched nothing and DOI lookups kept
-  hitting the network in offline mode, sometimes returning a non-reproducible `verified` that
-  hides a reference from triage. The list now uses the real backend names, drops two that
-  hallucinator never emits (SSRN, NeurIPS), and the audit warns at run time if a configured name
-  never appears in any result.
+- `--offline` now disables the DOI backend. The disable list named it "DOI Resolver", but
+  hallucinator emits "DOI", so offline runs still made DOI lookups and could return a
+  non-reproducible `verified` that hid a reference from triage. The list uses the real backend
+  names and drops SSRN and NeurIPS, which hallucinator never emits, and the audit warns at run time
+  when a configured name never appears in any result.
 - The audit exits non-zero and prints a summary when a paper fails to process, instead of printing
-  "Done" and returning 0 while the failed paper is silently absent from Stage 3.
-- The audit warns when a paper extracts zero references or no References section is found, which
-  previously looked identical to a clean paper.
+  "Done" and returning 0 without the paper.
+- The audit warns when a paper extracts zero references or has no References section.
 - `triage.py record` warns when the given `paper_id:number` matches no audited reference, instead
-  of storing an orphan verdict that never reaches a report.
-- The mise `audit` task quotes the DBLP path so a path containing spaces no longer word-splits.
+  of silently storing an orphan verdict.
+- The mise `audit` task quotes the DBLP path, so a path that contains spaces works.
 
 ### Added
 
 - Smoke-test suite (`skills/hallucite/scripts/tests/run_smoke.py`) and a GitHub Actions workflow
-  (`.github/workflows/smoke.yml`): version/packaging consistency, logic-contract unit tests
-  (including a guard that a `mismatch` reference still reaches triage), Markdown lint, and an
-  offline end-to-end audit against a generated fixture DBLP database and a synthetic fixture PDF.
+  (`.github/workflows/smoke.yml`): packaging consistency, logic-contract unit tests, Markdown lint,
+  and an offline end-to-end audit against a fixture DBLP database and a synthetic fixture PDF.
 
 ## [1.3.0] - 2026-05-29
 
 ### Fixed
 
-- Triage no longer silently drops references whose database verdict is `mismatch` (a title match
-  with mismatching authors). hallucinator reports these with the top-level status `mismatch`, but
-  the worklist, the report, and the audit's `unverified` count filtered on a hard-coded
-  `author_mismatch` that the validator never emits at that level. Matching references -- including
-  likely-hallucinated ones -- were therefore counted as neither verified nor unverified and never
-  reached triage. `needs_triage` and the `unverified` total are now derived by negation (any
-  checked reference whose status is not `verified`), so an unrecognized status can no longer fall
-  through.
+- Triage no longer drops references whose database verdict is `mismatch`, a title match with
+  mismatching authors. The worklist, the report, and the audit's `unverified` count filtered on
+  `author_mismatch`, which the validator never emits at that level, so such references, including
+  likely-hallucinated ones, never reached triage. `needs_triage` and the `unverified` total are
+  derived by negation (any checked reference whose status is not `verified`), so an unrecognized
+  status can no longer fall through.
 
 ### Added
 
-- The offline DBLP database location is configurable via the `$HALLUCITE_DBLP` environment
-  variable (default unchanged: `~/hallucite/dblp.db`), honored by `audit_references.py`, the
-  `mise` tasks, and the bundled skill.
+- The offline DBLP database location is configurable through `$HALLUCITE_DBLP` (default
+  `~/hallucite/dblp.db`), honored by `audit_references.py`, the `mise` tasks, and the bundled skill.
 
 ## [1.2.0] - 2026-05-28
 
 ### Changed
 
-- Stage 3 triage searches in escalating breadth: when a title-plus-author query finds nothing, it
-  broadens to an unquoted title search and screens the results instead of concluding "not found".
-  Obscure and predatory venues are poorly indexed, so a narrow miss is no longer treated as
-  evidence of fabrication.
+- Stage 3 triage searches in escalating breadth. When a title-plus-author query finds nothing, it
+  broadens to an unquoted title search and screens the results instead of concluding "not found",
+  since obscure and predatory venues are poorly indexed.
 
 ## [1.1.0] - 2026-05-28
 
@@ -1862,7 +1141,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
 
 - Initial release. Extracts references from paper PDF files and verifies each
   against an offline DBLP database plus CrossRef, arXiv, OpenAlex, and Semantic
-  Scholar; an LLM then triages the references no database confirms and writes the
+  Scholar. An LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
 [2.5.3]: https://github.com/se-uhd/hallucite/releases/tag/v2.5.3

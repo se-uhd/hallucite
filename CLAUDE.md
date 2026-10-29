@@ -6,8 +6,8 @@
 (extract, then verify against DBLP, CrossRef, arXiv, and others) use no LLM; verification queries
 the online databases unless `--offline` restricts it to the offline DBLP mirror.
 Stage 3 (triage the database-unverified residue) is the LLM step, done interactively by you. See
-`PLAN.md` for the design and architecture, `README.md` for commands, `CHANGELOG.md` for what was
-measured and why.
+`PLAN.md` for the design and architecture, `README.md` for commands, `CHANGELOG.md` for what
+changed in each release.
 
 Extraction, parsing, verification and the DBLP ingest are all hallucite's own and use only the
 standard library: `pdf_references.py`, `reference_parser.py`, `verifier.py`, `dblp_check.py`,
@@ -177,8 +177,8 @@ change to `SKILL.md` and to those tests together. Do not restate it here.
 
 - Several widenings of name and title matching were measured and rejected -- name forms beyond the
   umlaut transliteration, `_MIN_TOKENS` at 2, a `?` as a subtitle mark, a book-before-article
-  record key -- and the 2.0.0 entry lists each with its numbers. Read that list before widening
-  either, and measure the widening on every fabricated-citation set before it ships.
+  record key -- and the 2.0.0 entry lists each with the reason it was rejected. Read that list
+  before widening either, and measure the widening on every fabricated-citation set before it ships.
 
 ### Measuring a change, and guarding it
 
@@ -189,12 +189,12 @@ change to `SKILL.md` and to those tests together. Do not restate it here.
   citations. Comparing the cited authors against the *clearing* backend's list instead flagged one,
   and still caught the real case. Every false demotion asks a human to judge named authors, so
   precision is the constraint. Expect the noise to come from data quality -- truncated author rows,
-  venue text parsed as an author, name-form differences -- not from bad citations. Record the
-  measurement in the CHANGELOG entry, including the rules that were measured and rejected. The DOI,
-  year and venue checks were each measured and rejected as automatic demotions and the table is in
-  CHANGELOG under 1.19.0; do not revisit one without a fresh measurement on a corpus whose verdicts
-  you trust. Choosing among records that have already matched is a different use of those same
-  fields, and is what the locator key does.
+  venue text parsed as an author, name-form differences -- not from bad citations. The DOI, year
+  and venue checks were each measured and rejected as automatic demotions, because each disagrees
+  with verified references far more often (DOI 6.7%, year 10%, venue 28%) than the author-absence
+  check that does demote (0.22%). Do not revisit one without a fresh measurement on a corpus whose
+  verdicts you trust. Choosing among records that have already matched is a different use of those
+  same fields, and is what the locator key does.
 
 - Widen the corpus by adding a template nobody has tried, not by adding more of what is there.
   Every extraction fault this repo has found came that way: EMSE and JSS broke five papers on their
@@ -223,7 +223,7 @@ change to `SKILL.md` and to those tests together. Do not restate it here.
 
 - Build the harness from the population the change touches, not from the population that is
   convenient. The 250-record fabricated-citation set samples titles of three or more tokens, so it could
-  not see a `_MIN_TOKENS` of 2 at all (it stayed at 3; the measurement is under 2.0.0); a second
+  not see a `_MIN_TOKENS` of 2 at all (it stayed at 3, see 2.0.0); a second
   sample of two-token titles showed three padded citations confirmed, every one through a record
   carrying an `et al.` row, and a third sample of such truncated records showed the lenient tier
   confirming a wholly invented author list 90 times in 90. Neither hole was visible from the sample
