@@ -4,6 +4,30 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.5.2] - 2026-10-29
+
+### Changed
+
+- `AGENTS.md` is a symlink to `CLAUDE.md`, so a Codex session in a clone loads the same repo
+  guidance as Claude Code. Codex reads `AGENTS.md` itself, and its documentation describes no link
+  following, so the four-line pointer file this replaces gave Codex the guidance only if the agent
+  chose to open `CLAUDE.md`. Smoke tier 1 checks that the symlink resolves to `CLAUDE.md`.
+- `CLAUDE.md` states its rules without the history around them: the mutation runner's old serial
+  timing, the dates of the prose and spelling passes, and a release it never named. Its title is
+  now "Agent guidance for hallucite".
+
+### Fixed
+
+- `SKILL.md` gives the triaging agent the real reason triage is slow: each reference takes several
+  web searches. It said triage "calls an LLM", but the agent reading the skill does the triage and
+  no script calls one. `README.md` carries the same correction.
+- In `SKILL.md`, "Classify title-first", the sentence that opens the classification protocol,
+  rendered as the end of the preceding search bullet because no blank line separated them. The
+  paragraph on repeated bibliography entries now names the per-paper reports and the rollup, where
+  it said "both reports" after a list of three.
+- The Claude Code and Codex plugin descriptions list OpenAlex among the verification backends, as
+  `SKILL.md` and `README.md` already did.
+
 ## [2.5.1] - 2026-10-22
 
 ### Fixed
@@ -1834,6 +1858,7 @@ AGPL-3.0-or-later dependency. Everything below was measured before it shipped.
   Scholar; an LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[2.5.2]: https://github.com/se-uhd/hallucite/releases/tag/v2.5.2
 [2.5.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.5.1
 [2.5.0]: https://github.com/se-uhd/hallucite/releases/tag/v2.5.0
 [2.4.4]: https://github.com/se-uhd/hallucite/releases/tag/v2.4.4
