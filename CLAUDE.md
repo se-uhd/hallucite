@@ -1,4 +1,4 @@
-# Claude Code guidance for hallucite
+# Agent guidance for hallucite
 
 ## What this is
 
@@ -85,7 +85,7 @@ its contents constantly:
   CrossRef 181, OpenAlex 32, arXiv 16, the DOI resolver 11 and Semantic Scholar 10. What a recording
   cannot cover is a backend that refused that day. Semantic Scholar failed to answer for 232
   references even with a key, and those are the only degraded references in the file. arXiv's search
-  API refused every identifier lookup that day, which is what the OAI-PMH fallback now covers; the
+  API refused every identifier lookup that day, which the OAI-PMH fallback covers; the
   references it left degraded were re-asked through the same `check` and merged back in, which is
   the repair to make when one backend has a bad day rather than re-recording the corpus.
   Re-recording is a corpus replay of about 50 minutes and most of a day's OpenAlex allowance, on a
@@ -96,9 +96,8 @@ its contents constantly:
   `mutations.py` reverts one fix at a time and requires the suite to fail. It works in copies of
   the tracked tree, one per worker, so the working tree stays free to edit and to measure against
   while it runs, and the entries run concurrently (`--jobs`, default: cores less two) with each
-  suite run stopping at its first failing check. The whole set takes about three minutes, against
-  the hour and a half it took in place and serially -- which is the difference between running it
-  after every fix and putting it off. What it measures is the snapshot taken when it started.
+  suite run stopping at its first failing check. The whole set takes about three minutes, short
+  enough to run after every fix. What it measures is the snapshot taken when it started.
 - Stage 1/2 driver: `skills/hallucite/scripts/audit_references.py` (segments each reference via
   `pdf_references.py`, parses it with `reference_parser.py`, then runs `verifier.check`). The
   target is 0 unparsed references.
@@ -264,10 +263,9 @@ change to `SKILL.md` and to those tests together. Do not restate it here.
   `_page_furniture` were asserted directly while `_gutter` and `_linearize` could ignore them, so
   reverting either extraction fix left the suite green; and `C.eq(x, MODULE.THE_CONSTANT)` passes
   whichever value the constant holds, guarding the shape and not the finding, when the value is what
-  was measured. A mutation run found seven fixes revertible with the tests still
-  passing, one of them the fix that release had just announced. Assert through the function the
-  pipeline calls, pin the number as a literal, and re-run `measure/mutations.py` after adding a
-  fix: every entry must fail.
+  was measured. A mutation run found seven fixes revertible with the tests still passing. Assert
+  through the function the pipeline calls, pin the number as a literal, and re-run
+  `measure/mutations.py` after adding a fix: every entry must fail.
 
 ### Prose
 
@@ -281,10 +279,8 @@ change to `SKILL.md` and to those tests together. Do not restate it here.
   "it's not X, it's Y" negative parallelism, filler transitions ("it's worth noting",
   "importantly"), grandiose stakes, vague attributions ("experts say") instead of a named source,
   invented concept labels, and inflated verbs (`use`, not `utilize`/`leverage`). The house dash is
-  `--`, two ASCII hyphens, and a literal em dash is not house style: since the 2.0.0 prose pass no
-  hallucite-owned file carries one, and the only em dashes left are in the synced vendor tooling
-  and in citations quoted as data. Spelling is American throughout (`behavior`, `normalized`,
-  `recognized`), which a repo-wide pass fixed on 2026-09-18 after the two forms had drifted to
-  roughly even. Those and bold-lead bullets already appear throughout, so do not pile on more than
-  the surrounding text uses. Plain, specific, and
+  `--`, two ASCII hyphens. No hallucite-owned file carries a literal em dash. The only ones are in
+  the synced vendor tooling and in citations quoted as data, and those stay. Spelling is American
+  throughout (`behavior`, `normalized`, `recognized`). `--` dashes and bold-lead bullets already
+  appear throughout, so do not pile on more than the surrounding text uses. Plain, specific, and
   varied beats ornate.

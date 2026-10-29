@@ -245,6 +245,7 @@ For each entry (references whose `db_verification.status` is anything other than
   -- and a plain-keyword pass. A cited "LLMs as assistants in software architecture design" that a
   quoted search could not find resolves this way to "**Large Language Models** as Assistants in
   Software Architecture Design" in IEEE Software, with a DOI.
+
 Classify title-first. Two independent questions, asked in order -- do not collapse them:
 
 1. **Does a publication bearing the cited title exist?** Match on the *title* (allowing only
@@ -354,10 +355,10 @@ Then assemble the reports:
 - `<outdir>/reports/verify-<paper_id>.md`: for each paper with flags, a manual-verification
   checklist (per-reference verdict line plus one-click Scholar/Google/DOI/arXiv links).
 
-Both reports also list **repeated bibliography entries**: different citation keys carrying the same
-authors and title. Verification cannot find these -- each entry is a real reference that verifies
-on its own -- so only a whole-bibliography pass does. They come in two kinds, and the report
-separates them because the evidence differs:
+The per-paper reports and the rollup also list **repeated bibliography entries**: different citation
+keys carrying the same authors and title. Verification cannot find these -- each entry is a real
+reference that verifies on its own -- so only a whole-bibliography pass does. They come in two
+kinds, and each report separates them because the evidence differs:
 
 - **Duplicate** -- every field matches: authors, title, venue, volume, pages. Two distinct articles
   cannot share a venue, volume, and article number, so this is one work entered more than once.
@@ -377,7 +378,8 @@ stays fixable -- so an unresolved conflict defaults to no action, not to a guess
 
 ## Notes
 
-- Triage is the slow step that calls an LLM. Default to one paper at a time; confirm before the whole corpus.
+- Triage is the slow step: each reference takes several web searches. Default to one paper at a
+  time; confirm before the whole corpus.
 - Most database-unverified references are real but uncovered (books, standards, tech reports,
   vendor docs, preprints). Verify them; do not assume fabrication. Genuine hallucinations cluster
   and show the signatures above. A "hallucinated" call against named authors is serious: flag it

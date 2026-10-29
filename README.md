@@ -145,8 +145,8 @@ rollup for review: a severity table, then a **Desk-reject candidates** section l
 whose cited title matches no real publication, compounded by a fabricated author set,
 venue, or DOI), and `verify-<paper>.md` (a manual-check sheet for each flagged paper, with a
 per-reference verdict line, the matched title, the signals, and one-click Scholar/Google/DOI/arXiv
-links). Triage is the slow step that calls an LLM; do one paper at a time unless you ask for the
-whole corpus.
+links). Triage is the slow step, since each reference takes several web searches; do one paper at
+a time unless you ask for the whole corpus.
 
 ## Updating the offline DBLP database
 

@@ -162,7 +162,8 @@ Codex CLI. Claude Code uses `.claude-plugin/plugin.json` plus
 `.codex-plugin/plugin.json`, `.agents/plugins/marketplace.json` (name `hallucite`, plugin
 `source.path "./plugins/hallucite"`), `plugins/hallucite -> ..` as the marketplace compatibility
 shim, and `.agents/skills/hallucite -> ../../skills/hallucite` for repo-local skill discovery.
-The scripts live once in `skills/hallucite/scripts/`, used by mise and by the bundled skill.
+`AGENTS.md -> CLAUDE.md` gives a Codex session in a clone the same repo guidance that Claude Code
+loads. The scripts live once in `skills/hallucite/scripts/`, used by mise and by the bundled skill.
 Generated artifacts under `out/` are gitignored. See `README.md` for commands.
 
 The skill drives the scripts through `skills/hallucite/scripts/run.sh`, a single entry point

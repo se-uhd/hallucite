@@ -154,7 +154,6 @@ def tier1_packaging() -> None:
     claude_market = json.loads((REPO / ".claude-plugin" / "marketplace.json").read_text())
     codex_market = json.loads((REPO / ".agents" / "plugins" / "marketplace.json").read_text())
     skill = (HALLUCITE / "SKILL.md").read_text()
-    agents_md = (REPO / "AGENTS.md").read_text()
     changelog = (REPO / "CHANGELOG.md").read_text()
 
     parts = skill.split("---", 2)
@@ -227,8 +226,11 @@ def tier1_packaging() -> None:
     C.true(skill_shim.is_symlink(), ".agents/skills/hallucite is a symlink")
     C.eq(skill_shim.resolve(), HALLUCITE.resolve(),
          ".agents/skills/hallucite resolves to shared skill")
-    C.true("CLAUDE.md" in agents_md and "[CLAUDE.md](CLAUDE.md)" in agents_md,
-           "AGENTS.md points to CLAUDE.md")
+    # Codex reads AGENTS.md and its docs describe no link following, so a pointer file gave a
+    # Codex session the repo guidance only if the agent chose to open CLAUDE.md.
+    agents_md = REPO / "AGENTS.md"
+    C.true(agents_md.is_symlink(), "AGENTS.md is a symlink")
+    C.eq(agents_md.resolve(), (REPO / "CLAUDE.md").resolve(), "AGENTS.md resolves to CLAUDE.md")
 
     C.true(re.search(r'^\s*name:\s*hallucite\s*$', fm, re.M) is not None,
            "SKILL.md frontmatter name = hallucite")
