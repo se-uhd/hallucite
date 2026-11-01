@@ -4,6 +4,18 @@ All notable changes to hallucite are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [2.5.4] - 2026-11-01
+
+### Fixed
+
+- `build_dblp.py` resolves an entity that a chunk boundary splits, also when a read stops inside the
+  held-back start of it. It used to hand the parser `&uu` before `ml;` arrived, and the build died
+  on an undefined entity. The real dump has few enough entities that no build hit the alignment,
+  but a synthetic dump with one entity per record failed after 35,643 lines.
+- `build_dblp.py` detaches each record from the root once it is stored. Cleared records stayed
+  attached, and on a synthetic dump of 400,000 records they cost 37 MB of peak memory, about 90
+  bytes per record.
+
 ## [2.5.3] - 2026-10-29
 
 ### Changed
@@ -1146,6 +1158,7 @@ dependency.
   Scholar. An LLM then triages the references no database confirms and writes the
   reports. Packaged as a runnable mise project and a Claude Code plugin.
 
+[2.5.4]: https://github.com/se-uhd/hallucite/releases/tag/v2.5.4
 [2.5.3]: https://github.com/se-uhd/hallucite/releases/tag/v2.5.3
 [2.5.2]: https://github.com/se-uhd/hallucite/releases/tag/v2.5.2
 [2.5.1]: https://github.com/se-uhd/hallucite/releases/tag/v2.5.1
