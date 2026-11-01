@@ -95,6 +95,7 @@ alignment that fixture exists to test).
 from __future__ import annotations
 
 import gzip
+import io
 import json
 import os
 import re
@@ -3811,6 +3812,20 @@ def tier6e_dblp_ingest() -> None:
         C.eq([(c.key, c.authors) for c in got],
              [("journals/x/Beyerer14", ["Jürgen Beyerer", "François Chaumette"])],
              "and dblp_check queries the result through its own FTS index")
+
+    # Six bytes per chunk and five per read put a chunk boundary inside `&uuml;` and a read
+    # boundary inside the held-back `&u`, the alignment that once handed the parser half an entity.
+    class Trickle(io.BytesIO):
+        def read(self, n=-1):
+            return super().read(6)
+
+    stream = build_dblp._EntityStream(Trickle(b"<a>J&uuml;rgen &amp; Fran&ccedil;ois</a>"))
+    pieces = []
+    while piece := stream.read(5):
+        pieces.append(piece)
+    C.eq(b"".join(pieces), b"<a>J&#252;rgen &amp; Fran&#231;ois</a>",
+         "REGRESSION GUARD: an entity split across two chunks is resolved whole, also when a read "
+         "stops inside it -- the parser rejects a half entity and the build dies")
 
 
 

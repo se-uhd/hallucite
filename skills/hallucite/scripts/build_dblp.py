@@ -83,42 +83,42 @@ class _EntityStream(io.RawIOBase):
     """The dump with its named entities resolved, as a readable stream.
 
     Substituting in the byte stream rather than after parsing is what keeps the parser from ever
-    seeing an undeclared entity. The tail buffer is what makes that work: a chunk boundary
-    that falls inside `&Ouml;` would otherwise leave half an entity on each side of it, and
-    the name it
-    belongs to would come out wrong."""
+    seeing an undeclared entity. A chunk boundary that falls inside `&Ouml;` leaves half an entity
+    on each side of it, so an `&` near the end of a chunk with no `;` after it is held back in
+    `_tail` until the next chunk completes it. The held bytes are kept apart from `_out`, the
+    resolved bytes waiting to be read: when they shared one buffer, a read that stopped a few bytes
+    short of its end handed the parser `&uu` before `ml;` had arrived, and the build died on an
+    undefined entity. `_pos` is how far `_out` has been read, so a read copies only what it returns
+    rather than the whole remaining buffer."""
 
     def __init__(self, raw) -> None:
         self._raw = raw
-        self._buf = b""
+        self._out = b""
+        self._pos = 0
+        self._tail = b""
+        self._eof = False
 
     def readable(self) -> bool:
         return True
 
     def readinto(self, out) -> int:
-        want = len(out)
-        while len(self._buf) < want:
-            chunk = self._raw.read(max(want, 1 << 20))
-            if not chunk:
-                break
-            # Hold back anything that could be the start of an entity split across the boundary.
-            data = self._buf + chunk
-            cut = data.rfind(b"&")
-            if cut >= 0 and len(data) - cut <= 34:
-                self._buf, data = data[cut:], data[:cut]
+        while len(self._out) - self._pos < len(out) and not self._eof:
+            chunk = self._raw.read(1 << 20)
+            if chunk:
+                data = self._tail + chunk
+                cut = data.rfind(b"&")
+                if cut >= 0 and len(data) - cut <= 34 and b";" not in data[cut:]:
+                    data, self._tail = data[:cut], data[cut:]
+                else:
+                    self._tail = b""
             else:
-                self._buf = b""
-            self._buf = _resolve(data) + self._buf
-            if not chunk:
-                break
-        if not self._buf:
-            tail, self._buf = _resolve(self._buf), b""
-            if not tail:
-                return 0
-            self._buf = tail
-        n = min(want, len(self._buf))
-        out[:n] = self._buf[:n]
-        self._buf = self._buf[n:]
+                self._eof = True
+                data, self._tail = self._tail, b""
+            self._out = self._out[self._pos:] + _resolve(data)
+            self._pos = 0
+        n = min(len(out), len(self._out) - self._pos)
+        out[:n] = self._out[self._pos:self._pos + n]
+        self._pos += n
         return n
 
 
@@ -145,8 +145,14 @@ def build(dump: Path, out: Path, limit: int | None, progress_every: int) -> int:
     stream = _EntityStream(gzip.open(dump, "rb"))
     # `recover`-style leniency is not available in the standard library, so the dump is trusted to
     # be well formed once its entities are resolved -- which, after they are, it is.
-    for event, elem in ET.iterparse(stream, events=("end",)):
-        if elem.tag not in KINDS:
+    # The root is cleared after every record. Clearing only the record left it attached to
+    # <dblp>: on a synthetic dump of 400,000 records the empty records held there cost 37 MB of
+    # peak memory, about 90 bytes per record.
+    root = None
+    for event, elem in ET.iterparse(stream, events=("start", "end")):
+        if root is None:
+            root = elem
+        if event != "end" or elem.tag not in KINDS:
             continue
         key = elem.get("key") or ""
         title = _text(elem, "title")
@@ -180,9 +186,9 @@ def build(dump: Path, out: Path, limit: int | None, progress_every: int) -> int:
                 print(f"  {pubs:>9,} publications, {len(authors):>9,} authors "
                       f"({rate:,.0f}/s)", flush=True)
             if limit and pubs >= limit:
-                elem.clear()
+                root.clear()
                 break
-        elem.clear()
+        root.clear()
 
     print(f"  indexing {pubs:,} titles ...", flush=True)
     con.commit()
