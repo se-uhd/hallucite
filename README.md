@@ -93,10 +93,11 @@ reference needs triage when its `db_verification.status` is anything other than 
 (`triage_verdicts.json` accumulates by `paper_id:number`).
 
 The audit exits 4 when extraction cannot account for a paper's whole bibliography, and names each
-such paper on a `HALLUCITE_EXTRACTION_UNSUPPORTED:` line with the reasons. It detects a References
-heading it did not recognize, no entries under the heading, an entry number the bibliography prints
-that no reference carries, a number the text cites beyond the last extracted entry, and two
-author-year entries merged into one. Each of these means a reference that never reached
+such paper on a `HALLUCITE_EXTRACTION_UNSUPPORTED:` line with the reasons. It detects a PDF that
+yields no extractable text at all (an image-only scan, or fonts without ToUnicode maps), a
+References heading it did not recognize, no entries under the heading, an entry number the
+bibliography prints that no reference carries, a number the text cites beyond the last extracted
+entry, and two author-year entries merged into one. Each of these means a reference that never reached
 verification, and nothing downstream can report one that never arrived. The paper's template needs
 support in `pdf_references.py`; the other papers in the run are unaffected, and the triage report
 lists the paper as not fully checked. Read the other warnings the run ends with too: the

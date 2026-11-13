@@ -73,6 +73,10 @@ Tiers (any failing check exits non-zero):
                               venue-field year still voting author-year, continuations opening with
                               digits not voting numeric, and the trailing author biographies dropped.
                               No network/DB/poppler.
+  4l empty-PDF diagnostic  -- a PDF whose text layer is empty (scan, or fonts without ToUnicode
+                               maps) is reported as "no extractable text", not as a missing
+                               References heading; old-schema records keep the old message. Pure
+                               pdf_references logic; no network, DB, or poppler.
   5  reference parsing     -- one entry of each style the corpus prints (IEEE quoted, ACM
                               year-first, Springer inverted, the repeated-author dash), plus the
                               identifier forms, held to VERIFICATION-SPEC.md. No network/DB.
@@ -2217,6 +2221,58 @@ def tier4i_hanging_indent_author_first() -> None:
          "a numbered hanging-indent bibliography is not pulled into author-year")
 
 
+def tier4l_empty_pdf_text() -> None:
+    """A PDF with no text layer at all -- an image-only scan, or fonts without ToUnicode maps --
+    used to be reported as "no References or Bibliography heading was recognized", which sends
+    the reader hunting for a heading shape when there is no text to search. The real case behind
+    this tier: a REFSQ submission whose `pdftotext` output was ten form-feed page separators and
+    nothing else. The diagnostic has to name the empty text layer, and only that.
+
+    Pure logic plus one drive of `extract_references` against a stubbed `_pages` -- no poppler,
+    no fixture PDF, so it runs everywhere."""
+    print("Tier 4l: empty-PDF-text diagnostic (no network/DB/poppler)")
+    import pdf_references
+    import audit_references
+
+    # Through the function the audit calls: an empty text layer names itself, and does not
+    # additionally claim a missing heading.
+    problems = audit_references.extraction_problems(
+        0, {"section_found": False, "text_chars": 0})
+    C.eq(len(problems), 1, "an empty text layer reports exactly one problem")
+    C.true("no extractable text" in problems[0] and "scan" in problems[0],
+           f"the problem names the empty text layer :: {problems}")
+    C.true("heading" not in problems[0],
+           "REGRESSION GUARD: the empty-text case no longer claims a missing heading")
+
+    # Backward compatibility: records written before `text_chars` existed keep the old message.
+    problems = audit_references.extraction_problems(0, {"section_found": False})
+    C.eq(len(problems), 1, "a record without text_chars reports the heading problem")
+    C.true("heading was recognized" in problems[0],
+           "REGRESSION GUARD: old-schema records keep the heading message")
+
+    # The field comes from the real extraction: zero text in means zero text_chars out.
+    saved = pdf_references._pages
+    try:
+        pdf_references._pages = lambda path: ["\x0c", "\x0c"]  # two pages, no characters
+        info = pdf_references.extract_references("whatever.pdf", pdf_references)
+        C.eq(info.text_chars, 0, "extract_references counts zero characters for an empty PDF")
+        C.true(info.section_found is False, "and finds no section (nothing to search)")
+        real_problems = audit_references.extraction_problems(
+            0, {"section_found": info.section_found, "text_chars": info.text_chars,
+                "style": info.style})
+        C.true(bool(real_problems) and real_problems[0].startswith(
+                   "the PDF yielded no extractable text"),
+               "the real extraction path lands on the empty-text diagnostic")
+    finally:
+        pdf_references._pages = saved
+
+    # A paper with text but no recognizable heading keeps the heading message.
+    problems = audit_references.extraction_problems(
+        0, {"section_found": False, "text_chars": 4200})
+    C.true(any("heading was recognized" in p for p in problems),
+           "a PDF with text but no recognizable heading keeps the heading diagnostic")
+
+
 def tier5_reference_parser() -> None:
     """The parse half of VERIFICATION-SPEC.md, on one entry of each style the corpus prints.
 
@@ -3857,6 +3913,7 @@ def main() -> int:
     tier4g_two_column_gutter()
     tier4h_extraction_furniture()
     tier4i_hanging_indent_author_first()
+    tier4l_empty_pdf_text()
     tier5_reference_parser()
     tier5b_verifier()
     tier5d_openalex()

@@ -140,6 +140,11 @@ class ExtractionInfo:
     # Numbers the body text cites in brackets that are higher than the last extracted entry: the
     # bibliography's tail was lost, which `missing_numbers` cannot see in a plain-numeric one.
     cited_beyond: list[int] = field(default_factory=list)
+    # Non-whitespace characters `pdftotext` yielded, across the whole document. Zero means the PDF
+    # has no text layer at all -- an image-only scan, or fonts without ToUnicode maps -- which is
+    # a different fault from a heading the detector missed, and needs a different message: sending
+    # the reader after a heading shape when there is no text to search wastes the investigation.
+    text_chars: int = 0
 
 
 # ── PDF text to linearized lines ─────────────────────────────────────────────
@@ -818,8 +823,10 @@ def extract_references(pdf_path: str, extractor) -> ExtractionInfo:
 
     # `_references_section` returns the lines after the heading, so everything before them is body.
     body = lines[:len(lines) - len(section)] if section else []
+    text_chars = sum(len(line.strip()) for line in lines)
     return ExtractionInfo(refs=refs, lineno_on=lineno_on,
                           section_found=bool(section), style=style,
                           suspect_merged=_suspect_merges(refs, style),
                           missing_numbers=_missing_numbers(refs, style),
-                          cited_beyond=_cited_beyond(body, refs, style))
+                          cited_beyond=_cited_beyond(body, refs, style),
+                          text_chars=text_chars)
