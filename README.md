@@ -13,10 +13,11 @@ Three stages: extract and verify use no LLM (verification queries the online dat
 `--offline` restricts it to the offline DBLP mirror); triage is the only step that uses an LLM,
 which can be a cloud or a local model. See [PLAN.md](PLAN.md) for the design and architecture.
 
-One repo serves as the runnable project (the mise tasks below) and one shared plugin tree for
-Claude Code and Codex CLI. The Claude metadata is under `.claude-plugin/`; the Codex metadata
-lives under `.codex-plugin/` and `.agents/plugins/marketplace.json`. The bundled skill in
-`skills/hallucite/` drives the same scripts for both tools.
+One repo serves as the runnable project (the mise tasks below) and one shared skill tree for
+Claude Code, Codex CLI, and OpenCode. The Claude metadata is under `.claude-plugin/`; the Codex
+metadata lives under `.codex-plugin/` and `.agents/plugins/marketplace.json`; the OpenCode catalog
+manifest is `skills/index.json`. The bundled skill in `skills/hallucite/` drives the same scripts
+for all three.
 
 ## Setup (once)
 
@@ -49,8 +50,8 @@ below and a plugin installed from a local checkout see the same values. A variab
 the environment wins.
 
 A plugin installed from the marketplace is a different tree and never sees your clone's
-`.env.local`. Export the values in the shell that starts Claude Code or Codex CLI, or pass
-`--s2-api-key` and `--openalex-api-key`.
+`.env.local`; the same holds for an OpenCode catalog install. Export the values in the shell that
+starts Claude Code, Codex CLI, or OpenCode, or pass `--s2-api-key` and `--openalex-api-key`.
 
 ```sh
 S2_API_KEY=s2k-...        # Semantic Scholar: https://www.semanticscholar.org/product/api
@@ -222,11 +223,29 @@ The local path install uses the `plugins/hallucite -> ..` compatibility shim and
 current working tree into Codex's plugin cache, including ignored local directories. Use a clean
 checkout when testing local installs.
 
+For OpenCode, add the skill catalog to `opencode.json(c)` -- no clone needed:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "skills": [
+    "https://raw.githubusercontent.com/se-uhd/hallucite/main/skills/"
+  ]
+}
+```
+
+OpenCode reads `skills/index.json` at that URL, downloads each listed file into its skill cache,
+and re-downloads when the catalog's version changes, which happens on every release. Keeping a
+clone works without any config too: OpenCode reads `.agents/skills/hallucite` for skill discovery
+when you run it in the repo, and a `"skills": ["/path/to/hallucite/skills"]` entry points it at a
+checkout from any other project.
+
 Then in any session, ask for it in words: "check the references in `<dir>` for hallucinations".
 Claude Code also lists the bundled skill as `hallucite:hallucite`. The skill
 (`skills/hallucite/SKILL.md`) resolves the bundled
-`skills/hallucite/scripts/run.sh` from a Claude plugin install, a Codex repo-local skill shim, a
-direct repo clone, the Claude Code plugin cache, or the Codex plugin cache. That wrapper is the single entry point
+`skills/hallucite/scripts/run.sh` from a Claude plugin install, a Codex or OpenCode repo-local
+skill shim, a direct repo clone, the Claude Code plugin cache, the Codex plugin cache, or an
+OpenCode skill install. That wrapper is the single entry point
 (`check-env | audit | triage | lint | python`). Installed plugins do not need mise:
 `run.sh` finds a Python 3.10 or newer with `sqlite3` -- searching PATH and the places a
 plugin's non-interactive shell tends to miss -- and fails loud with a
@@ -235,13 +254,36 @@ install: the pipeline is standard library only. Set `$HALLUCITE_PYTHON` to pin a
 `run.sh check-env` reports whether the environment is ready, including a warning when `pdftotext`
 is missing.
 
+### Using it in OpenCode
+
+OpenCode lists the skill as `hallucite`. Ask for the job in words and the skill loads when the
+task matches its description, or name it directly with `@hallucite` anywhere in the prompt:
+
+> Check the references in `papers/` for hallucinations.
+>
+> @hallucite audit the PDFs in `~/reviews/submission/`
+
+Loaded, it drives the same three stages as any other install: a preflight
+(`bash <skill>/scripts/run.sh check-env`, which must print `HALLUCITE_OK` -- if it prints
+`HALLUCITE_BOOTSTRAP_FAILED:` instead, nothing ran and the failure is relayed verbatim), then
+extraction and verification of every reference (Stage 1+2 above), then triage of the residue with
+web searches (Stage 3 above), writing the per-paper reports and the rollup into `<outdir>`. The
+agent running the skill does the triage; it reads `triage worklist` and records each verdict with
+`triage record`.
+
+An OpenCode install wants the same once-only setup as a clone: `pdftotext` (poppler) on PATH, and
+the offline DBLP database. API keys go in the environment or the command-line flags, because a
+catalog install is a separate tree without your clone's `.env.local`.
+
 You still build the offline DBLP database once, and without a clone there are no mise tasks to do
 it with. Get `dblp.xml.gz` with `fetch_dblp_dump.py`, which downloads the newest monthly
 snapshot and verifies its checksum, then run the ingest through the wrapper:
 
 ```sh
-RUN=<plugin>/skills/hallucite/scripts/run.sh
-"$RUN" python <plugin>/skills/hallucite/scripts/build_dblp.py ~/hallucite/dblp.xml.gz \
+# Claude Code / Codex CLI install: <plugin root>/skills/hallucite/scripts/run.sh
+# OpenCode install: <skill base dir>/scripts/run.sh -- the base dir the skill tool reports
+RUN=<that path>
+bash "$RUN" python "$(dirname "$RUN")"/build_dblp.py ~/hallucite/dblp.xml.gz \
   --out ~/hallucite/dblp.db
 ```
 

@@ -9,7 +9,7 @@ description: >-
   database-unverified residue via web search and writes a report of likely-hallucinated
   references plus per-paper manual-verification sheets.
 license: MIT
-compatibility: Requires Python 3.10 or newer (standard library only), pdftotext (poppler), and an offline DBLP database at ~/hallucite/dblp.db, built by `mise run build-dblp` (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code and Codex CLI.
+compatibility: Requires Python 3.10 or newer (standard library only), pdftotext (poppler), and an offline DBLP database at ~/hallucite/dblp.db, built by `mise run build-dblp` (override the location with $HALLUCITE_DBLP). Tool-agnostic; usable by any agent that can run the scripts. Packaged for Claude Code, Codex CLI, and OpenCode.
 metadata:
   version: "2.5.4"
 ---
@@ -67,7 +67,9 @@ resolve_hallucite_run() {
     [ -x "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
   fi
 
-  # 2. Codex repo-local skill discovery shim.
+  # 2. Codex CLI and OpenCode repo-local skill discovery shim. Both tools read
+  #    .agents/skills as a project skill source, so this branch covers a clone
+  #    under either, from the repo root.
   candidate=".agents/skills/hallucite/scripts/run.sh"
   [ -x "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
 
@@ -99,12 +101,28 @@ resolve_hallucite_run() {
     [ -n "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
   fi
 
+  # 6. OpenCode skill locations: the global skills directory and the HTTP-catalog
+  # cache, where a catalog download lands under a hash of the catalog URL (so
+  # there is no version to sort by, unlike branches 4 and 5). When the skill tool
+  # loaded this skill it reported the skill's base directory -- prefer running the
+  # wrapper from there; these scans are the fallback.
+  for opencode_root in "${XDG_CONFIG_HOME:-$HOME/.config}/opencode/skills" \
+                       "${XDG_CACHE_HOME:-$HOME/.cache}/opencode/skills"; do
+    [ -d "$opencode_root" ] || continue
+    candidate="$(find "$opencode_root" -path '*/hallucite/scripts/run.sh' -type f 2>/dev/null | tail -n 1)"
+    [ -n "$candidate" ] && { printf '%s\n' "$candidate"; return 0; }
+  done
+
   printf '%s\n' 'HALLUCITE_BOOTSTRAP_FAILED: cannot locate hallucite scripts/run.sh' >&2
   return 3
 }
 
 RUN="$(resolve_hallucite_run)" || exit $?
 ```
+
+Invoke the wrapper through `bash` as shown below. Installed copies of the skill are copied or
+downloaded as files, and a downloaded file need not carry the executable bit -- `bash` runs it
+either way, in every install layout.
 
 Subcommands: `run.sh check-env` (preflight), `audit ...`, `triage ...`, `lint ...`, `python ...`.
 On success it is transparent (runs the script, forwards its exit code); on a setup failure it
@@ -118,7 +136,7 @@ can equivalently use the `mise run ...` tasks.)
 ### Preflight (every session, before any audit)
 
 ```sh
-"$RUN" check-env    # must print `HALLUCITE_OK: <python> (Python <version>)`
+bash "$RUN" check-env    # must print `HALLUCITE_OK: <python> (Python <version>)`
 ```
 
 If it prints `HALLUCITE_BOOTSTRAP_FAILED:` instead, relay that line to the user and stop -- see the
@@ -148,7 +166,7 @@ against the directory the user means (ask if ambiguous).
 ## Stage 1+2: extract and verify (no LLM)
 
 ```sh
-"$RUN" audit <pdf-file-or-dir> --out <outdir>
+bash "$RUN" audit <pdf-file-or-dir> --out <outdir>
 ```
 
 Writes `<outdir>/<paper_id>.json` (every reference, parsed fields plus per-database verification)
@@ -185,10 +203,10 @@ hallucite does not support the named papers' bibliography layout.
 ## Stage 3: triage the residue (LLM)
 
 ```sh
-"$RUN" triage worklist --out <outdir>             # -> <outdir>/triage_worklist.json
-"$RUN" triage worklist --pending --out <outdir>   # only refs not yet recorded
-"$RUN" triage worklist --paper <paper_id> --out <outdir>  # one paper's slice
-"$RUN" triage status --out <outdir>               # per-paper done / pending counts
+bash "$RUN" triage worklist --out <outdir>             # -> <outdir>/triage_worklist.json
+bash "$RUN" triage worklist --pending --out <outdir>   # only refs not yet recorded
+bash "$RUN" triage worklist --paper <paper_id> --out <outdir>  # one paper's slice
+bash "$RUN" triage status --out <outdir>               # per-paper done / pending counts
 ```
 
 These read the per-paper JSON the audit has already written, so Stage 3 can run on finished
@@ -317,7 +335,7 @@ Record each verdict (it persists immediately and is resumable) with the structur
 back the category:
 
 ```sh
-"$RUN" triage record <paper_id> <number> <category> "<finding>" \
+bash "$RUN" triage record <paper_id> <number> <category> "<finding>" \
   --signals '{"title_match":"no","authors_match":"yes","venue_match":"no","doi_status":"none"}' \
   --out <outdir>
 ```
@@ -343,7 +361,7 @@ category.
 Then assemble the reports:
 
 ```sh
-"$RUN" triage report --out <outdir>
+bash "$RUN" triage report --out <outdir>
 ```
 
 - `<outdir>/reports/reference-check-<paper_id>.md`: per paper, including a **Repeated
