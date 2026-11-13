@@ -18,9 +18,9 @@ external `hallucinator` package, which is AGPL-3.0-or-later where this repo is M
 it, and no code was copied across -- they were written against a black-box recording of it, kept
 as `~/hallucite/verification-results-hallucinator.json`.
 
-One repo, two roles: the runnable project (mise tasks) and an installable plugin for Claude Code
-and Codex CLI, sharing one copy of the scripts in `skills/hallucite/scripts/`. The manifests and
-symlinks that make that work are listed in `PLAN.md` under Packaging.
+One repo, two roles: the runnable project (mise tasks) and an installable plugin for Claude Code,
+Codex CLI, and OpenCode, sharing one copy of the scripts in `skills/hallucite/scripts/`. The
+manifests, shims, and catalog manifest that make that work are listed in `PLAN.md` under Packaging.
 
 `~/hallucite/` holds everything too large or too mutable to commit, and the document below names
 its contents constantly:
@@ -120,9 +120,10 @@ change to `SKILL.md` and to those tests together. Do not restate it here.
 
 ### Repo, release and lint
 
-- Editing a script under `skills/hallucite/scripts/` updates it for mise, Claude Code, and Codex
-  CLI (one copy). On a real release, bump the version in `.claude-plugin/plugin.json`,
-  `.codex-plugin/plugin.json`, and `skills/hallucite/SKILL.md` (`metadata.version`), add a
+- Editing a script under `skills/hallucite/scripts/` updates it for mise, Claude Code, Codex
+  CLI, and OpenCode (one copy). On a real release, bump the version in `.claude-plugin/plugin.json`,
+  `.codex-plugin/plugin.json`, `skills/hallucite/SKILL.md` (`metadata.version`), and
+  `skills/index.json` (via `opencode_index.py`), add a
   `CHANGELOG.md` entry, and tag the release commit: `git tag v<version>` (lightweight, matching the
   existing `v*` tags and the CHANGELOG link footers). Run the smoke tests
   (`python skills/hallucite/scripts/tests/run_smoke.py`) and do not consider a release done until

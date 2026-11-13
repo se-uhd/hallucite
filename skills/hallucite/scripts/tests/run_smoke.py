@@ -6,15 +6,18 @@ contract and the plugin packaging. Run in CI (.github/workflows/smoke.yml) and l
 
 Tiers (any failing check exits non-zero):
   1  packaging/consistency -- version in sync across Claude/Codex manifests / SKILL.md /
-                              CHANGELOG, JSON validity, SKILL.md frontmatter, every script
-                              compiles, referenced script paths exist, Claude and Codex
-                              marketplace shapes, repo-local symlink shims, AGENTS.md, and
+                              CHANGELOG / OpenCode catalog, JSON validity, SKILL.md
+                              frontmatter, every script compiles, referenced script paths
+                              exist, Claude and Codex marketplace shapes, the OpenCode
+                              catalog manifest, repo-local symlink shims, AGENTS.md, and
                               SKILL.md runner resolver branches.
   1b run.sh bootstrap       -- the wrapper syntax-checks, rejects an unknown command, fails loud
                               (sentinel + non-zero) when its Python is unusable, and reads the
                               gitignored .env.local without letting it override the environment.
   1c Codex CLI marketplace  -- optional when `codex` is installed: register this repo in an
                               isolated CODEX_HOME and assert hallucite@hallucite is listed.
+  1e OpenCode skill         -- optional when `opencode` is installed: the running OpenCode
+                              service discovers skill id `hallucite` for this repo location.
   3  logic contract        -- needs_triage / paper_status_counts on synthetic records,
                               including the "mismatch" status a past bug silently dropped,
                               and category/severity consistency. No network or DB.
@@ -111,6 +114,7 @@ from shutil import which
 TESTS = Path(__file__).resolve().parent
 SCRIPTS = TESTS.parent
 HALLUCITE = SCRIPTS.parent            # skills/hallucite
+SKILLS_ROOT = HALLUCITE.parent        # skills/ -- the OpenCode catalog root
 REPO = SCRIPTS.parents[2]             # scripts -> hallucite -> skills -> repo
 FIXTURES = TESTS / "fixtures"
 sys.path.insert(0, str(SCRIPTS))
@@ -156,6 +160,7 @@ def tier1_packaging() -> None:
     codex_market = json.loads((REPO / ".agents" / "plugins" / "marketplace.json").read_text())
     skill = (HALLUCITE / "SKILL.md").read_text()
     changelog = (REPO / "CHANGELOG.md").read_text()
+    catalog = json.loads((SKILLS_ROOT / "index.json").read_text())
 
     parts = skill.split("---", 2)
     fm = parts[1] if len(parts) >= 3 else ""
@@ -165,9 +170,13 @@ def tier1_packaging() -> None:
     sv = m.group(1) if m else None
     m = re.search(r'^##\s*\[([0-9]+\.[0-9]+\.[0-9]+)\]', changelog, re.M)
     cv = m.group(1) if m else None
-    C.true(pv is not None and pv == cpv == sv == cv,
+    catalog_entries = catalog.get("skills") or []
+    catalog_entry = next((e for e in catalog_entries if e.get("name") == "hallucite"), None)
+    ov = catalog_entry.get("version") if catalog_entry else None
+    C.true(pv is not None and pv == cpv == sv == cv == ov,
            "version in sync: "
-           f"Claude plugin={pv}, Codex plugin={cpv}, SKILL.md={sv}, CHANGELOG latest={cv}")
+           f"Claude plugin={pv}, Codex plugin={cpv}, SKILL.md={sv}, CHANGELOG latest={cv}, "
+           f"OpenCode catalog={ov}")
 
     try:
         tags = subprocess.run(["git", "-C", str(REPO), "tag", "-l", "v*"],
@@ -220,6 +229,16 @@ def tier1_packaging() -> None:
         C.true(isinstance(codex_entry.get("category"), str) and codex_entry["category"].strip(),
                "Codex marketplace category is present")
 
+    # The OpenCode catalog manifest is derived from the skill tree by opencode_index.py, so the
+    # committed file is held to that derivation rather than to a shape check alone -- a file added
+    # to the skill tree without regenerating the index would silently miss an installed copy.
+    r = subprocess.run([sys.executable, str(SCRIPTS / "opencode_index.py"), "--check"],
+                       capture_output=True, text=True)
+    C.true(r.returncode == 0, "OpenCode catalog index matches the skill tree"
+           + ("" if r.returncode == 0 else f" :: {(r.stderr or r.stdout).strip()[-300:]}"))
+    C.eq(catalog_entry.get("files", [None])[0] if catalog_entry else None, "SKILL.md",
+         "OpenCode catalog entry lists SKILL.md")
+
     plugin_shim = REPO / "plugins" / "hallucite"
     C.true(plugin_shim.is_symlink(), "plugins/hallucite is a symlink")
     C.eq(plugin_shim.resolve(), REPO.resolve(), "plugins/hallucite resolves to repo root")
@@ -262,6 +281,8 @@ def tier1_packaging() -> None:
         ("Codex plugin cache root", "${CODEX_HOME:-$HOME/.codex}/plugins/cache"),
         ("preferred hallucite/hallucite cache", "*/hallucite/hallucite/*/skills/hallucite/scripts/run.sh"),
         ("fallback hallucite cache", "*/hallucite/*/skills/hallucite/scripts/run.sh"),
+        ("OpenCode global skills root", "${XDG_CONFIG_HOME:-$HOME/.config}/opencode/skills"),
+        ("OpenCode catalog cache root", "${XDG_CACHE_HOME:-$HOME/.cache}/opencode/skills"),
         ("locator failure sentinel",
          "HALLUCITE_BOOTSTRAP_FAILED: cannot locate hallucite scripts/run.sh"),
         # Version sort, not lexicographic: plain `sort` picks 1.9.0 over 1.10.0.
@@ -304,6 +325,39 @@ def tier1c_codex_cli_marketplace() -> None:
                + ("" if r.returncode == 0 else f" :: {listing.strip()[-300:]}"))
         C.true("hallucite@hallucite" in listing,
                "codex plugin list shows hallucite@hallucite")
+
+
+def tier1e_opencode_discovery() -> None:
+    """OpenCode reads the repo-local `.agents/skills/hallucite -> ../../skills/hallucite` shim as a
+    project compatibility source, so a clone needs no OpenCode-specific files. Optional when
+    `opencode` is installed: ask the running service which skills it discovers for this repo's
+    location and assert skill id `hallucite` is among them. `opencode api` finds or starts the
+    shared background service itself, like the TUI does."""
+    print("Tier 1e: OpenCode skill discovery (optional)")
+    opencode = which("opencode")
+    if opencode is None:
+        C.skip("opencode CLI not installed; OpenCode skill discovery skipped")
+        return
+    try:
+        r = subprocess.run(
+            [opencode, "api", "get",
+             f"/api/skill?location[directory]={urllib.parse.quote(str(REPO))}"],
+            capture_output=True, text=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        C.fail("opencode api get /api/skill timed out")
+        return
+    if r.returncode != 0:
+        C.skip("opencode api did not answer (no healthy service?); discovery skipped"
+               f" :: {(r.stderr or r.stdout).strip()[-300:]}")
+        return
+    try:
+        discovered = [s.get("id") for s in json.loads(r.stdout).get("data", [])]
+    except json.JSONDecodeError:
+        C.fail("opencode api /api/skill returned non-JSON")
+        return
+    C.true("hallucite" in discovered,
+           "opencode discovers skill id hallucite for this repo"
+           + ("" if "hallucite" in discovered else f" :: found {discovered}"))
 
 
 def tier1d_help_answers() -> None:
@@ -3835,6 +3889,7 @@ def main() -> int:
     tier1b_runner()
     tier1d_help_answers()
     tier1c_codex_cli_marketplace()
+    tier1e_opencode_discovery()
     tier3_logic()
     tier3d_duplicate_entries()
     tier3e_reference_labels()

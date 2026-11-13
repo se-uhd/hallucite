@@ -156,15 +156,21 @@ backends are not exercised in CI.
 
 ## Packaging
 
-One repo (`se-uhd/hallucite`) is the runnable project and an installable plugin for Claude Code and
-Codex CLI. Claude Code uses `.claude-plugin/plugin.json` plus
+One repo (`se-uhd/hallucite`) is the runnable project and an installable plugin for Claude Code,
+Codex CLI, and OpenCode. Claude Code uses `.claude-plugin/plugin.json` plus
 `.claude-plugin/marketplace.json` (name `hallucite`, plugin `source "./"`). Codex CLI uses
 `.codex-plugin/plugin.json`, `.agents/plugins/marketplace.json` (name `hallucite`, plugin
-`source.path "./plugins/hallucite"`), `plugins/hallucite -> ..` as the marketplace compatibility
-shim, and `.agents/skills/hallucite -> ../../skills/hallucite` for repo-local skill discovery.
-`AGENTS.md -> CLAUDE.md` gives a Codex session in a clone the same repo guidance that Claude Code
-loads. The scripts live once in `skills/hallucite/scripts/`, used by mise and by the bundled skill.
-Generated artifacts under `out/` are gitignored. See `README.md` for commands.
+`source.path "./plugins/hallucite"`), and `plugins/hallucite -> ..` as the marketplace
+compatibility shim. `.agents/skills/hallucite -> ../../skills/hallucite` is the repo-local skill
+discovery shim for Codex and OpenCode alike: OpenCode reads `.agents/skills` as a project skill
+source, so a clone needs no OpenCode-specific file, and it reads `AGENTS.md -> CLAUDE.md` natively,
+as Codex reads it for repo guidance. For installs without a clone, `skills/index.json` is an
+OpenCode HTTP-catalog manifest, generated from the skill tree by `opencode_index.py` -- the catalog
+format carries no directories or globs, only an explicit list of the files an installed copy
+downloads. OpenCode re-downloads only when the entry's version changes, so the version syncs with
+the release and the smoke suite holds the list to the derivation. The scripts live once in
+`skills/hallucite/scripts/`, used by mise and by the bundled skill. Generated artifacts under
+`out/` are gitignored. See `README.md` for commands.
 
 The skill drives the scripts through `skills/hallucite/scripts/run.sh`, a single entry point
 (`check-env | audit | triage | lint | python`). It resolves the wrapper from a Claude Code plugin
