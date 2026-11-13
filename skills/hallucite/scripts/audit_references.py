@@ -589,6 +589,7 @@ def audit_pdf(pdf: Path, extractor, validator: Verifier | None,
         "style": info.style,
         "lineno_on": info.lineno_on,
         "section_found": info.section_found,
+        "text_chars": info.text_chars,
         "parsed": len(parsed_refs),
         "unparsed": len(info.refs) - len(parsed_refs),
         "suspect_merged": info.suspect_merged,
@@ -609,16 +610,25 @@ def audit_pdf(pdf: Path, extractor, validator: Verifier | None,
 
 def extraction_problems(num_references: int, ext: dict) -> list[str]:
     """Why extraction cannot vouch for having reached every reference in the bibliography, or []
-    when it can. Each problem is one the input itself exposes -- a heading that never matched, an
-    entry number the bibliography prints and no reference carries, a number the text cites past the
-    last entry, two author-year blocks in one entry -- so none needs a threshold. Over the 55-paper
-    corpus the one paper this names is a real miss: an `[1]` printed beside a figure.
+    when it can. Each problem is one the input itself exposes -- a heading that never matched, a
+    text layer that yielded nothing, an entry number the bibliography prints and no reference
+    carries, a number the text cites past the last entry, two author-year blocks in one entry --
+    so none needs a threshold. Over the 55-paper corpus the one paper this names is a real miss:
+    an `[1]` printed beside a figure.
 
     A paper with any of these was not fully checked, and no verdict can say otherwise: the
     reference that went missing is the one the audit cannot report. Pure, so a test can call it."""
     problems = []
     if not ext.get("section_found"):
-        problems.append("no References or Bibliography heading was recognized")
+        # An empty text layer is a different fault from a heading the detector missed: the PDF
+        # has nothing to search, so the heading message would send the reader hunting for a
+        # heading shape that cannot exist. Zero is checked explicitly; a record from an older
+        # schema carries no `text_chars` and keeps the old message.
+        if ext.get("text_chars") == 0:
+            problems.append("the PDF yielded no extractable text (an image-only scan, or fonts "
+                            "without ToUnicode maps)")
+        else:
+            problems.append("no References or Bibliography heading was recognized")
     elif num_references == 0:
         problems.append(f"a References heading was found, but no entries could be segmented "
                         f"under it (style: {ext.get('style')})")
